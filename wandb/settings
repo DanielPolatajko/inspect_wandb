@@ -1,0 +1,5 @@
+[default]
+entity = danielpolatajko-mars
+project = docs-tutorial
+base_url = https://api.wandb.ai
+
