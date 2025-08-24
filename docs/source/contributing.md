@@ -1,2 +1,2 @@
 # Contributing
-We are currently actively developing the repo and are happy to recieve new issues and pull requests. 
+We are currently actively developing the repo and are happy to receive new issues and pull requests. We are also in contact WandB and are able to raise requests their team which are not able to directly accommodate. 
