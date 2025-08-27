@@ -86,7 +86,7 @@ Currently, `output.log` and the `Logs` tab contain illegible rich text instead o
 ### WandB Weave: Evals
 The Evals tab under WandB Weave might look something like:
 ![](img/weave-evals.png)
-This tab contains evals which previously ran, along with attributes that primarily consist of an aggregation across samples of any [Inspect Scorer](https://inspect.aisi.org.uk/scorers.html) in the eval and additional metadata collected by WandB Weave.
+This tab contains evals which previously ran, alongs with attributes which primarily consist of an aggregation across samples of any Inspect Scorer in the eval  logged + additional metadata.
 The rule of thumb is that 1 model + Inspect task = 1 eval in the Evals dashboard.
 
 The first field is status which shows if the eval is in progress, succeeded, or failed. This is particularly nice on long-running evals as one can connect to WandB on mobile to check status.  
