@@ -170,7 +170,7 @@ class WeaveEvaluationHooks(Hooks):
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
         assert weave_eval_logger is not None
         
-        sample_id = int(data.sample.id)
+        sample_id = data.sample.id
         epoch = data.sample.epoch
         input_value = data.sample.input
         with weave.attributes({"sample_id": sample_id, "epoch": epoch}):
