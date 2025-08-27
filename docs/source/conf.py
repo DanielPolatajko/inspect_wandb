@@ -34,6 +34,21 @@ extensions = [
     "myst_parser",
 ]
 
+# MyST Parser configuration - enables macros and cross-references
+myst_enable_extensions = [
+    "substitution",  # Enables {{ macro_name }} syntax
+    "colon_fence",   # Enables {ref}`label` and {doc}`filename` links
+]
+
+# Global substitutions (macros) - use {{ macro_name }} in .md files
+# Update these values once to change them everywhere in docs
+myst_substitutions = {
+    "repo_url": "https://github.com/DanielPolatajko/inspect_wandb.git",
+    "install_basic": "pip install git+https://github.com/DanielPolatajko/inspect_wandb.git",
+    "install_weave": 'pip install inspect_wandb @ "git+https://github.com/DanielPolatajko/inspect_wandb.git[weave]"',
+    "install_full": 'pip install inspect_wandb @ "git+https://github.com/DanielPolatajko/inspect_wandb.git[weave,viz]"',
+}
+
 intersphinx_mapping = {
     "rtd": ("https://docs.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
