@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing_extensions import override
 
 import wandb
@@ -56,7 +57,15 @@ class WandBModelHooks(Hooks):
 
         if self.settings is not None and self.settings.files:
             for file in self.settings.files:
-                 self.run.save(str(file), policy="now")  # TODO: fix wandb Symlinked warning for folder upload
+                file_path = Path(file)
+                if file_path.exists():
+                    try:
+                        self.run.save(str(file), policy="now")  # TODO: fix wandb Symlinked warning for folder upload
+                        logger.info(f"Successfully saved {file} to wandb")
+                    except Exception as e:
+                        logger.warning(f"Failed to save {file} to wandb: {e}")
+                else:
+                    logger.warning(f"File or folder '{file}' does not exist. Skipping wandb upload.")
 
         self.run.finish()
 

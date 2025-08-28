@@ -165,7 +165,8 @@ class TestWandBModelHooks:
         })
 
     @pytest.mark.asyncio
-    async def test_files_saved_on_run_end(self, mock_wandb_run: Run) -> None:
+    async def test_files_saved_on_run_end_when_file_exists(self, mock_wandb_run: Run) -> None:
+        """Test that existing files are saved to wandb"""
         # Given
         hooks = WandBModelHooks()
         hooks.run = mock_wandb_run
@@ -179,19 +180,117 @@ class TestWandBModelHooks:
         hooks._correct_samples = 5
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
-        hooks._hooks_enabled = True
 
-        # When
-        await hooks.on_run_end(
-            RunEnd(
-                run_id="test-run",
-                exception=None,
-                logs=[]
+        # When - mock Path.exists() to return True
+        with patch('inspect_wandb.models.hooks.Path.exists', return_value=True):
+            await hooks.on_run_end(
+                RunEnd(
+                    run_id="test-run",
+                    exception=None,
+                    logs=[]
+                )
             )
-        )
 
         # Then
         hooks.run.save.assert_called_once_with("test-file.txt", policy="now")
+
+    @pytest.mark.asyncio
+    async def test_files_not_saved_when_file_missing(self, mock_wandb_run: Run) -> None:
+        """Test that missing files are skipped with warning"""
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project",
+            files=["missing-file.txt"]
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+
+        # When - mock Path.exists() to return False and capture logger
+        with patch('inspect_wandb.models.hooks.Path.exists', return_value=False), \
+             patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    run_id="test-run",
+                    exception=None,
+                    logs=[]
+                )
+            )
+
+        # Then
+        hooks.run.save.assert_not_called()
+        mock_logger.warning.assert_called_with("File or folder 'missing-file.txt' does not exist. Skipping wandb upload.")
+
+    @pytest.mark.asyncio
+    async def test_files_save_handles_exceptions(self, mock_wandb_run: Run) -> None:
+        """Test that exceptions during file save are handled gracefully"""
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.run.save.side_effect = Exception("Upload failed")
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project",
+            files=["test-file.txt"]
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+
+        # When - mock Path.exists() to return True and capture logger
+        with patch('inspect_wandb.models.hooks.Path.exists', return_value=True), \
+             patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    run_id="test-run",
+                    exception=None,
+                    logs=[]
+                )
+            )
+
+        # Then
+        hooks.run.save.assert_called_once_with("test-file.txt", policy="now")
+        mock_logger.warning.assert_called_with("Failed to save test-file.txt to wandb: Upload failed")
+
+    @pytest.mark.asyncio
+    async def test_multiple_files_mixed_existence(self, mock_wandb_run: Run) -> None:
+        """Test handling multiple files with mixed existence"""
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project",
+            files=["existing-file.txt", "missing-file.txt", "another-existing.txt"]
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+
+        # When - mock Path constructor to control exists() method
+        def mock_path_constructor(file_str):
+            mock_path = MagicMock()
+            mock_path.exists.return_value = file_str in ["existing-file.txt", "another-existing.txt"]
+            return mock_path
+
+        with patch('inspect_wandb.models.hooks.Path', side_effect=mock_path_constructor), \
+             patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    run_id="test-run",
+                    exception=None,
+                    logs=[]
+                )
+            )
+
+        # Then
+        assert hooks.run.save.call_count == 2
+        hooks.run.save.assert_any_call("existing-file.txt", policy="now")
+        hooks.run.save.assert_any_call("another-existing.txt", policy="now")
+        mock_logger.warning.assert_called_with("File or folder 'missing-file.txt' does not exist. Skipping wandb upload.")
 
     @pytest.mark.asyncio
     async def test_wandb_run_url_added_to_eval_metadata(self, mock_wandb_run: Run, task_end_eval_log: EvalLog) -> None:
