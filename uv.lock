@@ -1209,8 +1209,8 @@ wheels = [
 
 [[package]]
 name = "inspect-viz"
-version = "0.3.1"
-source = { registry = "https://pypi.org/simple" }
+version = "0.3.3.dev4"
+source = { git = "https://github.com/meridianlabs-ai/inspect_viz.git#3ed9bf7f31c079420396070eb4771dc755329536" }
 dependencies = [
     { name = "anywidget" },
     { name = "ipython" },
@@ -1224,10 +1224,6 @@ dependencies = [
     { name = "sniffio" },
     { name = "traitlets" },
     { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/91/036943194dbbf17fa6164499b6b105b77fc61e24cb057877280983e89dce/inspect_viz-0.3.1.tar.gz", hash = "sha256:96e6098c1f18771ba65a945d999ed36e30de3df2793979e8bd62da15df7d436a", size = 108436, upload-time = "2025-08-12T13:18:47.501Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/42/8814b7e5d83db46c433aba798684a58e98d99ccb3358bf0c7563e79f39a8/inspect_viz-0.3.1-py3-none-any.whl", hash = "sha256:efdd9bc68c691b4a7ab61aa3e84a4c8ee95037d88f6e73227c34d69b1de550d5", size = 160574, upload-time = "2025-08-12T13:18:45.995Z" },
 ]
 
 [[package]]
@@ -1271,7 +1267,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "inspect-ai", specifier = ">=0.3.118" },
-    { name = "inspect-viz", marker = "extra == 'viz'" },
+    { name = "inspect-viz", marker = "extra == 'viz'", git = "https://github.com/meridianlabs-ai/inspect_viz.git" },
     { name = "playwright", marker = "extra == 'viz'" },
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "pydantic-settings" },
