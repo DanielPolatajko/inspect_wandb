@@ -97,7 +97,7 @@ class TestWandBModelHooks:
     @pytest.mark.asyncio
     async def test_wandb_tags_updated_on_task_start_if_settings_tags_are_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
         """
-        Test that the on_task_start method adds settings tags to the WandB run tags.
+        Test that the on_task_start method adds settings tags to the run tags.
         """
         hooks = WandBModelHooks()
         mock_init = MagicMock(return_value=mock_wandb_run)
