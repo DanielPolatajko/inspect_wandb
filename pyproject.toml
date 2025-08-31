@@ -23,7 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 weave = ["weave == 0.52.1"]
 viz = [
-  "inspect_viz",
+  "inspect_viz @ git+https://github.com/meridianlabs-ai/inspect_viz.git",
   "playwright"
 ]
 

@@ -25,6 +25,8 @@ class ModelsSettings(BaseSettings):
     files: list[str] | None = Field(default=None, description="Files to upload to the models run. Paths should be relative to the wandb directory.")
     viz: bool = Field(default=False, description="Whether to enable the inspect_viz extra")
 
+    tags: list[str] | None = Field(default=None, description="Tags to add to the models run")
+
     @classmethod
     def settings_customise_sources(
         cls,

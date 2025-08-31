@@ -95,6 +95,31 @@ class TestWandBModelHooks:
             assert hooks.run.tags == ("inspect_task:test_task", "inspect_model:mockllm/model", "inspect_dataset:test-dataset")
 
     @pytest.mark.asyncio
+    async def test_wandb_tags_updated_on_task_start_if_settings_tags_are_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+        """
+        Test that the on_task_start method adds settings tags to the WandB run tags.
+        """
+        hooks = WandBModelHooks()
+        mock_init = MagicMock(return_value=mock_wandb_run)
+        task_start = create_task_start()
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project",
+            tags=["custom-tag1", "custom-tag2"]
+        )
+        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+            await hooks.on_task_start(task_start)
+
+            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            assert hooks._wandb_initialized is True
+            assert hooks.run is mock_wandb_run
+            hooks.run.config.update.assert_not_called()
+            hooks.run.define_metric.assert_called_once_with(step_metric=Metric.SAMPLES, name=Metric.ACCURACY)
+            expected_tags = ("inspect_task:test_task", "inspect_model:mockllm/model", "inspect_dataset:test-dataset", "custom-tag1", "custom-tag2")
+            assert hooks.run.tags == expected_tags
+
+    @pytest.mark.asyncio
     async def test_accuracy_and_samples_logged_on_sample_end(self, mock_wandb_run: Run) -> None:
         """
         Test that the on_sample_end method logs the accuracy and samples.
