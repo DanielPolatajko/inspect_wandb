@@ -216,19 +216,19 @@ The latter env var controls the Weave integration in the same manner.
 
 #### Script-Level Control (Highest Priority)
 
-For fine-grained control, you can override hook enablement settings at the script level using task metadata. This takes **highest priority** over all other configuration methods.
+For fine-grained control, you can override any settings at the script level using task metadata. This takes **highest priority** over all other configuration methods.
 With script:
 ```python
 eval(my_eval, 
   model="mockllm/model", 
   metadata={
-    "weave_enabled": True, 
-    "models_enabled": False
+    "inspect_wandb_weave_enabled": True, 
+    "inspect_wandb_models_enabled": False
     }
   )
 ```
 or with command:
-`inspect eval my_eval --metadata weave_enabled=True`
+`inspect eval my_eval --metadata inspect_wandb_weave_enabled=True`
 
 
 
