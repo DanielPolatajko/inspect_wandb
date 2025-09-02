@@ -83,7 +83,12 @@ class WandBModelHooks(Hooks):
         
         # Lazy initialization: only init WandB when first task starts
         if not self._wandb_initialized:
-            self.run = wandb.init(id=data.run_id, entity=self.settings.entity, project=self.settings.project) 
+            self.run = wandb.init(
+                id=data.run_id, 
+                entity=self.settings.entity, 
+                project=self.settings.project,
+                resume="allow"
+            ) 
 
             if self.settings.config:
                 self.run.config.update(self.settings.config)

@@ -1,7 +1,7 @@
 import pytest
 import configparser
 import os
-from typing import Callable
+from typing import Callable, Generator
 from pathlib import Path
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
@@ -52,7 +52,7 @@ def initialise_wandb(wandb_path: Path) -> None:
 ## Mock wandb/weave client calls
 
 @pytest.fixture(scope="function", autouse=True)
-def patch_wandb_client():
+def patch_wandb_client() -> Generator[tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock], None, None]:
     mock_config = MagicMock()
     mock_config.update = MagicMock()
     mock_summary = MagicMock()
@@ -70,7 +70,7 @@ def patch_wandb_client():
         yield mock_wandb_init, mock_save, mock_config, mock_summary, mock_log
 
 @pytest.fixture(scope="function")
-def reset_inspect_ai_hooks():
+def reset_inspect_ai_hooks() -> Generator[None, None, None]:
     hooks_startup_module._registry_hooks_loaded = False
     yield
     # reload settings for every test
@@ -146,7 +146,7 @@ def error_eval() -> Callable[[], Task]:
     Returns a mock Inspect eval plus a set of mocks that can be used to check that Weave was called correctly.
     """
     @task
-    def hello_world_with_error():
+    def hello_world():
         return Task(
             dataset=[
                 Sample(
@@ -159,7 +159,7 @@ def error_eval() -> Callable[[], Task]:
             metadata={"test": "test"}
         )
 
-    return hello_world_with_error
+    return hello_world
 
 
 ### Inspect Hooks DTOs
