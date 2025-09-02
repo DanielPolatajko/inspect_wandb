@@ -38,15 +38,15 @@ class ModelsSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
         Customise the priority of settings sources to prioritise as follows:
-        1. Environment variables (highest priority)
-        2. Wandb settings file (for entity/project)
-        3. Initial settings (programmatic overrides)
+        1. Initial settings (can be set via eval metadata fields)
+        2. Environment variables (highest priority)
+        3. Wandb settings file (for entity/project)
         4. Pyproject.toml (lowest priority)
         """
         return (
+            init_settings,
             env_settings, 
-            WandBSettingsSource(settings_cls),
-            init_settings, 
+            WandBSettingsSource(settings_cls), 
             PyprojectTomlConfigSettingsSource(settings_cls)
         )
 
@@ -82,15 +82,15 @@ class WeaveSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
         Customise the priority of settings sources to prioritise as follows:
-        1. Environment variables (highest priority)
-        2. Wandb settings file (for entity/project)
-        3. Initial settings (programmatic overrides)
+        1. Initial settings (can be set via eval metadata fields)
+        2. Environment variables (highest priority)
+        3. Wandb settings file (for entity/project)
         4. Pyproject.toml (lowest priority)
         """
         return (
+            init_settings,
             env_settings, 
             WandBSettingsSource(settings_cls),
-            init_settings, 
             PyprojectTomlConfigSettingsSource(settings_cls)
         )
 
