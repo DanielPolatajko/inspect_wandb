@@ -1,8 +1,9 @@
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
-on: push
-branches:
-  - refs/tags/*
+on: 
+  push:
+    branches:
+      - refs/tags/*
 
 jobs:
   build:
