@@ -4,7 +4,7 @@ import weave
 from weave.integrations.patcher import SymbolPatcher, MultiPatcher
 from weave.trace.autopatch import AutopatchSettings, IntegrationSettings
 from pydantic import Field
-from typing import Callable
+from typing import Callable, cast
 
 import anyio
 from inspect_ai.dataset import Sample
@@ -89,33 +89,40 @@ async def patched_task_run_sample(
 ) -> dict[str, SampleScore] | None:
 
     patched_plan = PatchedPlan(plan.steps, plan.finish, plan.cleanup, plan.name, internal=True)
+    
+    # Create patched scorers with thread context (bulk approach)
+    if scorers:
+        with weave.thread(thread_id=str(state.uuid)):
+            patched_scorers = [cast(Scorer, weave.op(name=registry_info(scorer).name)(scorer)) for scorer in scorers]
+    else:
+        patched_scorers = None
 
     return await task_run_sample(
-        task_name=task_name,
-        log_location=log_location,
-        sample=sample,
-        state=state,
-        sandbox=sandbox,
-        max_sandboxes=max_sandboxes,
-        sandbox_cleanup=sandbox_cleanup,
-        plan=patched_plan,
-        scorers=scorers,
-        generate=generate,
-        progress=progress,
-        logger=logger,
-        log_images=log_images,
-        sample_source=sample_source,
-        sample_error=sample_error,
-        sample_complete=sample_complete,
-        fails_on_error=fails_on_error,
-        retry_on_error=retry_on_error,
-        error_retries=error_retries,
-        time_limit=time_limit,
-        working_limit=working_limit,
-        semaphore=semaphore,
-        run_id=run_id,
-        task_id=task_id,
-    )
+            task_name=task_name,
+            log_location=log_location,
+            sample=sample,
+            state=state,
+            sandbox=sandbox,
+            max_sandboxes=max_sandboxes,
+            sandbox_cleanup=sandbox_cleanup,
+            plan=patched_plan,
+            scorers=patched_scorers,
+            generate=generate,
+            progress=progress,
+            logger=logger,
+            log_images=log_images,
+            sample_source=sample_source,
+            sample_error=sample_error,
+            sample_complete=sample_complete,
+            fails_on_error=fails_on_error,
+            retry_on_error=retry_on_error,
+            error_retries=error_retries,
+            time_limit=time_limit,
+            working_limit=working_limit,
+            semaphore=semaphore,
+            run_id=run_id,
+            task_id=task_id,
+        )
 
 
 inspect_patcher = MultiPatcher(
