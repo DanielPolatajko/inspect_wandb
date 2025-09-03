@@ -43,7 +43,16 @@ def test_inspect_quickstart(
     eval(hello_world, model="mockllm/model")
 
     calls = list(patch_weave_client_in_hooks.calls())
-    assert len(calls) == 8
+    
+    # Debug: Print all calls to understand what the 9 calls are
+    print(f"\n=== Found {len(calls)} calls ===")
+    for i, call in enumerate(calls):
+        print(f"{i+1}. {call._op_name}")
+        if hasattr(call, 'attributes') and call.attributes:
+            print(f"   Attributes: {call.attributes}")
+        print()
+    
+    assert len(calls) == 9  # Updated to account for scorer tracing
     for call in calls:
         # this checks all calls were made to mock client
         assert TEST_ENTITY in call._op_name

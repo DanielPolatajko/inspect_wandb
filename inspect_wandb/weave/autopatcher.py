@@ -90,10 +90,13 @@ async def patched_task_run_sample(
 
     patched_plan = PatchedPlan(plan.steps, plan.finish, plan.cleanup, plan.name, internal=True)
     
-    # Create patched scorers with thread context (bulk approach)
+    # Create patched scorers with thread context (individual approach)
     if scorers:
-        with weave.thread(thread_id=str(state.uuid)):
-            patched_scorers = [cast(Scorer, weave.op(name=registry_info(scorer).name)(scorer)) for scorer in scorers]
+        patched_scorers = []
+        for scorer in scorers:
+            with weave.thread(thread_id=str(state.uuid)):
+                scorer_op = cast(Scorer, weave.op(name=registry_info(scorer).name)(scorer))
+            patched_scorers.append(scorer_op)
     else:
         patched_scorers = None
 
