@@ -99,7 +99,6 @@ class WeaveEvaluationHooks(Hooks):
             eval_attributes=self._get_eval_metadata(data)
         )
         
-        # Store logger with task_id as key
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
         
         # Store task name mapping for use in sample hooks
