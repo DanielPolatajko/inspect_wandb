@@ -32,8 +32,6 @@ uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_w
 
 And to install WandB Models, WandB Weave and Viz **(experimental)**: 
 
-> **Note** correct installation is not currently confirmed
-
 **pip**
 ```bash
 pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"

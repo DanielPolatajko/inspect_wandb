@@ -47,7 +47,7 @@ uv run inspect eval inspect_evals/gpqa_diamond --model anthropic/claude-3-5-haik
 which will run `claude-3-5-haiku-latest` on the first 10 questions of `GPQA_DIAMOND` (for 4 epochs, which is the default for this eval).
 Once the eval completes, you should see in your console output a line like:
 ```bash
-wandb:  View project at: https://wandb.ai/danielpolatajko-mars/docs-tutorial
+wandb:  View project at: https://wandb.ai/your-team-name/your-proj-name
 ```
 Going to that link, your view should look something like:
 ![initial view](img/initial.png)
@@ -57,7 +57,7 @@ I ran a couple more evals using `uv run inspect eval inspect_evals/...` so we'll
 
 ### WandB Models: Workspace
 The current primary aim of the WandB Models integration is to auto-log information about a run so it can be reproduced and further investigated if needed.
-The rule of thumb is that one `inspect eval ...` = 1 run in WandB Models. So even if you execute multiple models or dataset, with one `inspect eval ...` command, all the data will belong to a single WandB Models run. 
+The rule of thumb is that one `inspect eval ...` or `inspect eval-set ...` = 1 run in WandB Models. So even if you execute multiple models or dataset, with one `inspect eval ...` command, all the data will belong to a single WandB Models run. 
 
 Your workspace tab might look something like:
 ![](img/workspace.png)
@@ -118,7 +118,6 @@ we see:
 which shows various comparison metrics between gpt-4o and claude-3.7-sonnet on `agentharm`.
 It is also possible to compare multiple models on the same and different evals.
 
-> **Known Issue:** Comparison functionality may not work as expected. See [issue #92](https://github.com/DanielPolatajko/inspect_wandb/issues/92#issuecomment-3218202638) for details.
 
 ### Inspect WandB Weave: obtaining reproducibility info from an eval of interest
 Once having filtered and found an eval of interest in WandB Weave UI, click on the eval from the list > `Summary` > Scroll down and click on to `Inspect` > `run_id`. This is the same `run_id` that is used to index WandB Models runs, from which we have already shown how to retrieve reproducibility information.  
