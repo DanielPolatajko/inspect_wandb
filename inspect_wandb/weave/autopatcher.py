@@ -26,7 +26,7 @@ class PatchedPlan(Plan):
     async def __call__(self, state: TaskState, generate: Generate) -> TaskState:
         try:
             # execute steps
-            for index, solver in enumerate(self.steps):
+            for _, solver in enumerate(self.steps):
 
                 # run solver
                 async with solver_transcript(solver, state) as st:
