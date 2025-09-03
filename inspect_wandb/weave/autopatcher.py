@@ -24,41 +24,39 @@ from inspect_ai._util.registry import registry_info
 
 class PatchedPlan(Plan):
     async def __call__(self, state: TaskState, generate: Generate) -> TaskState:
-        with weave.thread(thread_id=str(state.uuid)):
+        try:
+            # execute steps
+            for index, solver in enumerate(self.steps):
 
-            try:
-                # execute steps
-                for index, solver in enumerate(self.steps):
+                # run solver
+                async with solver_transcript(solver, state) as st:
+                    solver_name = registry_info(solver).name
+                    state = await weave.op(name=solver_name)(solver)(state, generate)
+                    st.complete(state)
 
-                    # run solver
-                    async with solver_transcript(solver, state) as st:
-                        solver_name = registry_info(solver).name
-                        state = await weave.op(name=solver_name)(solver)(state, generate)
-                        st.complete(state)
+                # check for completed
+                if state.completed:
+                    # exit loop
+                    break
 
-                    # check for completed
-                    if state.completed:
-                        # exit loop
-                        break
+            # execute finish
+            if self.finish:
+                async with solver_transcript(self.finish, state) as st:
+                    finish_name = registry_info(self.finish).name
+                    state = await weave.op(name=finish_name)(self.finish)(state, generate)
+                    st.complete(state)
 
-                # execute finish
-                if self.finish:
-                    async with solver_transcript(self.finish, state) as st:
-                        finish_name = registry_info(self.finish).name
-                        state = await weave.op(name=finish_name)(self.finish)(state, generate)
-                        st.complete(state)
+        finally:
+            # always do cleanup if we have one
+            if self.cleanup:
+                try:
+                    await weave.op(name="inspect_sample_cleanup")(self.cleanup)(state)
+                except Exception as ex:
+                    logger.warning(
+                        f"Exception occurred during plan cleanup: {ex}", exc_info=ex
+                    )
 
-            finally:
-                # always do cleanup if we have one
-                if self.cleanup:
-                    try:
-                        await weave.op(name="inspect_sample_cleanup")(self.cleanup)(state)
-                    except Exception as ex:
-                        logger.warning(
-                            f"Exception occurred during plan cleanup: {ex}", exc_info=ex
-                        )
-
-            return state
+        return state
 
 async def patched_task_run_sample(
     *,
@@ -90,12 +88,11 @@ async def patched_task_run_sample(
 
     patched_plan = PatchedPlan(plan.steps, plan.finish, plan.cleanup, plan.name, internal=True)
     
-    # Create patched scorers with thread context (individual approach)
+    # Create patched scorers
     if scorers:
         patched_scorers = []
         for scorer in scorers:
-            with weave.thread(thread_id=str(state.uuid)):
-                scorer_op = cast(Scorer, weave.op(name=registry_info(scorer).name)(scorer))
+            scorer_op = cast(Scorer, weave.op(name=registry_info(scorer).name)(scorer))
             patched_scorers.append(scorer_op)
     else:
         patched_scorers = None
