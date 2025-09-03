@@ -1,6 +1,8 @@
 # `inspect_wandb`
 Integration with [Inspect](https://inspect.aisi.org.uk/) and Weights & Biases. Initially, this integration was focused primarily on [Weave](https://weave-docs.wandb.ai/), but we are also expanding to include the [wandb Models API](https://docs.wandb.ai/guides/models/)
 
+[![Publish Python 🐍 distribution 📦 to TestPyPI](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/test-build-and-publish.yml/badge.svg)](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/test-build-and-publish.yml)
+
 ## Demo Video
 
 <div>
