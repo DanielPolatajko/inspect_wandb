@@ -6,7 +6,7 @@
             "name": "Debug Inspect",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv_test/bin/inspect", // Replace inspect_weave_venv with your venv
+            "program": "${workspaceFolder}/inspect_wandb_venv_test/bin/inspect", // Replace inspect_wandb_test_venv with your venv
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",
@@ -19,6 +19,21 @@
             "env": {
                 "INSPECT_WANDB_WEAVE_AUTOPATCH": "true"
             }
+        },
+        {
+            "name": "Debug Inspect (Windows)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_wandb_venv with your venv
+            "console": "integratedTerminal",
+            "args": [ // add whatever args you want to pass to inspect
+                "eval",
+                "test.py",
+                "--limit",
+                "5"
+            ],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
         },
         {
             "name": "Python: Current File",
