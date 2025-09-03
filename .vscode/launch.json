@@ -6,11 +6,35 @@
             "name": "Debug Inspect",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv_test/bin/inspect", // Replace inspect_weave_venv with your venv
+            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_weave_venv with your venv
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",
                 "hellaswag.py",
+                "--limit",
+                "5"
+            ],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "env": {
+                "INSPECT_WANDB_WEAVE_AUTOPATCH": "true"
+            }
+        },
+        {
+            "name": "Debug Inspect (eval-set)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_weave_venv with your venv
+            "console": "integratedTerminal",
+            "args": [ // add whatever args you want to pass to inspect
+                "eval-set",
+                "test.py",
+                "--log-dir",
+                "test_logs",
+                "--model",
+                "openai/gpt-4o-mini,anthropic/claude-sonnet-4-0",
+                "--metadata",
+                "'{\"inspect_wandb_models_tags\": [\"test\"]}'",
                 "--limit",
                 "5"
             ],
