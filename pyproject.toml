@@ -33,6 +33,7 @@ dev = ["pytest", "ruff", "mypy", "pre-commit", "pytest-asyncio"]
 [project.urls]
 Homepage = "https://github.com/DanielPolatajko/inspect_wandb"
 Issues = "https://github.com/DanielPolatajko/inspect_wandb/issues"
+Documentation = "https://inspect-wandb.readthedocs.io/en/latest/"
 
 [build-system]
 requires = ["setuptools"]
