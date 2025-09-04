@@ -5,27 +5,22 @@ from unittest.mock import MagicMock, patch
 from inspect_ai import Task, eval_set, task
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import exact
-from inspect_ai.solver import Solver, TaskState, Generate, solver
-from inspect_wandb.config.settings import ModelsSettings
+from inspect_ai.solver import Solver, TaskState, Generate, solver, generate
+from inspect_wandb.config.settings import ModelsSettings, WeaveSettings
 from inspect_ai._util.registry import registry_find
 import inspect_ai.hooks._startup as hooks_startup_module
 from typing import Generator
-
+from inspect_wandb.shared.utils import format_wandb_id_string
+from uuid import uuid4
+from typing import Sequence
 
 @solver
-def failing_solver_that_retries() -> Solver:
+def failing_solver_that_retries(fail: Sequence[bool]) -> Solver:
     """Solver that fails on first few attempts but succeeds eventually."""
-    call_count = 0
-    
     async def solve(state: TaskState, generate: Generate) -> TaskState:
-        nonlocal call_count
-        call_count += 1
-        
-        if call_count <= 2:  # Fail first 2 attempts
-            raise RuntimeError(f"Simulated failure attempt {call_count}")
-        
-        # Success on 3rd attempt
-        state.output = "Hello World"
+        should_fail = iter(fail)
+        if should_fail:
+            raise ValueError("Simulated failure attempt")
         return state
     
     return solve
@@ -36,6 +31,7 @@ def failing_retry_eval() -> Callable[[], Task]:
     """Returns an eval that fails initially but succeeds on retry."""
     @task
     def retry_task():
+        failures = [True, False]
         return Task(
             dataset=[
                 Sample(
@@ -43,7 +39,7 @@ def failing_retry_eval() -> Callable[[], Task]:
                     target="Hello World",
                 )
             ],
-            solver=[failing_solver_that_retries()],
+            solver=[failing_solver_that_retries(failures), generate()],
             scorer=exact(),
             metadata={"test": "retry_scenario"}
         )
@@ -94,25 +90,33 @@ class TestWandBModelHooksE2ERetryScenarios:
                 project="test-project"
             )
             mock_loader.return_value.models = enabled_settings
+            mock_loader.return_value.weave = WeaveSettings(
+                enabled=False,
+                entity="test-entity",
+                project="test-project"
+            )
 
             # When
+            uid = str(uuid4())
             logs = eval_set(
                 tasks=[failing_retry_eval()],
-                log_dir=str(tmp_path),
-                retry_attempts=3,
+                log_dir=str(tmp_path / uid),
+                retry_attempts=2,
+                retry_wait=1.0,
                 model="mockllm/model",
-                fail_on_error=False
+                display="plain"
             )
             
             # Then
-            assert mock_wandb_init.call_count >= 1
+            assert mock_wandb_init.call_count == 2
             
-            if mock_wandb_init.call_count > 1:
-                run_ids = [call[1]['id'] for call in mock_wandb_init.call_args_list]
-                
-                assert len(set(run_ids)) == 1, f"Expected all retries to use same run_id, got: {run_ids}"
+            eval_set_ids = [call[1]['id'] for call in mock_wandb_init.call_args_list]
+
+            assert len(set(eval_set_ids)) == 1
             
-            assert len(logs) >= 1
+            assert eval_set_ids[0] == format_wandb_id_string(str(tmp_path / uid))
+            
+            assert len(logs) == 2
 
     def test_wandb_uses_same_run_id_when_rerunning_same_log_dir(
         self,
@@ -149,6 +153,11 @@ class TestWandBModelHooksE2ERetryScenarios:
                 project="test-project"
             )
             mock_loader.return_value.models = enabled_settings
+            mock_loader.return_value.weave = WeaveSettings(
+                enabled=False,
+                entity="test-entity",
+                project="test-project"
+            )
 
             # When            
             logs1 = eval_set(
@@ -184,8 +193,8 @@ class TestWandBModelHooksE2ERetryScenarios:
             second_run_id = mock_wandb_init.call_args_list[0][1]['id']
             assert first_run_id == second_run_id, f"Expected same run_id for same log_dir, got {first_run_id} != {second_run_id}"
             
-            assert len(logs1) >= 1
-            assert len(logs2) >= 1
+            assert len(logs1) == 2
+            assert len(logs2) == 2
 
     def test_wandb_uses_different_run_id_for_different_log_dirs(
         self,
@@ -226,12 +235,17 @@ class TestWandBModelHooksE2ERetryScenarios:
                 project="test-project"
             )
             mock_loader.return_value.models = enabled_settings
+            mock_loader.return_value.weave = WeaveSettings(
+                enabled=False,
+                entity="test-entity",
+                project="test-project"
+            )
 
             # When
             eval_set(
                 tasks=[hello_world_eval()],
                 log_dir=str(temp_dir1),
-                model="mockllm/model"
+                model="mockllm/model",
             )
             
             first_run_id = mock_wandb_init.call_args_list[0][1]['id']
@@ -280,6 +294,11 @@ class TestWandBModelHooksE2ERetryScenarios:
                 project="test-project"
             )
             mock_loader.return_value.models = disabled_settings
+            mock_loader.return_value.weave = WeaveSettings(
+                enabled=False,
+                entity="test-entity",
+                project="test-project"
+            )
 
             # When
             logs = eval_set(

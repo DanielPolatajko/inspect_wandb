@@ -123,7 +123,9 @@ class WandBModelHooks(Hooks):
             wandb_run_id = data.eval_id
         
         # Lazy initialization: only init WandB when first task starts
+        print(self._wandb_initialized)
         if not self._wandb_initialized:
+            print("Initializing WandB...")
             self.run = wandb.init(
                 id=wandb_run_id, 
                 name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
@@ -143,18 +145,18 @@ class WandBModelHooks(Hooks):
             self._wandb_initialized = True
             logger.info(f"WandB initialized for task {data.spec.task}")
         
-        inspect_tags = (
-            f"inspect_task:{data.spec.task}",
-            f"inspect_model:{data.spec.model}",
-            f"inspect_dataset:{data.spec.dataset.name}",
-        )
-        if self.run.tags:
-            self.run.tags = self.run.tags + inspect_tags
-        else:
-            self.run.tags = inspect_tags
+            inspect_tags = (
+                f"inspect_task:{data.spec.task}",
+                f"inspect_model:{data.spec.model}",
+                f"inspect_dataset:{data.spec.dataset.name}",
+            )
+            if self.run.tags:
+                self.run.tags = self.run.tags + inspect_tags
+            else:
+                self.run.tags = inspect_tags
 
-        if self.settings.tags is not None and self.run.tags is not None:
-            self.run.tags = self.run.tags + tuple(self.settings.tags)
+            if self.settings.tags is not None and self.run.tags is not None:
+                self.run.tags = self.run.tags + tuple(self.settings.tags)
 
     
     @override
