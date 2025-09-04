@@ -1,4 +1,5 @@
-from inspect_wandb.weave.utils import format_model_name, format_score_types, format_sample_display_name
+from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
+from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
 import pytest
 import re
 

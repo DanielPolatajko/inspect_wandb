@@ -21,6 +21,29 @@
             }
         },
         {
+            "name": "Debug Inspect (eval-set)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_weave_venv with your venv
+            "console": "integratedTerminal",
+            "args": [ // add whatever args you want to pass to inspect
+                "eval-set",
+                "test.py",
+                "--log-dir",
+                "test_logs-2",
+                "--model",
+                "openai/gpt-4o-mini,anthropic/claude-sonnet-4-0",
+                "--metadata",
+                "'{\"inspect_wandb_models_tags\": [\"test\"]}'",
+                "--limit",
+                "5",
+                "--display",
+                "plain"
+            ],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+        },
+        {
             "name": "Debug Inspect (Windows)",
             "type": "debugpy",
             "request": "launch",

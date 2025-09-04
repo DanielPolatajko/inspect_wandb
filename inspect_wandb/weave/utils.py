@@ -5,9 +5,6 @@ from logging import getLogger
 
 utils_logger = getLogger(__name__)
 
-def format_model_name(model_name: str) -> str:
-    return model_name.replace("/", "__").replace("-", "_").replace(".", "__").replace(":", "__").replace("@", "__")
-
 def format_score_types(score_value: Value) -> ScoreType:
     if isinstance(score_value, str):
         return {"score": score_value}

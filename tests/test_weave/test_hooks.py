@@ -34,6 +34,7 @@ class TestWeaveEvaluationHooks:
         hooks.settings = test_settings
         hooks._hooks_enabled = True  # Enable hooks for this test
         sample = SampleEnd(
+            eval_set_id=None,
             run_id="test_run_id",
             eval_id="test_eval_id",
             sample_id="test_sample_id",
@@ -74,6 +75,7 @@ class TestWeaveEvaluationHooks:
         hooks.settings = test_settings
         hooks._hooks_enabled = True  # Enable hooks for this test
         sample = SampleEnd(
+            eval_set_id=None,
             run_id="test_run_id",
             eval_id="test_eval_id",
             sample_id="test_sample_id",
@@ -114,6 +116,7 @@ class TestWeaveEvaluationHooks:
         hooks.settings = test_settings
         hooks._hooks_enabled = True  # Enable hooks for this test
         task_end = TaskEnd(
+            eval_set_id=None,
             run_id="test_run_id",
             eval_id="test_eval_id",
             log=task_end_eval_log
@@ -146,6 +149,7 @@ class TestWeaveEvaluationHooks:
         hooks._weave_initialized = True  # Mark as initialized for cleanup
         hooks.weave_client = MagicMock(spec=WeaveClient)
         task_end = RunEnd(
+            eval_set_id=None,
             run_id="test_run_id",
             logs=EvalLogs([]),       
             exception=e
@@ -178,6 +182,7 @@ class TestWeaveEvaluationHooks:
         hooks.task_mapping["test_eval_id"] = "test_task"
         
         sample = SampleStart(
+            eval_set_id=None,
             run_id="test_run_id",
             eval_id="test_eval_id",
             sample_id="test_sample_id",
@@ -323,11 +328,14 @@ class TestWeaveEnablementPriority:
         hooks.weave_eval_loggers["test_eval_id"]._evaluate_call.ui_url = "test_url"
         
         # When
-        await hooks.on_task_end(TaskEnd(
-            run_id="test_run_id",
-            eval_id="test_eval_id",
-            log=task_end_eval_log
-        ))
+        await hooks.on_task_end(
+            TaskEnd(
+                eval_set_id="test_eval_set_id",
+                run_id="test_run_id",
+                eval_id="test_eval_id",
+                log=task_end_eval_log
+            )
+        )
 
         # Then
         assert task_end_eval_log.eval.metadata["weave_run_url"] == "test_url"

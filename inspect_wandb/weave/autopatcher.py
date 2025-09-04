@@ -82,6 +82,7 @@ async def patched_task_run_sample(
     time_limit: int | None,
     working_limit: int | None,
     semaphore: anyio.Semaphore | None,
+    eval_set_id: str | None,
     run_id: str,
     task_id: str,
 ) -> dict[str, SampleScore] | None:
@@ -111,6 +112,7 @@ async def patched_task_run_sample(
         time_limit=time_limit,
         working_limit=working_limit,
         semaphore=semaphore,
+        eval_set_id=eval_set_id,
         run_id=run_id,
         task_id=task_id,
     )
