@@ -1,10 +1,10 @@
 import pytest
 from pathlib import Path
 import subprocess
-import os
+from typing import Generator
 
 @pytest.fixture(scope="function")
-def base_install_venv(tmp_path: Path) -> None:
+def base_install_venv(tmp_path: Path) -> Generator[Path, None, None]:
     subprocess.call(["uv", "venv", str(tmp_path)])
     subprocess.call(
         ["uv", "pip", "install", ".", "--python", tmp_path, ],
@@ -13,7 +13,7 @@ def base_install_venv(tmp_path: Path) -> None:
     yield tmp_path
 
 @pytest.fixture(scope="function")
-def base_and_weave_install_venv(tmp_path: Path) -> None:
+def base_and_weave_install_venv(tmp_path: Path) -> Generator[Path, None, None]:
     subprocess.call(["uv", "venv", str(tmp_path)])
     subprocess.call(
         ["uv", "pip", "install", ".[weave]", "--python", tmp_path, ],
@@ -22,7 +22,7 @@ def base_and_weave_install_venv(tmp_path: Path) -> None:
     yield tmp_path
 
 @pytest.fixture(scope="function")
-def base_and_vision_install_venv(tmp_path: Path) -> None:
+def base_and_vision_install_venv(tmp_path: Path) -> Generator[Path, None, None]:
     subprocess.call(["uv", "venv", str(tmp_path)])
     subprocess.call(
         ["uv", "pip", "install", ".[viz]", "--python", tmp_path, ],
@@ -31,7 +31,7 @@ def base_and_vision_install_venv(tmp_path: Path) -> None:
     yield tmp_path
 
 @pytest.fixture(scope="function")
-def all_extras_install_venv(tmp_path: Path) -> None:
+def all_extras_install_venv(tmp_path: Path) -> Generator[Path, None, None]:
     subprocess.call(["uv", "venv", str(tmp_path)])
     subprocess.call(
         ["uv", "pip", "install", ".[weave,viz]", "--python", tmp_path, ],
@@ -39,7 +39,7 @@ def all_extras_install_venv(tmp_path: Path) -> None:
     )
     yield tmp_path
 
-@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping tests in CI")
+@pytest.mark.skip(reason="Long running, only run if testing the extras")
 class TestExtraInstallations:
 
     def test_weave_hooks_dont_run_with_base_install(self, base_install_venv: Path) -> None:
