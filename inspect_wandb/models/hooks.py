@@ -4,11 +4,12 @@ from typing import Any
 from typing_extensions import override
 
 import wandb
-from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, TaskEnd
+from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, TaskEnd, EvalSetStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings_loader import SettingsLoader
 from inspect_wandb.config.settings import ModelsSettings
+from inspect_wandb.shared.utils import format_wandb_id_string
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
@@ -26,6 +27,7 @@ class WandBModelHooks(Hooks):
     _correct_samples: int = 0
     _total_samples: int = 0
     _wandb_initialized: bool = False
+    _is_eval_set: bool = False
     _hooks_enabled: bool | None = None
 
     def __init__(self):
@@ -39,6 +41,15 @@ class WandBModelHooks(Hooks):
         self._load_settings()
         assert self.settings is not None
         return self.settings.enabled
+
+    @override
+    async def on_eval_set_start(self, data: EvalSetStart) -> None:
+        """
+        Hook to run at the start of an eval set.
+        Sets a flag to indicate that this is an eval set run, and adds log_dir to state
+        """
+        self._is_eval_set = True
+        self.eval_set_log_dir = data.log_dir
     
     @override
     async def on_run_end(self, data: RunEnd) -> None:
@@ -87,7 +98,12 @@ class WandBModelHooks(Hooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
-        # Ensure settings are loaded
+        """
+        Hook to run at the start of each inspect task.
+        Initializes WandB run if not already initialized.
+        Updates tags, config, and other metadata based on user-provided settings.
+        """
+
         self._load_settings()
         assert self.settings is not None
         
@@ -101,15 +117,24 @@ class WandBModelHooks(Hooks):
             logger.info(f"WandB model hooks disabled for run (task: {data.spec.task})")
             return
         
+        if self._is_eval_set:
+            wandb_run_id = format_wandb_id_string(self.eval_set_log_dir)
+        else:
+            wandb_run_id = data.eval_id
+        
         # Lazy initialization: only init WandB when first task starts
         if not self._wandb_initialized:
             self.run = wandb.init(
-                id=data.eval_id, 
+                id=wandb_run_id, 
+                name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
                 entity=self.settings.entity, 
                 project=self.settings.project,
                 resume="allow",
-                settings=wandb.Settings(console="off"),
             ) 
+
+            if self.run.summary:
+                self._total_samples = int(self.run.summary.get("samples_total", 0))
+                self._correct_samples = int(self.run.summary.get("samples_correct", 0))
 
             if self.settings.config:
                 self.run.config.update(self.settings.config)
