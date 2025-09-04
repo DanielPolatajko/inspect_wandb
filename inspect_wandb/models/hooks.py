@@ -85,6 +85,8 @@ class WandBModelHooks(Hooks):
         if not self._wandb_initialized:
             self.run = wandb.init(id=data.run_id, entity=self.settings.entity, project=self.settings.project) 
 
+            if self.settings.add_metadata_to_config and data.spec.metadata is not None:
+                self.run.config.update({k: v for k,v in data.spec.metadata.items() if k != "inspect_wandb_models_config"})
             if self.settings.config:
                 self.run.config.update(self.settings.config)
 
