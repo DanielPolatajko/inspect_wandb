@@ -17,11 +17,6 @@ from weave.evaluation.eval_imperative import EvaluationLogger
 from inspect_ai.hooks import TaskStart
 from inspect_ai.log import EvalSpec, EvalConfig, EvalDataset, EvalLog, EvalResults, EvalScore, EvalMetric
 from datetime import datetime
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-pytest_plugins = ["tests.conftest_weave_client"]
 
 ## Setup wandb directory and settings
 

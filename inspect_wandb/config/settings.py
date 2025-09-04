@@ -68,7 +68,7 @@ class WeaveSettings(BaseSettings):
     project: str = Field(alias="WANDB_PROJECT", description="Project to write to for the Weave integration")
     entity: str = Field(alias="WANDB_ENTITY", description="Entity to write to for the Weave integration")
 
-    autopatch: bool = Field(default=False, description="Whether to automatically patch Inspect with Weave calls for tracing")
+    autopatch: bool = Field(default=True, description="Whether to automatically patch Inspect with Weave calls for tracing")
     sample_name_template: str = Field(default="{task_name}-sample-{sample_id}-epoch-{epoch}", description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}")
 
     @classmethod

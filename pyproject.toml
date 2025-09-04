@@ -21,18 +21,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-weave = ["weave == 0.52.1"]
+weave = ["weave >= 0.52.1"]
 viz = [
-  "inspect_viz @ git+https://github.com/meridianlabs-ai/inspect_viz.git",
+  "inspect-viz",
   "playwright"
 ]
 
 [dependency-groups]
-dev = ["pytest", "ruff", "mypy", "pre-commit", "clickhouse-connect", "ddtrace", "opentelemetry-proto", "sqlparse", "boto3", "azure-storage-blob", "google-cloud-storage", "confluent-kafka", "emoji", "pytest-asyncio"]
+dev = ["pytest", "ruff", "mypy", "pre-commit", "pytest-asyncio"]
 
 [project.urls]
 Homepage = "https://github.com/DanielPolatajko/inspect_wandb"
 Issues = "https://github.com/DanielPolatajko/inspect_wandb/issues"
+Documentation = "https://inspect-wandb.readthedocs.io/en/latest/"
 
 [build-system]
 requires = ["setuptools"]
