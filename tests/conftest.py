@@ -164,6 +164,7 @@ def create_task_start() -> Callable[[dict | None], TaskStart]:
     """Helper to create TaskStart with optional metadata"""
     def _create_task_start(metadata: dict | None = None) -> TaskStart:
         return TaskStart(
+            eval_set_id="test_eval_set_id",
             run_id="test_run_id",
             eval_id="test_eval_id",
             spec=EvalSpec(
@@ -183,6 +184,7 @@ def create_task_start() -> Callable[[dict | None], TaskStart]:
 def task_end_eval_log() -> EvalLog:
     return EvalLog(
         eval=EvalSpec(
+            eval_set_id="test_eval_set_id",
             run_id="test_run_id",
             task_id="test_task_id",
             created=datetime.now().isoformat(),
