@@ -30,7 +30,9 @@
                 "eval",
                 "test.py",
                 "--limit",
-                "5"
+                "5",
+                "--metadata",
+                "inspect_wandb_weave_enabled=false"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
