@@ -48,6 +48,7 @@ def test_inspect_quickstart(
     # check for inspect AI patched calls
     assert "sample" in calls[1].name
     assert "inspect_ai/generate" in calls[2].name
+    assert "scorer_inspect_ai/exact" in calls[3].name
 
     # reset the env variables
     monkeypatch.delenv("INSPECT_WANDB_MODELS_ENABLED")
