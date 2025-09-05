@@ -40,24 +40,24 @@ To install Models and Weave
 
 __pip__
 ```bash
-pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave]"
+pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 __uv__
 ```bash
-uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave]"
+uv pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 And to install Models, Weave and Viz
 
 __pip__
 ```bash
-pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"
+pip install "inspect_wandb[weave,viz] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 __uv__
 ```bash
-uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"
+uv pip install "inspect_wandb[weave,viz] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 If you intend to use the Viz integration, you also need to subsequently install `chromium` with:
