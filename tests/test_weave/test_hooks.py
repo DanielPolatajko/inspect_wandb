@@ -230,7 +230,7 @@ class TestWeaveEnablementPriority:
         """Test _check_enable_override returns False when metadata has weave_enabled: false"""
         # Given
         hooks = WeaveEvaluationHooks()
-        task_start = create_task_start({"enabled": False})
+        task_start = create_task_start({"inspect_wandb_weave_enabled": False})
         
         # When
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
