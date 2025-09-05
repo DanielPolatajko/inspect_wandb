@@ -102,15 +102,17 @@ Clicking on Playground at the top right takes one to an interactive chat view wh
 ### Comparing evals
 To run multiple evals on the same dataset you can:
 ```bash
-uv run inspect eval inspect_evals/agentharm --model openai/gpt-4o,anthropic/claude-3.7-sonnet-latest
+uv run inspect eval inspect_evals/agentharm --model anthropic/claude-3-7-sonnet-latest,anthropic/claude-3-haiku-20240307 --max-connections 30
 ```
+> Note: Anthropic API seems to support fewer max-connections than OA API and restricted max-connections manually is often good practice 
 Marking two evals on the left and clicking compare:
-![](img/compare-enter.png)
+![](image.png)
 we see:
 ![](img/compare.png)
-which shows various comparison metrics between gpt-4o and claude-3.7-sonnet on agentharm.
+which shows various comparison metrics between claude-3.7 and claude-3.5-haiku on agentharm. 
+We see comparison of the models across different scorers in 3 different chart types, and generally see 3.7 gets higher scores which is expected since its more capable. 
+ 
 
-> **Known Issue:** Comparison functionality may not work as expected. See [issue #92](https://github.com/DanielPolatajko/inspect_wandb/issues/92#issuecomment-3218202638) for details.
 
 ### Inspect Weave: obtaining reproducibility info from an eval of interest
 Once having filtered and found an eval of interest in Weave UI, click on the eval > Summary > Scroll down and click on to Inspect > `run_id`. This is the same `run_id` that is used to index WandB Models runs, from which we have already shown how to retrieve reproducibility information.  
