@@ -13,7 +13,7 @@
 
 ### New Contributors
 
-- @DanielPolatajko
-- @Esther-Guo
-- @scottire
-- @GnarlyMshtep
+- [@DanielPolatajko](https://github.com/DanielPolatajko)
+- [@Esther-Guo](https://github.com/Esther-Guo)
+- [@scottire](https://github.com/scottire)
+- [@GnarlyMshtep](https://github.com/GnarlyMshtep)
