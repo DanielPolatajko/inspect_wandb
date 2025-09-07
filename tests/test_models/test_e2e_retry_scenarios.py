@@ -9,7 +9,6 @@ from inspect_ai.solver import Solver, TaskState, Generate, solver, generate
 from inspect_wandb.config.settings import ModelsSettings, WeaveSettings
 from inspect_ai._util.registry import registry_find
 import inspect_ai.hooks._startup as hooks_startup_module
-from typing import Generator
 from inspect_wandb.shared.utils import format_wandb_id_string
 from uuid import uuid4
 from typing import Sequence
@@ -41,18 +40,11 @@ def failing_retry_eval() -> Callable[[], Task]:
             ],
             solver=[failing_solver_that_retries(failures), generate()],
             scorer=exact(),
-            metadata={"test": "retry_scenario"}
+            metadata={"test": "retry_scenario"},
+            name="hello_world_eval"
         )
     
     return retry_task
-
-@pytest.fixture(scope="function")
-def disable_weave_hooks(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
-    """Fixture to disable Weave hooks via environment variable."""
-    monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
-    yield
-    monkeypatch.delenv("INSPECT_WANDB_WEAVE_ENABLED")
-
 
 class TestWandBModelHooksE2ERetryScenarios:
     """E2E tests for wandb model hooks with actual eval_set calls covering retry and rerun scenarios."""
@@ -62,7 +54,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         failing_retry_eval: Callable[[], Task],
         patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
         tmp_path: Path,
-        disable_weave_hooks: None,
+        reset_inspect_ai_hooks: None,
     ) -> None:
         """
         Test that when hooks are enabled and eval_set is run with retry_attempts,
@@ -125,7 +117,6 @@ class TestWandBModelHooksE2ERetryScenarios:
         patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
         tmp_path: Path,
         reset_inspect_ai_hooks: None,
-        disable_weave_hooks: None
     ) -> None:
         """
         Test that when user reruns eval_set with the same log_dir,
@@ -202,7 +193,6 @@ class TestWandBModelHooksE2ERetryScenarios:
         patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
         tmp_path: Path,
         reset_inspect_ai_hooks: None,
-        disable_weave_hooks: None
     ) -> None:
         """
         Test that different log_dirs result in different wandb run_ids.
@@ -277,7 +267,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         failing_retry_eval: Callable[[], Task],
         patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
         tmp_path: Path,
-        disable_weave_hooks: None
+        reset_inspect_ai_hooks: None,
     ) -> None:
         """
         Test that when wandb model hooks are disabled, 

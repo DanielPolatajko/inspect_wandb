@@ -70,7 +70,7 @@ class TestEndToEndInspectRuns:
         score_display = eval_logs[0].eval.config.score_display
 
         weave_evaluation_logger.assert_called_once_with(
-            name="hello_world",
+            name="hello_world_eval",
             dataset="test_dataset",
             model="mockllm__model",
             eval_attributes={
