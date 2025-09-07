@@ -1,6 +1,6 @@
 # Contributing to Inspect WandB
 
-We welcome contributions from the community! This is a young project, so we are very open to feature requests and/or PRs for features or bug fixes that you'd like to see. If you want to discuss new features, bugs or the overall direction of Inspect WandB with us, the best place to do so is the (Inspect Community #inspect_wandb Slack Channel)[https://inspectcommunity.slack.com/archives/C09B5B00459]
+We welcome contributions from the community! This is a young project, so we are very open to feature requests and/or PRs for features or bug fixes that you'd like to see. If you want to discuss new features, bugs or the overall direction of Inspect WandB with us, the best place to do so is the [Inspect Community #inspect_wandb Slack Channel](https://inspectcommunity.slack.com/archives/C09B5B00459)
 
 ## Development
 
