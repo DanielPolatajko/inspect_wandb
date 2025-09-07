@@ -50,3 +50,6 @@ inspect_wandb = "inspect_wandb._registry"
 exclude = [
     "inspect_wandb/_registry.py"
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

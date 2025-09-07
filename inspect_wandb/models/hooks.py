@@ -138,6 +138,8 @@ class WandBModelHooks(Hooks):
                 self._total_samples = int(self.run.summary.get("samples_total", 0))
                 self._correct_samples = int(self.run.summary.get("samples_correct", 0))
 
+            if self.settings.add_metadata_to_config and data.spec.metadata is not None:
+                self.run.config.update({k: v for k,v in data.spec.metadata.items() if k != "inspect_wandb_models_config"})
             if self.settings.config:
                 self.run.config.update(self.settings.config)
 
@@ -208,7 +210,7 @@ class WandBModelHooks(Hooks):
         """
         if data.spec.metadata is None:
             return None
-        return {k:v for k,v in data.spec.metadata.items() if k.startswith("inspect_wandb_models_")}
+        return { k[len("inspect_wandb_models_"):]: v for k,v in data.spec.metadata.items() if k.startswith("inspect_wandb_models_")}
 
     def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
         if self.settings is None or overrides is not None:
