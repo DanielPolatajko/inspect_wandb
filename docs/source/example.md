@@ -112,7 +112,7 @@ we see:
 which shows various comparison metrics between claude-3.7 and claude-3.5-haiku on agentharm. 
 We see comparison of the models across different scorers in 3 different chart types, and generally see 3.7 gets higher scores which is expected since its more capable. 
 
-> NOTE: "dataset comparison" in the top left is currently perhaps not working. 
+> NOTE: "dataset comparison" in the top left is currently perhaps not working. https://github.com/DanielPolatajko/inspect_wandb/issues/118#issuecomment-3259677981
 
 
 ### Inspect Weave: obtaining reproducibility info from an eval of interest
