@@ -231,26 +231,6 @@ eval(my_eval,
 or with command:
 `inspect eval my_eval --metadata inspect_wandb_weave_enabled=True`
 
-
-
-## Development
-
-If you want to develop this project, you can fork and clone the repo and then run:
-
-```bash
-uv sync --group dev
-source .venv/bin/activate
-uv add pre-commit 
-pre-commit install
-```
-
-to install for development locally.
-For editing the docs and then displaying them with `html` you additionally need 
-
-### Testing
-
-We write unit tests with `pytest`. If you want to run the tests, you can simply run `pytest`. Please consider writing a test if adding a new feature, and make sure that tests are passing before submitting changes.
-
 ## Project notes
 
 This project in a work-in-progress, being developed as a [MARS](https://www.cambridgeaisafety.org/mars) project by [DanielPolatajko](https://github.com/DanielPolatajko), [Qi Guo](https://github.com/Esther-Guo), [Matan Shtepel](https://github.com/GnarlyMshtep), and supervised by Justin Olive. We are open to feature requests and suggestions for future directions (including extensions of this integration as well as other possible Inspect integrations).
