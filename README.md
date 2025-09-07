@@ -40,24 +40,24 @@ To install Models and Weave
 
 __pip__
 ```bash
-pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave]"
+pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 __uv__
 ```bash
-uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave]"
+uv pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 And to install Models, Weave and Viz
 
 __pip__
 ```bash
-pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"
+pip install "inspect_wandb[weave,viz] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 __uv__
 ```bash
-uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"
+uv pip install "inspect_wandb[weave,viz] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 If you intend to use the Viz integration, you also need to subsequently install `chromium` with:
@@ -70,7 +70,7 @@ playwright install-deps chromium
 
 In order to utilise the W&B integration, you will also need to setup a W&B project, authenticate your environment with W&B, and initialise the wandb client.
 
-To get set up with a new Weave project. follow the instructions [here](https://weave-docs.wandb.ai/), or to set up a W&B project, look [here](https://docs.wandb.ai/quickstart/) (they are basically the same, but it might be useful to follow the guide of the feature you're more interested in)
+To get set up with a new Weave project, follow the instructions [here](https://weave-docs.wandb.ai/), or to set up a W&B project, look [here](https://docs.wandb.ai/quickstart/) (they are basically the same, but it might be useful to follow the guide of the feature you're more interested in)
 
 #### Console configuration
 
@@ -178,7 +178,7 @@ export INSPECT_WANDB_WEAVE_SAMPLE_NAME_TEMPLATE="{task_name}-epoch{epoch}-{sampl
 
 If no custom template is provided, sample traces will use the format: `"{task_name}-sample-{sample_id}-epoch-{epoch}"` (e.g., "my_task-sample-1-epoch-1").
 
-This name can be configured with the `sample_name_template` parameter e.g.
+This template can also be configured with the `sample_name_template` parameter in `pyproject.toml` file, e.g.
 
 ```toml
 [tool.inspect-wandb.weave]
@@ -216,19 +216,19 @@ The latter env var controls the Weave integration in the same manner.
 
 #### Script-Level Control (Highest Priority)
 
-For fine-grained control, you can override hook enablement settings at the script level using task metadata. This takes **highest priority** over all other configuration methods.
+For fine-grained control, you can override any settings at the script level using task metadata. This takes **highest priority** over all other configuration methods.
 With script:
 ```python
 eval(my_eval, 
   model="mockllm/model", 
   metadata={
-    "weave_enabled": True, 
-    "models_enabled": False
+    "inspect_wandb_weave_enabled": True, 
+    "inspect_wandb_models_enabled": False
     }
   )
 ```
 or with command:
-`inspect eval my_eval --metadata weave_enabled=True`
+`inspect eval my_eval --metadata inspect_wandb_weave_enabled=True`
 
 
 

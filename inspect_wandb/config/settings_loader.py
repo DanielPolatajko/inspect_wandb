@@ -11,9 +11,9 @@ class SettingsLoader:
     def load_inspect_wandb_settings(cls, settings: dict[str, Any] | None = None) -> InspectWandBSettings:
         """
         Load settings with this priority:
-        1. Environment variables (both WANDB_* vars defined by W&B, and INSPECT_WANDB_* vars defined by this package)
-        2. Wandb settings file (for entity/project - handled by WandBSettingsSource)
-        3. Initial settings (programmatic overrides provided to the settings argument)
+        1. Initial settings (programmatic overrides provided to the settings argument)
+        2. Environment variables (both WANDB_* vars defined by W&B, and INSPECT_WANDB_* vars defined by this package)
+        3. Wandb settings file (for entity/project - handled by WandBSettingsSource)
         4. Pyproject.toml customizations
         5. Defaults if no other source provides values
         
