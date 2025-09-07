@@ -231,6 +231,14 @@ eval(my_eval,
 or with command:
 `inspect eval my_eval --metadata inspect_wandb_weave_enabled=True`
 
+## Contributing
+
+Please see our [contributing guidelines](./CHANGELOG.md) if you'd like to make contributions to Inspect WandB
+
+## Feedback
+
+We welcome all feedback; the best way to get in touch to discuss the project is the (Inspect Community #inspect_wandb Slack Channel)[https://inspectcommunity.slack.com/archives/C09B5B00459]
+
 ## Project notes
 
 This project in a work-in-progress, being developed as a [MARS](https://www.cambridgeaisafety.org/mars) project by [DanielPolatajko](https://github.com/DanielPolatajko), [Qi Guo](https://github.com/Esther-Guo), [Matan Shtepel](https://github.com/GnarlyMshtep), and supervised by Justin Olive. We are open to feature requests and suggestions for future directions (including extensions of this integration as well as other possible Inspect integrations).
