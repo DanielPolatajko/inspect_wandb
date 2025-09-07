@@ -24,6 +24,9 @@ class ModelsSettings(BaseSettings):
     config: dict[str, Any] | None = Field(default=None, description="Configuration to pass directly to wandb.config for the Models integration")
     files: list[str] | None = Field(default=None, description="Files to upload to the models run. Paths should be relative to the wandb directory.")
     viz: bool = Field(default=False, description="Whether to enable the inspect_viz extra")
+    add_metadata_to_config: bool = Field(default=True, description="Whether to add eval metadata to wandb.config")
+
+    tags: list[str] | None = Field(default=None, description="Tags to add to the models run")
 
     @classmethod
     def settings_customise_sources(
@@ -36,15 +39,15 @@ class ModelsSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
         Customise the priority of settings sources to prioritise as follows:
-        1. Environment variables (highest priority)
-        2. Wandb settings file (for entity/project)
-        3. Initial settings (programmatic overrides)
+        1. Initial settings (can be set via eval metadata fields)
+        2. Environment variables (highest priority)
+        3. Wandb settings file (for entity/project)
         4. Pyproject.toml (lowest priority)
         """
         return (
+            init_settings,
             env_settings, 
-            WandBSettingsSource(settings_cls),
-            init_settings, 
+            WandBSettingsSource(settings_cls), 
             PyprojectTomlConfigSettingsSource(settings_cls)
         )
 
@@ -66,7 +69,7 @@ class WeaveSettings(BaseSettings):
     project: str = Field(alias="WANDB_PROJECT", description="Project to write to for the Weave integration")
     entity: str = Field(alias="WANDB_ENTITY", description="Entity to write to for the Weave integration")
 
-    autopatch: bool = Field(default=False, description="Whether to automatically patch Inspect with Weave calls for tracing")
+    autopatch: bool = Field(default=True, description="Whether to automatically patch Inspect with Weave calls for tracing")
     sample_name_template: str = Field(default="{task_name}-sample-{sample_id}-epoch-{epoch}", description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}")
 
     @classmethod
@@ -80,15 +83,15 @@ class WeaveSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
         Customise the priority of settings sources to prioritise as follows:
-        1. Environment variables (highest priority)
-        2. Wandb settings file (for entity/project)
-        3. Initial settings (programmatic overrides)
+        1. Initial settings (can be set via eval metadata fields)
+        2. Environment variables (highest priority)
+        3. Wandb settings file (for entity/project)
         4. Pyproject.toml (lowest priority)
         """
         return (
+            init_settings,
             env_settings, 
             WandBSettingsSource(settings_cls),
-            init_settings, 
             PyprojectTomlConfigSettingsSource(settings_cls)
         )
 

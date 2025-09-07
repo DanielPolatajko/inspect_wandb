@@ -108,7 +108,38 @@ project = wandb-project
         assert settings.entity == "wandb-entity"
         assert settings.project == "wandb-project"
 
-    def test_environment_variables_highest_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_init_settings_highest_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Given
+        wandb_dir = tmp_path / "wandb"
+        wandb_dir.mkdir()
+        settings_file = wandb_dir / "settings"
+        settings_content = """[default]
+entity = wandb-entity
+project = wandb-project
+"""
+        settings_file.write_text(settings_content)
+        
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
+        monkeypatch.setenv("WANDB_PROJECT", "env-project")
+        monkeypatch.setenv("WANDB_ENTITY", "env-entity")
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_FILES", '["env-file1.txt", "env-file2.txt"]')
+        
+        # When
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
+            settings = ModelsSettings(
+                enabled=True,
+                WANDB_PROJECT="init-project",
+                WANDB_ENTITY="init-entity",
+                files=["init-file1.txt", "init-file2.txt"]
+            )
+            
+        # Then
+        assert settings.enabled is True
+        assert settings.project == "init-project"
+        assert settings.entity == "init-entity"
+        assert settings.files == ["init-file1.txt", "init-file2.txt"]
+
+    def test_environment_variables_second_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
@@ -134,7 +165,7 @@ project = wandb-project
         assert settings.entity == "env-entity"
         assert settings.files == ["env-file1.txt", "env-file2.txt"]
 
-    def test_wandb_settings_middle_priority(self, tmp_path: Path) -> None:
+    def test_wandb_settings_third_priority(self, tmp_path: Path) -> None:
         # Given
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
@@ -147,48 +178,43 @@ project = wandb-project
         
         # When
         with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
-            settings = ModelsSettings(
-                WANDB_PROJECT="init-project",
-                WANDB_ENTITY="init-entity"
-            )
+            settings = ModelsSettings.model_validate({})
             
         # Then
         assert settings.project == "wandb-project"
         assert settings.entity == "wandb-entity"
         assert settings.enabled is True
 
-    def test_init_settings_override_pyproject(self, tmp_path: Path) -> None:
+    def test_init_settings_override_environment(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
-        pyproject_content = """
-[tool.inspect-wandb.models]
-enabled = false
-files = ["toml-file1.txt", "toml-file2.txt"]
-"""
-        pyproject_path = tmp_path / "pyproject.toml"
-        pyproject_path.write_text(pyproject_content)
-        
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
+        settings_file = wandb_dir / "settings"
+        settings_content = """[default]
+entity = wandb-entity
+project = wandb-project
+"""
+        settings_file.write_text(settings_content)
         
-        original_cwd = os.getcwd()
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
+        monkeypatch.setenv("WANDB_PROJECT", "env-project")
+        monkeypatch.setenv("WANDB_ENTITY", "env-entity")
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_FILES", '["env-file.txt"]')
         
         # When
-        try:
-            os.chdir(tmp_path)
-            with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
-                settings = ModelsSettings(
-                    WANDB_PROJECT="init-project",
-                    WANDB_ENTITY="init-entity",
-                    enabled=True
-                )
-                
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
+            settings = ModelsSettings(
+                enabled=True,
+                WANDB_PROJECT="init-project",
+                WANDB_ENTITY="init-entity",
+                files=["init-file.txt"]
+            )
+            
         # Then
             assert settings.enabled is True
-            assert settings.files == ["toml-file1.txt", "toml-file2.txt"]
+            assert settings.files == ["init-file.txt"]
             assert settings.project == "init-project"
             assert settings.entity == "init-entity"
-        finally:
-            os.chdir(original_cwd)
 
     def test_complete_priority_order(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
@@ -226,8 +252,8 @@ files = ["toml-file.txt"]
         # Then
             assert settings.enabled is True
             assert settings.files == ["env-file.txt"]
-            assert settings.project == "wandb-project"
-            assert settings.entity == "wandb-entity"
+            assert settings.project == "init-project"
+            assert settings.entity == "init-entity"
         finally:
             os.chdir(original_cwd)
 
@@ -379,7 +405,35 @@ project = wandb-project
         assert settings.entity == "wandb-entity"
         assert settings.project == "wandb-project"
 
-    def test_environment_variables_highest_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_init_settings_highest_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Given
+        wandb_dir = tmp_path / "wandb"
+        wandb_dir.mkdir()
+        settings_file = wandb_dir / "settings"
+        settings_content = """[default]
+entity = wandb-entity
+project = wandb-project
+"""
+        settings_file.write_text(settings_content)
+        
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
+        monkeypatch.setenv("WANDB_PROJECT", "env-weave-project")
+        monkeypatch.setenv("WANDB_ENTITY", "env-weave-entity")
+        
+        # When
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
+            settings = WeaveSettings(
+                enabled=True,
+                WANDB_PROJECT="init-weave-project",
+                WANDB_ENTITY="init-weave-entity"
+            )
+            
+        # Then
+        assert settings.enabled is True
+        assert settings.project == "init-weave-project"
+        assert settings.entity == "init-weave-entity"
+
+    def test_environment_variables_second_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
@@ -403,6 +457,54 @@ project = wandb-project
         assert settings.project == "env-weave-project"
         assert settings.entity == "env-weave-entity"
 
+    def test_wandb_settings_third_priority(self, tmp_path: Path) -> None:
+        # Given
+        wandb_dir = tmp_path / "wandb"
+        wandb_dir.mkdir()
+        settings_file = wandb_dir / "settings"
+        settings_content = """[default]
+entity = wandb-entity
+project = wandb-project
+"""
+        settings_file.write_text(settings_content)
+        
+        # When
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
+            settings = WeaveSettings.model_validate({})
+            
+        # Then
+        assert settings.project == "wandb-project"
+        assert settings.entity == "wandb-entity"
+        assert settings.enabled is True
+    
+    def test_init_settings_override_environment(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # Given
+        wandb_dir = tmp_path / "wandb"
+        wandb_dir.mkdir()
+        settings_file = wandb_dir / "settings"
+        settings_content = """[default]
+entity = wandb-entity
+project = wandb-project
+"""
+        settings_file.write_text(settings_content)
+        
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
+        monkeypatch.setenv("WANDB_PROJECT", "env-weave-project")
+        monkeypatch.setenv("WANDB_ENTITY", "env-weave-entity")
+        
+        # When
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
+            settings = WeaveSettings(
+                enabled=True,
+                WANDB_PROJECT="init-weave-project",
+                WANDB_ENTITY="init-weave-entity"
+            )
+            
+        # Then
+            assert settings.enabled is True
+            assert settings.project == "init-weave-project"
+            assert settings.entity == "init-weave-entity"
+    
     def test_pyproject_toml_lowest_priority(self, tmp_path: Path) -> None:
         # Given
         pyproject_content = """
@@ -614,6 +716,38 @@ project = wandb-project
         assert settings.models.project == "env-project"
         assert settings.weave.enabled is False
         assert settings.models.enabled is False
+
+    @patch('inspect_wandb.config.wandb_settings_source.wandb_dir')
+    def test_load_inspect_wandb_settings_with_init_override(self, mock_wandb_dir: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+        wandb_dir = tmp_path / "wandb"
+        wandb_dir.mkdir()
+        settings_file = wandb_dir / "settings"
+        settings_content = """[default]
+entity = wandb-entity
+project = wandb-project
+"""
+        settings_file.write_text(settings_content)
+        mock_wandb_dir.return_value = str(wandb_dir)
+        
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
+        monkeypatch.setenv("WANDB_PROJECT", "env-project")
+        monkeypatch.setenv("WANDB_ENTITY", "env-entity")
+        
+        # When
+        settings = SettingsLoader.load_inspect_wandb_settings({
+            "weave": {"enabled": True, "WANDB_PROJECT": "init-weave-project", "WANDB_ENTITY": "init-weave-entity"},
+            "models": {"enabled": True, "WANDB_PROJECT": "init-models-project", "WANDB_ENTITY": "init-models-entity"}
+        })
+        
+        # Then
+        assert settings.weave.entity == "init-weave-entity"
+        assert settings.weave.project == "init-weave-project"
+        assert settings.models.entity == "init-models-entity"
+        assert settings.models.project == "init-models-project"
+        assert settings.weave.enabled is True
+        assert settings.models.enabled is True
 
     @patch('inspect_wandb.config.wandb_settings_source.wandb_dir')
     def test_load_inspect_wandb_settings_with_pyproject_customization(self, mock_wandb_dir: Any, tmp_path: Path) -> None:

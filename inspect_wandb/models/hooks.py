@@ -1,8 +1,10 @@
 import logging
+from pathlib import Path
+from typing import Any
 from typing_extensions import override
 
 import wandb
-from inspect_ai.hooks import Hooks, RunEnd, RunStart, SampleEnd, TaskStart, TaskEnd
+from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, TaskEnd
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings_loader import SettingsLoader
@@ -37,11 +39,6 @@ class WandBModelHooks(Hooks):
         self._load_settings()
         assert self.settings is not None
         return self.settings.enabled
-
-    @override
-    async def on_run_start(self, data: RunStart) -> None:
-        self._load_settings()
-        # Note: wandb.init() moved to lazy initialization in on_task_start
     
     @override
     async def on_run_end(self, data: RunEnd) -> None:
@@ -56,7 +53,15 @@ class WandBModelHooks(Hooks):
 
         if self.settings is not None and self.settings.files:
             for file in self.settings.files:
-                 self.run.save(str(file), policy="now")  # TODO: fix wandb Symlinked warning for folder upload
+                file_path = Path(file)
+                if file_path.exists():
+                    try:
+                        self.run.save(str(file), policy="now")  # TODO: fix wandb Symlinked warning for folder upload
+                        logger.info(f"Successfully saved {file} to wandb")
+                    except Exception as e:
+                        logger.warning(f"Failed to save {file} to wandb: {e}")
+                else:
+                    logger.warning(f"File or folder '{file}' does not exist. Skipping wandb upload.")
 
         self.run.finish()
 
@@ -66,11 +71,11 @@ class WandBModelHooks(Hooks):
         self._load_settings()
         assert self.settings is not None
         
-        # Check enablement only on first task (all tasks share same metadata)
+        # Override settings from eval metadata on first task only
         if self._hooks_enabled is None:
-            script_override = self._check_enable_override(data)
-            # Use task-specific override if present, otherwise fall back to settings
-            self._hooks_enabled = script_override if script_override is not None else self.settings.enabled
+            metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
+            self._load_settings(overrides=metadata_overrides)
+            self._hooks_enabled = self.settings.enabled
         
         if not self._hooks_enabled:
             logger.info(f"WandB model hooks disabled for run (task: {data.spec.task})")
@@ -80,6 +85,8 @@ class WandBModelHooks(Hooks):
         if not self._wandb_initialized:
             self.run = wandb.init(id=data.run_id, entity=self.settings.entity, project=self.settings.project) 
 
+            if self.settings.add_metadata_to_config and data.spec.metadata is not None:
+                self.run.config.update({k: v for k,v in data.spec.metadata.items() if k != "inspect_wandb_models_config"})
             if self.settings.config:
                 self.run.config.update(self.settings.config)
 
@@ -96,6 +103,9 @@ class WandBModelHooks(Hooks):
             self.run.tags = self.run.tags + inspect_tags
         else:
             self.run.tags = inspect_tags
+
+        if self.settings.tags is not None and self.run.tags is not None:
+            self.run.tags = self.run.tags + tuple(self.settings.tags)
 
     
     @override
@@ -141,16 +151,16 @@ class WandBModelHooks(Hooks):
 
         return self._correct_samples * 1.0 / self._total_samples
 
-    def _check_enable_override(self, data: TaskStart) -> bool|None:
+    def _extract_settings_overrides_from_eval_metadata(self, data: TaskStart) -> dict[str, Any] | None:
         """
         Check TaskStart metadata to determine if hooks should be enabled
         """
         if data.spec.metadata is None:
             return None
-        return data.spec.metadata.get("models_enabled")
+        return { k[len("inspect_wandb_models_"):]: v for k,v in data.spec.metadata.items() if k.startswith("inspect_wandb_models_")}
 
-    def _load_settings(self) -> None:
-        if self.settings is None:
+    def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
+        if self.settings is None or overrides is not None:
             self.settings = SettingsLoader.load_inspect_wandb_settings(
-                {"weave": {}, "models": {"viz": self.viz_writer is not None}}
+                {"weave": {}, "models": overrides or {}}
             ).models

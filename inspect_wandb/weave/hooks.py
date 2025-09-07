@@ -1,5 +1,5 @@
 from typing import Any
-from inspect_ai.hooks import Hooks, RunEnd, RunStart, SampleEnd, SampleStart, TaskStart, TaskEnd
+from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd
 import weave
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_model_name, format_score_types, format_sample_display_name
@@ -29,16 +29,9 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     def enabled(self) -> bool:
-        self.settings = self.settings or SettingsLoader.load_inspect_wandb_settings().weave
+        self._load_settings()
+        assert self.settings is not None
         return self.settings.enabled
-
-    @override
-    async def on_run_start(self, data: RunStart) -> None:
-        # Ensure settings are loaded (in case enabled() wasn't called first)
-        if self.settings is None:
-            logger.info("Loading settings")
-            self.settings = SettingsLoader.load_inspect_wandb_settings().weave
-        # Note: weave.init() moved to lazy initialization in on_task_start
 
     @override
     async def on_run_end(self, data: RunEnd) -> None:
@@ -70,20 +63,19 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
-        # Ensure settings are loaded
-        if self.settings is None:
-            logger.info("Loading settings in on_task_start")
-            self.settings = SettingsLoader.load_inspect_wandb_settings().weave
         
         # Check enablement only on first task (all tasks share same metadata)
         if self._hooks_enabled is None:
-            script_override = self._check_enable_override(data)
-            # Use task-specific override if present, otherwise fall back to settings
-            self._hooks_enabled = script_override if script_override is not None else self.settings.enabled
+            metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
+            self._load_settings(overrides=metadata_overrides)
+            assert self.settings is not None
+            self._hooks_enabled = self.settings.enabled
         
         if not self._hooks_enabled:
             logger.info(f"Weave hooks disabled for run (task: {data.spec.task})")
             return
+
+        assert self.settings is not None
         
         # Lazy initialization: only init Weave when first task starts
         if not self._weave_initialized:
@@ -106,7 +98,6 @@ class WeaveEvaluationHooks(Hooks):
             eval_attributes=self._get_eval_metadata(data)
         )
         
-        # Store logger with task_id as key
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
         
         # Store task name mapping for use in sample hooks
@@ -117,7 +108,6 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_task_end(self, data: TaskEnd) -> None:
-        # Skip if hooks are disabled for this run
         if not self._hooks_enabled:
             return
             
@@ -141,7 +131,6 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_sample_start(self, data: SampleStart) -> None:
-        # Skip if hooks are disabled for this run
         if not self._hooks_enabled:
             return
         
@@ -246,13 +235,19 @@ class WeaveEvaluationHooks(Hooks):
             )
             self.sample_calls.pop(data.sample_id)
 
-    def _check_enable_override(self, data: TaskStart) -> bool|None:
+    def _extract_settings_overrides_from_eval_metadata(self, data: TaskStart) -> dict[str, Any] | None:
         """
         Check TaskStart metadata to determine if hooks should be enabled
         """
         if data.spec.metadata is None:
             return None
-        return data.spec.metadata.get("weave_enabled")
+        return { k[len("inspect_wandb_weave_"):]: v for k,v in data.spec.metadata.items() if k.startswith("inspect_wandb_weave_")} or None
+
+    def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
+        if self.settings is None or overrides is not None:
+            self.settings = SettingsLoader.load_inspect_wandb_settings(
+                settings={"weave": overrides or {}, "models": {}}
+            ).weave
 
     def _get_eval_metadata(self, data: TaskStart) -> dict[str, str | dict[str, Any]]:
 
