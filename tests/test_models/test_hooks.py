@@ -44,7 +44,7 @@ class TestWandBModelHooks:
         disabled_settings = ModelsSettings(
             enabled=False, 
             entity="test-entity", 
-            project="test-project"
+            project="test-project",
         )
         
         with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:

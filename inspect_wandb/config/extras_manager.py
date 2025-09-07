@@ -17,7 +17,7 @@ class ExtrasManager:
 
     def _check_for_viz_extra(self) -> None:
         if importlib.util.find_spec("inspect_viz") is not None and importlib.util.find_spec("playwright") is not None:
-            self.extras["viz"] = True
+            self.extras["viz"] = False
         else:
             self.extras["viz"] = False
 
