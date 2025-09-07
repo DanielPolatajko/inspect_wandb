@@ -239,10 +239,13 @@ If you want to develop this project, you can fork and clone the repo and then ru
 
 ```bash
 uv sync --group dev
+source .venv/bin/activate
+uv add pre-commit 
 pre-commit install
 ```
 
 to install for development locally.
+For editing the docs and then displaying them with `html` you additionally need 
 
 ### Testing
 

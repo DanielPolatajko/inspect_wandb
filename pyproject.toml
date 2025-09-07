@@ -29,6 +29,13 @@ viz = [
 
 [dependency-groups]
 dev = ["pytest", "ruff", "mypy", "pre-commit", "pytest-asyncio"]
+docs-dev = [
+  "pre-commit>=4.3.0",
+  "myst-parser>=4.0.1",
+  "sphinx-rtd-theme>=3.0.2",
+  "sphinx-autobuild>=2024.10.3",
+  "mypy>=1.17.1"
+]
 
 [project.urls]
 Homepage = "https://github.com/DanielPolatajko/inspect_wandb"
