@@ -237,7 +237,7 @@ Please see our [contributing guidelines](./CONTRIBUTING.md) if you'd like to mak
 
 ## Feedback
 
-We welcome all feedback; the best way to get in touch to discuss the project is the (Inspect Community #inspect_wandb Slack Channel)[https://inspectcommunity.slack.com/archives/C09B5B00459]
+We welcome all feedback; the best way to get in touch to discuss the project is the [Inspect Community #inspect_wandb Slack Channel](https://inspectcommunity.slack.com/archives/C09B5B00459)
 
 ## Project notes
 
