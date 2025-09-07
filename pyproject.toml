@@ -17,7 +17,6 @@ dependencies = [
   "inspect_ai >= 0.3.118",
   "pydantic >= 2.11, <3",
   "pydantic-settings",
-  "datasets >= 4.0.0",
   "wandb"
 ]
 
