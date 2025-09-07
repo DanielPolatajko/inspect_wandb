@@ -7,11 +7,10 @@ For advanced users who want to customize the behavior, you can configure Inspect
 ## Configuration Priority
 
 The priority for settings is:
-1. `eval` configs 
-2. Environment variables (highest priority)
-3. WandB settings file (for entity/project)
-4. Initial settings (programmatic overrides)
-5. `pyproject.toml` (lowest priority)
+1. `eval` or `eval-set` metadata configurations (highest priority)
+2. Environment variables (for automated environments)
+3. WandB settings file (for entity/project only)
+4. `pyproject.toml` (repo-level settings, lowest priority)
 
 
 ## WandB using env variables
@@ -34,8 +33,8 @@ The simplest way to configure WandB (Models and Weave) is with `wandb init`. For
    ```bash
    INSPECT_WANDB_MODELS_FILES='["README.md", "Makefile"]'
    ```
-6. **VIZ**: Controls whether to enable the inspect_viz extra functionality. Defaults to `False`. We recommend against this as the feature is still experimental (note it also requires additional installation). 
-7. **TAGS**: Tags to add to the models run, e.g. `INSPECT_WANDB_MODELS_TAGS="['tag1','tag2']"`
+6. **TAGS**: Optional tags to add to the models run, e.g. `INSPECT_WANDB_MODELS_TAGS="['tag1','tag2']"`
+7. **ADD_METADATA_TO_CONFIG**: Whether or not to write the entire Inspect metadata to WandB run config. Defaults to `True`.
 
 
 ### WandB Weave Configuration
@@ -51,7 +50,7 @@ The simplest way to configure WandB (Models and Weave) is with `wandb init`. For
 
 When using the Weave integration with autopatching enabled, you can customize how sample traces are named in the Weave dashboard. This helps organize and identify traces according to your preferences.
 
-**Environment Variable (Recommended)**
+**Environment Variable**
 ```bash
 export INSPECT_WANDB_WEAVE_SAMPLE_NAME_TEMPLATE="{task_name}_s{sample_id}_e{epoch}"
 ```
@@ -106,17 +105,22 @@ wandb_project = "test-project"
 files = ["pyproject.toml", "log/*"]  # Files/folders to upload with Models run, path relative to your current working directory (default: none)
 ```
 
-## Alternate configuration methods: `eval`
-For fine-grained control, you can override any settings at the script level using task metadata. This takes **highest priority** over all other configuration methods.
+As a general rule, settings in `pyproject.toml` are the same as the environment variable settings above, but rather than having prefixes like `INSPECT_WANDB_MODELS_`, they are adding to the relevant block.
+
+This configuration level is **lowest priority** i.e. any environment variables or metadata settings will override settings in `pyproject.toml`
+
+## Alternate configuration methods: `eval` or `eval-set` metadata
+For fine-grained control, you can override any settings at the script level using `eval` or `eval-set` metadata. The syntax for overriding this way is the same as environment variables (neither are case-sensitive). This takes **highest priority** over all other configuration methods.
 With script:
 ```python
-eval(my_eval, 
+eval(
+  my_eval, 
   model="mockllm/model", 
   metadata={
     "inspect_wandb_weave_enabled": True, 
     "inspect_wandb_models_enabled": False
-    }
-  )
+  }
+)
 ```
 or with command:
 `inspect eval my_eval --metadata inspect_wandb_weave_enabled=True`
