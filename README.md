@@ -45,5 +45,5 @@ We welcome all feedback; the best way to get in touch to discuss the project is 
 
 ## Project notes
 
-This project in a work-in-progress, being developed as a [MARS](https://www.cambridgeaisafety.org/mars) project by [DanielPolatajko](https://github.com/DanielPolatajko), [Qi Guo](https://github.com/Esther-Guo), [Matan Shtepel](https://github.com/GnarlyMshtep), and supervised by Justin Olive. We are open to feature requests and suggestions for future directions (including extensions of this integration as well as other possible Inspect integrations).
+This project was primarily developed by [DanielPolatajko](https://github.com/DanielPolatajko), [Qi Guo](https://github.com/Esther-Guo), [Matan Shtepel](https://github.com/GnarlyMshtep), and supervised by Justin Olive. It was supported through the MARS (Mentorship for Alignment Research Students) program at the [Cambridge AI Safety Hub](https://www.cambridgeaisafety.org/mars).
 
