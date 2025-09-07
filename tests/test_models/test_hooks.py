@@ -115,6 +115,7 @@ class TestWandBModelHooks:
             mock_init.assert_called_once_with(id="test_eval_set_log_dir", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
 
+    @pytest.mark.asyncio
     async def test_wandb_config_updated_with_eval_metadata(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
         """
         Test that the on_task_start method initializes the WandB run with config.
@@ -130,7 +131,7 @@ class TestWandBModelHooks:
         )
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_called_once_with({"test": "test"})
@@ -154,7 +155,7 @@ class TestWandBModelHooks:
         hooks._hooks_enabled = True
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()
