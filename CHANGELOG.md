@@ -9,3 +9,10 @@
 ### Added
 
 - Initial release
+
+### New Contributors
+
+- @DanielPolatajko
+- @Esther-Guo
+- @scottire
+- @GnarlyMshtep
