@@ -1,6 +1,6 @@
 
 # Inspect WandB
-Integration between [Inspect](https://inspect.aisi.org.uk/) and Weights & Biases, including support for both the Models API for experiment tracking, and Weave for evaluation analysis and transcripts.
+Integration between [Inspect](https://inspect.aisi.org.uk/) and [Weights & Biases](https://wandb.ai/site/), including support for both the Models API for experiment tracking, and Weave for evaluation analysis and transcripts.
 
 ![Docs Build](https://app.readthedocs.org/projects/inspect-wandb/badge/?version=latest)
 [![Package Build](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/test-build.yml/badge.svg)](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/test-build.yml)
