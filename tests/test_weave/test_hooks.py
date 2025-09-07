@@ -229,7 +229,7 @@ class TestWeaveEnablementPriority:
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
         
         # Then
-        assert result == {"inspect_wandb_weave_enabled": True}
+        assert result == {"enabled": True}
 
     def test_check_enable_override_with_false_metadata(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
         """Test _check_enable_override returns False when metadata has weave_enabled: false"""
@@ -241,7 +241,7 @@ class TestWeaveEnablementPriority:
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
         
         # Then
-        assert result == {"inspect_wandb_weave_enabled": False}
+        assert result == {"enabled": False}
 
     def test_check_enable_override_with_no_weave_enabled_key(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
         """Test _check_enable_override returns None when metadata exists but no weave_enabled key"""

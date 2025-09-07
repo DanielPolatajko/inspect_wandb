@@ -68,7 +68,6 @@ class WeaveEvaluationHooks(Hooks):
         # Check enablement only on first task (all tasks share same metadata)
         if self._hooks_enabled is None:
             metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            # Use task-specific override if present, otherwise fall back to settings
             self._load_settings(overrides=metadata_overrides)
             assert self.settings is not None
             self._hooks_enabled = self.settings.enabled
@@ -110,7 +109,6 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_task_end(self, data: TaskEnd) -> None:
-        # Skip if hooks are disabled for this run
         if not self._hooks_enabled:
             return
             
@@ -134,7 +132,6 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_sample_start(self, data: SampleStart) -> None:
-        # Skip if hooks are disabled for this run
         if not self._hooks_enabled:
             return
         
@@ -245,7 +242,7 @@ class WeaveEvaluationHooks(Hooks):
         """
         if data.spec.metadata is None:
             return None
-        return {k:v for k,v in data.spec.metadata.items() if k.startswith("inspect_wandb_weave_")} or None
+        return { k[len("inspect_wandb_weave_"):]: v for k,v in data.spec.metadata.items() if k.startswith("inspect_wandb_weave_")} or None
 
     def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
         if self.settings is None or overrides is not None:

@@ -1,3 +1,4 @@
+
 # `inspect_wandb`
 Integration with [Inspect](https://inspect.aisi.org.uk/) and Weights & Biases. Initially, this integration was focused primarily on [Weave](https://weave-docs.wandb.ai/), but we are also expanding to include the [wandb Models API](https://docs.wandb.ai/guides/models/)
 
@@ -40,24 +41,24 @@ To install Models and Weave
 
 __pip__
 ```bash
-pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave]"
+pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 __uv__
 ```bash
-uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave]"
+uv pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 And to install Models, Weave and Viz
 
 __pip__
 ```bash
-pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"
+pip install "inspect_wandb[weave,viz] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 __uv__
 ```bash
-uv pip install "inspect_wandb @ git+https://github.com/DanielPolatajko/inspect_wandb.git#[weave,viz]"
+uv pip install "inspect_wandb[weave,viz] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
 If you intend to use the Viz integration, you also need to subsequently install `chromium` with:
@@ -70,7 +71,7 @@ playwright install-deps chromium
 
 In order to utilise the W&B integration, you will also need to setup a W&B project, authenticate your environment with W&B, and initialise the wandb client.
 
-To get set up with a new Weave project. follow the instructions [here](https://weave-docs.wandb.ai/), or to set up a W&B project, look [here](https://docs.wandb.ai/quickstart/) (they are basically the same, but it might be useful to follow the guide of the feature you're more interested in)
+To get set up with a new Weave project, follow the instructions [here](https://weave-docs.wandb.ai/), or to set up a W&B project, look [here](https://docs.wandb.ai/quickstart/) (they are basically the same, but it might be useful to follow the guide of the feature you're more interested in)
 
 #### Console configuration
 
@@ -178,7 +179,7 @@ export INSPECT_WANDB_WEAVE_SAMPLE_NAME_TEMPLATE="{task_name}-epoch{epoch}-{sampl
 
 If no custom template is provided, sample traces will use the format: `"{task_name}-sample-{sample_id}-epoch-{epoch}"` (e.g., "my_task-sample-1-epoch-1").
 
-This name can be configured with the `sample_name_template` parameter e.g.
+This template can also be configured with the `sample_name_template` parameter in `pyproject.toml` file, e.g.
 
 ```toml
 [tool.inspect-wandb.weave]
@@ -250,3 +251,4 @@ We write unit tests with `pytest`. If you want to run the tests, you can simply 
 ## Project notes
 
 This project in a work-in-progress, being developed as a [MARS](https://www.cambridgeaisafety.org/mars) project by [DanielPolatajko](https://github.com/DanielPolatajko), [Qi Guo](https://github.com/Esther-Guo), [Matan Shtepel](https://github.com/GnarlyMshtep), and supervised by Justin Olive. We are open to feature requests and suggestions for future directions (including extensions of this integration as well as other possible Inspect integrations).
+
