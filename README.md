@@ -233,7 +233,7 @@ or with command:
 
 ## Contributing
 
-Please see our [contributing guidelines](./CHANGELOG.md) if you'd like to make contributions to Inspect WandB
+Please see our [contributing guidelines](./CONTRIBUTING.md) if you'd like to make contributions to Inspect WandB
 
 ## Feedback
 
