@@ -30,7 +30,7 @@ pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspe
 uv pip install "inspect_wandb[weave] @ git+https://github.com/DanielPolatajko/inspect_wandb.git"
 ```
 
-And to install Models, Weave and Viz
+And to install WandB Models, WandB Weave and Viz **(experimental)**: 
 
 **pip**
 ```bash
