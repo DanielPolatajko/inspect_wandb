@@ -121,7 +121,8 @@ def hello_world_eval() -> Callable[[], Task]:
             ],
             solver=[generate()],
             scorer=exact(),
-            metadata={"test": "test"}
+            metadata={"test": "test"},
+            name="hello_world_eval"
         )
 
     return hello_world
@@ -151,7 +152,8 @@ def error_eval() -> Callable[[], Task]:
             ],
             solver=[raise_error()],
             scorer=exact(),
-            metadata={"test": "test"}
+            metadata={"test": "test"},
+            name="hello_world_eval"
         )
 
     return hello_world
