@@ -7,6 +7,7 @@ installation.md
 tutorial.md
 configuration.md
 contributing.md
+faq.md
 ```
 
 **Inspect WandB** is a Python library for integrating the [Inspect AI framework](https://inspect.aisi.org.uk/) with Weights and Biases [Models](https://wandb.ai/site/models/) API and [Weave](https://wandb.ai/site/weave/).
