@@ -109,9 +109,9 @@ To run multiple evals on the same dataset you can:
 uv run inspect eval inspect_evals/agentharm --model openai/gpt-4o,anthropic/claude-3.7-sonnet-latest
 ```
 Marking two evals on the left and clicking compare:
-![](img/compare-enter.png)
+![](img/compare-enter-1.png)
 we see:
-![](img/compare.png)
+![](img/compare-1.png)
 which shows various comparison metrics between gpt-4o and claude-3.7-sonnet on `agentharm`.
 It is also possible to compare multiple models on the same and different evals.
 
