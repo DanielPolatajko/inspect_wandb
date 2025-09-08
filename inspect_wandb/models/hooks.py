@@ -9,7 +9,6 @@ from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings_loader import SettingsLoader
 from inspect_wandb.config.settings import ModelsSettings
-from inspect_wandb.shared.utils import format_wandb_id_string
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
@@ -118,7 +117,7 @@ class WandBModelHooks(Hooks):
             return
         
         if self._is_eval_set:
-            wandb_run_id = format_wandb_id_string(self.eval_set_log_dir)
+            wandb_run_id = data.eval_set_id
         else:
             wandb_run_id = data.eval_id
 
