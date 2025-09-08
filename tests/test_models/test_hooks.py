@@ -44,7 +44,7 @@ class TestWandBModelHooks:
         disabled_settings = ModelsSettings(
             enabled=False, 
             entity="test-entity", 
-            project="test-project"
+            project="test-project",
         )
         
         with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
@@ -63,7 +63,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()
@@ -87,12 +87,33 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_called_once_with({"test": "test"})
             hooks.run.define_metric.assert_called_once_with(step_metric=Metric.SAMPLES, name=Metric.ACCURACY)
             assert hooks.run.tags == ("inspect_task:test_task", "inspect_model:mockllm/model", "inspect_dataset:test-dataset")
+
+    @pytest.mark.asyncio
+    async def test_wandb_init_called_with_eval_set_log_dir_if_eval_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+        """
+        Test that the on_task_start method initializes the WandB run with eval-set log dir.
+        """
+        hooks = WandBModelHooks()
+        mock_init = MagicMock(return_value=mock_wandb_run)
+        task_start = create_task_start()
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project",
+        )
+        hooks._is_eval_set = True
+        hooks.eval_set_log_dir = "test_eval_set_log_dir"
+        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+            await hooks.on_task_start(task_start)
+
+            mock_init.assert_called_once_with(id="test_eval_set_log_dir", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
+            assert hooks._wandb_initialized is True
 
     @pytest.mark.asyncio
     async def test_wandb_config_updated_with_eval_metadata(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
@@ -110,7 +131,7 @@ class TestWandBModelHooks:
         )
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_called_once_with({"test": "test"})
@@ -134,7 +155,7 @@ class TestWandBModelHooks:
         hooks._hooks_enabled = True
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()
@@ -156,7 +177,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_run_id", entity="test-entity", project="test-project")
+            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()
@@ -184,6 +205,7 @@ class TestWandBModelHooks:
         # When
         await hooks.on_sample_end(
             SampleEnd(
+                eval_set_id=None,
                 run_id="test-run-id",
                 eval_id="test-eval-id",
                 sample_id="test-sample-id",
@@ -220,6 +242,7 @@ class TestWandBModelHooks:
         # When
         await hooks.on_run_end(
             RunEnd(
+                eval_set_id=None,
                 run_id="test-run",
                 exception=None,
                 logs=[]
@@ -255,6 +278,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=True):
             await hooks.on_run_end(
                 RunEnd(
+                    eval_set_id=None,
                     run_id="test-run",
                     exception=None,
                     logs=[]
@@ -284,6 +308,7 @@ class TestWandBModelHooks:
              patch('inspect_wandb.models.hooks.logger') as mock_logger:
             await hooks.on_run_end(
                 RunEnd(
+                    eval_set_id=None,
                     run_id="test-run",
                     exception=None,
                     logs=[]
@@ -315,6 +340,7 @@ class TestWandBModelHooks:
              patch('inspect_wandb.models.hooks.logger') as mock_logger:
             await hooks.on_run_end(
                 RunEnd(
+                    eval_set_id=None,
                     run_id="test-run",
                     exception=None,
                     logs=[]
@@ -350,6 +376,7 @@ class TestWandBModelHooks:
              patch('inspect_wandb.models.hooks.logger') as mock_logger:
             await hooks.on_run_end(
                 RunEnd(
+                    eval_set_id=None,
                     run_id="test-run",
                     exception=None,
                     logs=[]
@@ -380,6 +407,7 @@ class TestWandBModelHooks:
         # When
         await hooks.on_task_end(
             TaskEnd(
+                eval_set_id=None,
                 run_id="test_run_id",
                 eval_id="test_eval_id",
                 log=task_end_eval_log

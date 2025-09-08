@@ -62,6 +62,7 @@ class TestEndToEndInspectRuns:
         epochs = eval_logs[0].eval.config.epochs
         epochs_reducer = eval_logs[0].eval.config.epochs_reducer
         fail_on_error = eval_logs[0].eval.config.fail_on_error
+        continue_on_fail = eval_logs[0].eval.config.continue_on_fail
         sandbox_cleanup = eval_logs[0].eval.config.sandbox_cleanup
         log_samples = eval_logs[0].eval.config.log_samples
         log_realtime = eval_logs[0].eval.config.log_realtime
@@ -69,7 +70,7 @@ class TestEndToEndInspectRuns:
         score_display = eval_logs[0].eval.config.score_display
 
         weave_evaluation_logger.assert_called_once_with(
-            name="hello_world",
+            name="hello_world_eval",
             dataset="test_dataset",
             model="mockllm__model",
             eval_attributes={
@@ -79,9 +80,15 @@ class TestEndToEndInspectRuns:
                     "task_id": task_id,
                     "eval_id": eval_id,
                     'sample_count': sample_count, 
-                    'epochs': epochs, 'epochs_reducer': epochs_reducer, 
-                    'fail_on_error': fail_on_error, 'sandbox_cleanup': sandbox_cleanup, 
-                    'log_samples': log_samples, 'log_realtime': log_realtime, 'log_images': log_images, 'score_display': score_display
+                    'epochs': epochs, 
+                    'epochs_reducer': epochs_reducer, 
+                    'fail_on_error': fail_on_error, 
+                    'continue_on_fail': continue_on_fail,
+                    'sandbox_cleanup': sandbox_cleanup, 
+                    'log_samples': log_samples, 
+                    'log_realtime': log_realtime, 
+                    'log_images': log_images, 
+                    'score_display': score_display
                 }
             }
         )

@@ -120,6 +120,7 @@ async def patched_task_run_sample(
     time_limit: int | None,
     working_limit: int | None,
     semaphore: anyio.Semaphore | None,
+    eval_set_id: str | None,
     run_id: str,
     task_id: str,
 ) -> dict[str, SampleScore] | None:
@@ -127,37 +128,40 @@ async def patched_task_run_sample(
         
         # Create patched scorers using PatchedScorer class
         if scorers:
-            patched_scorers: list[Scorer] | None = [PatchedScorer(scorer)
-    for scorer in scorers]
+            patched_scorers: list[Scorer] | None = [
+                PatchedScorer(scorer)
+                for scorer in scorers
+            ]
         else:
             patched_scorers = None
 
         return await task_run_sample(
-                task_name=task_name,
-                log_location=log_location,
-                sample=sample,
-                state=state,
-                sandbox=sandbox,
-                max_sandboxes=max_sandboxes,
-                sandbox_cleanup=sandbox_cleanup,
-                plan=patched_plan,
-                scorers=patched_scorers,
-                generate=generate,
-                progress=progress,
-                logger=logger,
-                log_images=log_images,
-                sample_source=sample_source,
-                sample_error=sample_error,
-                sample_complete=sample_complete,
-                fails_on_error=fails_on_error,
-                retry_on_error=retry_on_error,
-                error_retries=error_retries,
-                time_limit=time_limit,
-                working_limit=working_limit,
-                semaphore=semaphore,
-                run_id=run_id,
-                task_id=task_id,
-            )
+            task_name=task_name,
+            log_location=log_location,
+            sample=sample,
+            state=state,
+            sandbox=sandbox,
+            max_sandboxes=max_sandboxes,
+            sandbox_cleanup=sandbox_cleanup,
+            plan=patched_plan,
+            scorers=patched_scorers,
+            generate=generate,
+            progress=progress,
+            logger=logger,
+            log_images=log_images,
+            sample_source=sample_source,
+            sample_error=sample_error,
+            sample_complete=sample_complete,
+            fails_on_error=fails_on_error,
+            retry_on_error=retry_on_error,
+            error_retries=error_retries,
+            time_limit=time_limit,
+            working_limit=working_limit,
+            semaphore=semaphore,
+            eval_set_id=eval_set_id,
+            run_id=run_id,
+            task_id=task_id,
+        )
 
 
 inspect_patcher = MultiPatcher(

@@ -1,7 +1,7 @@
 import pytest
 import configparser
 import os
-from typing import Callable
+from typing import Callable, Generator
 from pathlib import Path
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
@@ -47,7 +47,7 @@ def initialise_wandb(wandb_path: Path) -> None:
 ## Mock wandb/weave client calls
 
 @pytest.fixture(scope="function", autouse=True)
-def patch_wandb_client():
+def patch_wandb_client() -> Generator[tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock], None, None]:
     mock_config = MagicMock()
     mock_config.update = MagicMock()
     mock_summary = MagicMock()
@@ -65,7 +65,7 @@ def patch_wandb_client():
         yield mock_wandb_init, mock_save, mock_config, mock_summary, mock_log
 
 @pytest.fixture(scope="function")
-def reset_inspect_ai_hooks():
+def reset_inspect_ai_hooks() -> Generator[None, None, None]:
     hooks_startup_module._registry_hooks_loaded = False
     yield
     # reload settings for every test
@@ -121,7 +121,8 @@ def hello_world_eval() -> Callable[[], Task]:
             ],
             solver=[generate()],
             scorer=exact(),
-            metadata={"test": "test"}
+            metadata={"test": "test"},
+            name="hello_world_eval"
         )
 
     return hello_world
@@ -141,7 +142,7 @@ def error_eval() -> Callable[[], Task]:
     Returns a mock Inspect eval plus a set of mocks that can be used to check that Weave was called correctly.
     """
     @task
-    def hello_world_with_error():
+    def hello_world():
         return Task(
             dataset=[
                 Sample(
@@ -151,10 +152,11 @@ def error_eval() -> Callable[[], Task]:
             ],
             solver=[raise_error()],
             scorer=exact(),
-            metadata={"test": "test"}
+            metadata={"test": "test"},
+            name="hello_world_eval"
         )
 
-    return hello_world_with_error
+    return hello_world
 
 
 ### Inspect Hooks DTOs
@@ -164,6 +166,7 @@ def create_task_start() -> Callable[[dict | None], TaskStart]:
     """Helper to create TaskStart with optional metadata"""
     def _create_task_start(metadata: dict | None = None) -> TaskStart:
         return TaskStart(
+            eval_set_id="test_eval_set_id",
             run_id="test_run_id",
             eval_id="test_eval_id",
             spec=EvalSpec(
@@ -183,6 +186,7 @@ def create_task_start() -> Callable[[dict | None], TaskStart]:
 def task_end_eval_log() -> EvalLog:
     return EvalLog(
         eval=EvalSpec(
+            eval_set_id="test_eval_set_id",
             run_id="test_run_id",
             task_id="test_task_id",
             created=datetime.now().isoformat(),

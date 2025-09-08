@@ -4,7 +4,6 @@ from inspect_ai.scorer import exact, match, Target
 from inspect_ai.dataset import Sample
 from inspect_ai.solver import TaskState
 from typing import Generator
-from pytest import MonkeyPatch
 import pytest
 from unittest.mock import MagicMock, patch
 from .conftest import WeaveTestClient
@@ -20,7 +19,6 @@ def patch_weave_client_in_hooks(weave_test_client: WeaveTestClient) -> Generator
 
 def test_inspect_quickstart(
     patch_weave_client_in_hooks: WeaveTestClient,
-    monkeypatch: MonkeyPatch,
     reset_inspect_ai_hooks: None
 ) -> None:
     @task
@@ -34,14 +32,10 @@ def test_inspect_quickstart(
             ],
             solver=[generate()],
             scorer=exact(),
-            metadata={"test": "test"},
-            display_name="test task"
+            metadata={"test": "test", "inspect_wandb_weave_enabled": "true", "inspect_wandb_models_enabled": "false"},
+            display_name="test task",
+            name="hello_world_autopatcher"
         )
-    
-    # configure settings via env variables
-    monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
-    monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "true")
-    monkeypatch.setenv("INSPECT_WANDB_WEAVE_AUTOPATCH", "true")
 
     eval(hello_world, model="mockllm/model")
 
@@ -53,11 +47,6 @@ def test_inspect_quickstart(
     assert "sample" in calls[1].name
     assert "inspect_ai/generate" in calls[2].name
     assert "scorer_inspect_ai/exact" in calls[3].name
-
-    # reset the env variables
-    monkeypatch.delenv("INSPECT_WANDB_MODELS_ENABLED")
-    monkeypatch.delenv("INSPECT_WANDB_WEAVE_ENABLED")
-    monkeypatch.delenv("INSPECT_WANDB_WEAVE_AUTOPATCH")
 
 
 class TestPatchedScorerRegistryManagement:
