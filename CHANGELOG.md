@@ -1,5 +1,7 @@
 ## Unreleased
 
+## [v0.1.1](https://pypi.org/project/inspect-wandb/0.1.1/) (08 September 2025)
+
 ### Added
 
 - This CHANGELOG!
