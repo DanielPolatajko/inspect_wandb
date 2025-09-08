@@ -112,7 +112,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_eval_set_log_dir", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_eval_set_id", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
 
     @pytest.mark.asyncio
