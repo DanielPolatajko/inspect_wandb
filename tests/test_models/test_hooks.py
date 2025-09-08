@@ -238,6 +238,7 @@ class TestWandBModelHooks:
         hooks._correct_samples = 5
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When
         await hooks.on_run_end(
@@ -273,6 +274,7 @@ class TestWandBModelHooks:
         hooks._correct_samples = 5
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path.exists() to return True
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=True):
@@ -302,6 +304,7 @@ class TestWandBModelHooks:
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path.exists() to return False and capture logger
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=False), \
@@ -334,6 +337,7 @@ class TestWandBModelHooks:
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path.exists() to return True and capture logger
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=True), \
@@ -365,6 +369,7 @@ class TestWandBModelHooks:
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path constructor to control exists() method
         def mock_path_constructor(file_str):
@@ -403,6 +408,7 @@ class TestWandBModelHooks:
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
         hooks.run.url = "test_url"
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When
         await hooks.on_task_end(
