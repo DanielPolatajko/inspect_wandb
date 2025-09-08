@@ -80,11 +80,9 @@ class WandBModelHooks(Hooks):
                     logger.warning(f"File or folder '{file}' does not exist. Skipping wandb upload.")
 
         if data.exception is not None and isinstance(data.exception, KeyboardInterrupt):
-            self._wandb_initialized = False
             logger.error("Inspect exited due to KeyboardInterrupt")
             self.run.finish(exit_code=1)
         elif data.exception is not None and isinstance(data.exception, SystemExit):
-            self._wandb_initialized = False
             logger.error(f"SystemExit running eval set: {data.exception}")
             self.run.finish(exit_code=3)
         elif (last_run:= all([not run["running"] for run in self._active_runs.values()])) and data.exception is not None:
@@ -94,7 +92,9 @@ class WandBModelHooks(Hooks):
             logger.warning("One or more tasks failed, may retry if eval-set")
             self.run.finish(exit_code=4)
         elif last_run:
-            self.run.finish()
+            self.run.finish(exit_code=0)
+
+        self._wandb_initialized = False
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
@@ -126,7 +126,7 @@ class WandBModelHooks(Hooks):
             "running": True,
             "exception": None,
         }
-        
+
         # Lazy initialization: only init WandB when first task starts
         if not self._wandb_initialized:
             self.run = wandb.init(
