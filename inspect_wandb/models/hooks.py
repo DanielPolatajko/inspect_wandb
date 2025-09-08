@@ -87,7 +87,7 @@ class WandBModelHooks(Hooks):
             self._wandb_initialized = False
             logger.error(f"SystemExit running eval set: {data.exception}")
             self.run.finish(exit_code=3)
-        elif data.exception is not None and (last_run:= all([not run["running"] for run in self._active_runs.values()])):
+        elif (last_run:= all([not run["running"] for run in self._active_runs.values()])) and data.exception is not None:
             logger.error("Inspect exited due to exception")
             self.run.finish(exit_code=2)
         elif not(all(log.status == "success" for log in data.logs)) and last_run:
@@ -122,7 +122,7 @@ class WandBModelHooks(Hooks):
         else:
             wandb_run_id = data.eval_id
 
-        self._active_runs[wandb_run_id] = {
+        self._active_runs[data.run_id] = {
             "running": True,
             "exception": None,
         }
