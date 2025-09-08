@@ -5,6 +5,10 @@
 - This CHANGELOG!
 - Contributor guidelines
 
+### Fixed
+- Simplified log summary of outputs metric on Weave
+- Better handling of error states for Models runs
+
 ## [v0.1.0](https://pypi.org/project/inspect-wandb/0.1.0/) (07 September 2025)
 
 ### Added
