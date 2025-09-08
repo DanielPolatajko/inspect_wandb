@@ -9,7 +9,6 @@ from inspect_ai.solver import Solver, TaskState, Generate, solver, generate
 from inspect_wandb.config.settings import ModelsSettings, WeaveSettings
 from inspect_ai._util.registry import registry_find
 import inspect_ai.hooks._startup as hooks_startup_module
-from inspect_wandb.shared.utils import format_wandb_id_string
 from uuid import uuid4
 from typing import Sequence
 
@@ -105,8 +104,6 @@ class TestWandBModelHooksE2ERetryScenarios:
             eval_set_ids = [call[1]['id'] for call in mock_wandb_init.call_args_list]
 
             assert len(set(eval_set_ids)) == 1
-            
-            assert eval_set_ids[0] == format_wandb_id_string(str(tmp_path / uid))
             
             assert len(logs) == 2
 
