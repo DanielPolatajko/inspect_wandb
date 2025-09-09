@@ -7,7 +7,7 @@ from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import exact
 from inspect_ai.solver import generate, Solver, TaskState, Generate, solver
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 import inspect_ai.hooks._startup as hooks_startup_module
 from unittest.mock import patch
 from inspect_wandb.providers import weave_evaluation_hooks
@@ -54,7 +54,21 @@ def patch_wandb_client() -> Generator[tuple[MagicMock, MagicMock, MagicMock, Mag
     mock_summary.update = MagicMock()
     mock_log = MagicMock()
     mock_save = MagicMock()
-    mock_wandb_init = MagicMock()
+    
+    # Create a mock run that wandb.init() will return
+    mock_run = MagicMock()
+    mock_run.config = mock_config
+    mock_run.summary = mock_summary
+    mock_run.define_metric = MagicMock()
+    mock_run.tags = []
+    mock_run.save = MagicMock()
+    mock_run.finish = MagicMock()
+    
+    # Mock the url property using PropertyMock
+    type(mock_run).url = PropertyMock(return_value="mock_wandb_url")
+    
+    mock_wandb_init = MagicMock(return_value=mock_run)
+    
     with (
         patch("inspect_wandb.models.hooks.wandb.init", mock_wandb_init),
         patch("inspect_wandb.models.hooks.wandb.save", mock_save),

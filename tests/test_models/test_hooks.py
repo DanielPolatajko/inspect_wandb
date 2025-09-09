@@ -1,19 +1,19 @@
 from inspect_wandb.models.hooks import WandBModelHooks
 from inspect_wandb.config.settings import ModelsSettings
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 import pytest
 from wandb.sdk.wandb_run import Run
 from wandb.sdk.wandb_config import Config
 from wandb.sdk.wandb_summary import Summary
 from typing import Callable
-from inspect_ai.hooks import TaskStart, SampleEnd, RunEnd, TaskEnd
-from inspect_ai.log import EvalSample, EvalLog
+from inspect_ai.hooks import TaskStart, SampleEnd, RunEnd
+from inspect_ai.log import EvalSample
 from inspect_ai.scorer import Score 
 from inspect_wandb.models.hooks import Metric
 
 @pytest.fixture(scope="function")
 def mock_wandb_run() -> Run:
-    mock_run = MagicMock(spec=Run)
+    mock_run = MagicMock()  # Remove spec=Run to allow property mocking
     mock_run.config = MagicMock(spec=Config)
     mock_run.config.update = MagicMock()
     mock_run.define_metric = MagicMock()
@@ -22,6 +22,10 @@ def mock_wandb_run() -> Run:
     mock_run.summary.update = MagicMock()
     mock_run.save = MagicMock()
     mock_run.finish = MagicMock()
+    
+    # Mock the url property using PropertyMock
+    type(mock_run).url = PropertyMock(return_value="mock_wandb_url")
+    
     return mock_run
 
 class TestWandBModelHooks:
@@ -395,7 +399,7 @@ class TestWandBModelHooks:
         mock_logger.warning.assert_called_with("File or folder 'missing-file.txt' does not exist. Skipping wandb upload.")
 
     @pytest.mark.asyncio
-    async def test_wandb_run_url_added_to_eval_metadata(self, mock_wandb_run: Run, task_end_eval_log: EvalLog) -> None:
+    async def test_wandb_run_url_added_to_eval_metadata(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
         """Test wandb_run_url is added to eval metadata"""
         # Given
         hooks = WandBModelHooks()
@@ -406,22 +410,18 @@ class TestWandBModelHooks:
             project="test-project"
         )
         hooks._hooks_enabled = True
-        hooks._wandb_initialized = True
-        hooks.run.url = "test_url"
+        hooks._wandb_initialized = False
         hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
+        task_start = create_task_start()
+
         # When
-        await hooks.on_task_end(
-            TaskEnd(
-                eval_set_id=None,
-                run_id="test_run_id",
-                eval_id="test_eval_id",
-                log=task_end_eval_log
-            )
+        await hooks.on_task_start(
+            task_start
         )
 
         # Then
-        assert task_end_eval_log.eval.metadata["wandb_run_url"] == "test_url"
+        assert task_start.spec.metadata["wandb_run_url"] == "mock_wandb_url"
 
     @pytest.mark.asyncio
     async def test_keyboard_interrupt_exception_finishes_with_exit_code_1(self, mock_wandb_run: Run) -> None:

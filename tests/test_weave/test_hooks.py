@@ -1,5 +1,5 @@
 from inspect_ai.log import EvalLog
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 from inspect_ai.hooks import SampleEnd, TaskEnd, RunEnd, TaskStart, SampleStart
 from inspect_ai.model import ChatCompletionChoice, ModelOutput, ChatMessageAssistant
 from inspect_ai.log import EvalSample,EvalSampleSummary
@@ -11,6 +11,7 @@ from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
 from inspect_wandb.config.settings import WeaveSettings
 from weave.trace.weave_client import WeaveClient, Call
 from typing import Callable
+from .conftest import WeaveTestClient
 
 @pytest.fixture(scope="function")
 def test_settings() -> WeaveSettings:
@@ -316,26 +317,27 @@ class TestWeaveEnablementPriority:
         assert not hooks.settings.enabled
 
     @pytest.mark.asyncio
-    async def test_weave_run_url_added_to_eval_metadata(self, test_settings: WeaveSettings, task_end_eval_log: EvalLog) -> None:
+    async def test_weave_run_url_added_to_eval_metadata(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart], weave_test_client: WeaveTestClient) -> None:
         """Test weave_run_url is added to eval metadata"""
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
         hooks._hooks_enabled = True  # Enable hooks for this test
         hooks._weave_initialized = True  # Mark as initialized for cleanup
-        hooks.weave_eval_loggers["test_eval_id"] = MagicMock(spec=EvaluationLogger)
-        hooks.weave_eval_loggers["test_eval_id"]._evaluate_call = MagicMock(spec=Call)
-        hooks.weave_eval_loggers["test_eval_id"]._evaluate_call.ui_url = "test_url"
         
-        # When
-        await hooks.on_task_end(
-            TaskEnd(
-                eval_set_id="test_eval_set_id",
-                run_id="test_run_id",
-                eval_id="test_eval_id",
-                log=task_end_eval_log
-            )
-        )
+        # Mock CustomEvaluationLogger to return our mock with proper ui_url
+        mock_evaluation_logger = MagicMock(spec=EvaluationLogger)
+        mock_call = MagicMock()
+        type(mock_call).ui_url = PropertyMock(return_value="test_url")
+        mock_evaluation_logger._evaluate_call = mock_call
+        
+        with patch('inspect_wandb.weave.hooks.CustomEvaluationLogger', return_value=mock_evaluation_logger):
+            task_start = create_task_start()
+            
+            # When
+            await hooks.on_task_start(
+                task_start      
+                )
 
         # Then
-        assert task_end_eval_log.eval.metadata["weave_run_url"] == "test_url"
+        assert task_start.spec.metadata["weave_run_url"] == "test_url"
