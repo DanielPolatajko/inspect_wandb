@@ -133,7 +133,8 @@ class TestWeaveEvaluationHooks:
         expected_summary = {
             "test_score": {
                 "test_metric": 1.0
-            }
+            },
+            "sample_count": 1
         }
         mock_weave_eval_logger.log_summary.assert_called_once_with(
             expected_summary

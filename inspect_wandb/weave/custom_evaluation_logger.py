@@ -77,7 +77,7 @@ class CustomEvaluationLogger(EvaluationLogger):
             logger.warning("(NO-OP): Evaluation already finalized, cannot log summary.")
             return
 
-        final_summary = {"scoring": summary or {}}
+        final_summary = {"summary": summary or {}}
 
         # Call the summarize op
         assert self._evaluate_call is not None, (

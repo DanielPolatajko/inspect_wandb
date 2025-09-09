@@ -58,7 +58,6 @@ class TestEndToEndInspectRuns:
         run_id = eval_logs[0].eval.run_id
         task_id = eval_logs[0].eval.task_id
         eval_id = eval_logs[0].eval.eval_id
-        sample_count = eval_logs[0].eval.dataset.samples
         epochs = eval_logs[0].eval.config.epochs
         epochs_reducer = eval_logs[0].eval.config.epochs_reducer
         fail_on_error = eval_logs[0].eval.config.fail_on_error
@@ -79,7 +78,6 @@ class TestEndToEndInspectRuns:
                     "run_id": run_id,
                     "task_id": task_id,
                     "eval_id": eval_id,
-                    'sample_count': sample_count, 
                     'epochs': epochs, 
                     'epochs_reducer': epochs_reducer, 
                     'fail_on_error': fail_on_error, 
