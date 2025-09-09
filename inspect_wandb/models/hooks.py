@@ -9,7 +9,6 @@ from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings_loader import SettingsLoader
 from inspect_wandb.config.settings import ModelsSettings
-from inspect_wandb.shared.utils import format_wandb_id_string
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
@@ -29,6 +28,7 @@ class WandBModelHooks(Hooks):
     _wandb_initialized: bool = False
     _is_eval_set: bool = False
     _hooks_enabled: bool | None = None
+    _active_runs: dict[str, dict[str, bool | BaseException | None]] = {}
 
     def __init__(self):
         if INSTALLED_EXTRAS["viz"]:
@@ -57,6 +57,10 @@ class WandBModelHooks(Hooks):
         if not self._wandb_initialized:
             return
 
+        self._active_runs[data.run_id]["running"] = False
+        if data.exception is not None:
+            self._active_runs[data.run_id]["exception"] = data.exception
+
         self._log_summary(data)
 
         if self.settings is not None and self.settings.viz and self.viz_writer is not None:
@@ -74,27 +78,22 @@ class WandBModelHooks(Hooks):
                 else:
                     logger.warning(f"File or folder '{file}' does not exist. Skipping wandb upload.")
 
-        self._wandb_initialized = False
-
-        match data.exception:
-            case KeyboardInterrupt():
-                logger.error("Inspect exited due to KeyboardInterrupt")
-                self.run.finish(exit_code=1)
-                return
-            case Exception():
-                logger.exception(data.exception)
-                self.run.finish(exit_code=2)
-                return
-            case SystemExit() as sysexit:
-                logger.error(f"SystemExit running eval set: {sysexit}")
-                self.run.finish(exit_code=3)
-                return
-            
-        if not(all(log.status == "success" for log in data.logs)):
+        if data.exception is not None and isinstance(data.exception, KeyboardInterrupt):
+            logger.error("Inspect exited due to KeyboardInterrupt")
+            self.run.finish(exit_code=1)
+        elif data.exception is not None and isinstance(data.exception, SystemExit):
+            logger.error(f"SystemExit running eval set: {data.exception}")
+            self.run.finish(exit_code=3)
+        elif (last_run:= all([not run["running"] for run in self._active_runs.values()])) and data.exception is not None:
+            logger.error("Inspect exited due to exception")
+            self.run.finish(exit_code=2)
+        elif not(all(log.status == "success" for log in data.logs)) and last_run:
             logger.warning("One or more tasks failed, may retry if eval-set")
             self.run.finish(exit_code=4)
-        else:
-            self.run.finish()
+        elif last_run:
+            self.run.finish(exit_code=0)
+
+        self._wandb_initialized = False
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
@@ -118,14 +117,17 @@ class WandBModelHooks(Hooks):
             return
         
         if self._is_eval_set:
-            wandb_run_id = format_wandb_id_string(self.eval_set_log_dir)
+            wandb_run_id = data.eval_set_id
         else:
             wandb_run_id = data.eval_id
-        
+
+        self._active_runs[data.run_id] = {
+            "running": True,
+            "exception": None,
+        }
+
         # Lazy initialization: only init WandB when first task starts
-        print(self._wandb_initialized)
         if not self._wandb_initialized:
-            print("Initializing WandB...")
             self.run = wandb.init(
                 id=wandb_run_id, 
                 name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,

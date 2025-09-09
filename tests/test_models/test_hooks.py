@@ -112,7 +112,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_eval_set_log_dir", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_eval_set_id", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
 
     @pytest.mark.asyncio
@@ -238,6 +238,7 @@ class TestWandBModelHooks:
         hooks._correct_samples = 5
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When
         await hooks.on_run_end(
@@ -273,6 +274,7 @@ class TestWandBModelHooks:
         hooks._correct_samples = 5
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path.exists() to return True
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=True):
@@ -302,6 +304,7 @@ class TestWandBModelHooks:
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path.exists() to return False and capture logger
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=False), \
@@ -334,6 +337,7 @@ class TestWandBModelHooks:
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path.exists() to return True and capture logger
         with patch('inspect_wandb.models.hooks.Path.exists', return_value=True), \
@@ -365,6 +369,7 @@ class TestWandBModelHooks:
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When - mock Path constructor to control exists() method
         def mock_path_constructor(file_str):
@@ -403,6 +408,7 @@ class TestWandBModelHooks:
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
         hooks.run.url = "test_url"
+        hooks._active_runs = {"test-run": {"running": True, "exception": None}}
 
         # When
         await hooks.on_task_end(
@@ -416,3 +422,152 @@ class TestWandBModelHooks:
 
         # Then
         assert task_end_eval_log.eval.metadata["wandb_run_url"] == "test_url"
+
+    @pytest.mark.asyncio
+    async def test_keyboard_interrupt_exception_finishes_with_exit_code_1(self, mock_wandb_run: Run) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project"
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": False, "exception": None}}
+
+        # When
+        with patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    eval_set_id=None,
+                    run_id="test-run",
+                    exception=KeyboardInterrupt(),
+                    logs=[]
+                )
+            )
+
+        # Then
+        hooks.run.finish.assert_called_once_with(exit_code=1)
+        mock_logger.error.assert_called_with("Inspect exited due to KeyboardInterrupt")
+
+    @pytest.mark.asyncio
+    async def test_system_exit_exception_finishes_with_exit_code_3(self, mock_wandb_run: Run) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project"
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": False, "exception": None}}
+
+        # When
+        with patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    eval_set_id=None,
+                    run_id="test-run",
+                    exception=SystemExit(5),
+                    logs=[]
+                )
+            )
+
+        # Then
+        hooks.run.finish.assert_called_once_with(exit_code=3)
+        mock_logger.error.assert_called_with("SystemExit running eval set: 5")
+
+    @pytest.mark.asyncio
+    async def test_general_exception_when_last_run_finishes_with_exit_code_2(self, mock_wandb_run: Run) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project"
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": False, "exception": None}}
+
+        # When
+        with patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    eval_set_id=None,
+                    run_id="test-run",
+                    exception=ValueError("Test error"),
+                    logs=[]
+                )
+            )
+
+        # Then
+        hooks.run.finish.assert_called_once_with(exit_code=2)
+        mock_logger.error.assert_called_with("Inspect exited due to exception")
+
+    @pytest.mark.asyncio
+    async def test_failed_tasks_when_last_run_finishes_with_exit_code_4(self, mock_wandb_run: Run) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project"
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": False, "exception": None}}
+
+        mock_failed_log = MagicMock()
+        mock_failed_log.status = "failed"
+        
+        # When
+        with patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    eval_set_id=None,
+                    run_id="test-run",
+                    exception=None,
+                    logs=[mock_failed_log]
+                )
+            )
+
+        # Then
+        hooks.run.finish.assert_called_once_with(exit_code=4)
+        mock_logger.warning.assert_called_with("One or more tasks failed, may retry if eval-set")
+
+    @pytest.mark.asyncio
+    async def test_successful_completion_when_last_run_finishes_with_exit_code_0(self, mock_wandb_run: Run) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, 
+            entity="test-entity", 
+            project="test-project"
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": False, "exception": None}}
+
+        mock_success_log = MagicMock()
+        mock_success_log.status = "success"
+        
+        # When
+        await hooks.on_run_end(
+            RunEnd(
+                eval_set_id=None,
+                run_id="test-run",
+                exception=None,
+                logs=[mock_success_log]
+            )
+        )
+
+        # Then
+        hooks.run.finish.assert_called_once_with(exit_code=0)
