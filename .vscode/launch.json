@@ -34,7 +34,7 @@
                 "--model",
                 "openai/gpt-4o-mini,anthropic/claude-sonnet-4-0",
                 "--metadata",
-                "'{\"inspect_wandb_models_tags\": [\"test\"]}'",
+                "inspect_wandb_models_tags=['test']",
                 "--limit",
                 "5",
                 "--display",
@@ -55,7 +55,7 @@
                 "--limit",
                 "5",
                 "--metadata",
-                "inspect_wandb_weave_enabled=false"
+                "inspect_wandb_models_tags=['test']",
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
