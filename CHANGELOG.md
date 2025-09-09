@@ -1,5 +1,8 @@
 ## Unreleased
 
+## Added
+- Write wandb and weave URLs to Inspect eval metadata in log files
+
 ## [v0.1.1](https://pypi.org/project/inspect-wandb/0.1.1/) (08 September 2025)
 
 ### Added

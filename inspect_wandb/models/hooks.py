@@ -4,7 +4,7 @@ from typing import Any
 from typing_extensions import override
 
 import wandb
-from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, TaskEnd, EvalSetStart
+from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, EvalSetStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings_loader import SettingsLoader
@@ -162,13 +162,7 @@ class WandBModelHooks(Hooks):
             if self.settings.tags is not None and self.run.tags is not None:
                 self.run.tags = self.run.tags + tuple(self.settings.tags)
 
-    
-    @override
-    async def on_task_end(self, data: TaskEnd) -> None:
-        if data.log.eval.metadata is None:
-            data.log.eval.metadata = {"wandb_run_url": self.run.url}
-        else:
-            data.log.eval.metadata["wandb_run_url"] = self.run.url
+            data.spec.metadata = (data.spec.metadata or {}) | {"wandb_run_url": self.run.url}
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:

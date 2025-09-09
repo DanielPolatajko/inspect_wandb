@@ -107,6 +107,13 @@ class WeaveEvaluationHooks(Hooks):
         assert weave_eval_logger._evaluate_call is not None
         call_context.push_call(weave_eval_logger._evaluate_call)
 
+        if weave_eval_logger._evaluate_call is not None:
+            weave_url = weave_eval_logger._evaluate_call.ui_url
+        else:
+            weave_url = None
+
+        data.spec.metadata = (data.spec.metadata or {}) | {"weave_run_url": weave_url}
+
     @override
     async def on_task_end(self, data: TaskEnd) -> None:
         if not self._hooks_enabled:
@@ -125,11 +132,6 @@ class WeaveEvaluationHooks(Hooks):
                         summary[scorer_name][metric_name] = metric.value
             summary["sample_count"] = data.log.results.total_samples
         weave_eval_logger.log_summary(summary)
-
-        if data.log.eval.metadata is None and weave_eval_logger._evaluate_call is not None:
-            data.log.eval.metadata = {"weave_run_url": weave_eval_logger._evaluate_call.ui_url}
-        elif data.log.eval.metadata is not None and weave_eval_logger._evaluate_call is not None:
-            data.log.eval.metadata["weave_run_url"] = weave_eval_logger._evaluate_call.ui_url
 
     @override
     async def on_sample_start(self, data: SampleStart) -> None:
