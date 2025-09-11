@@ -36,6 +36,7 @@ class TestInspectWandBBaseSettings:
 
     def test_validation_errors_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
+        cwd = Path.cwd()
         os.chdir(tmp_path) # prevents settings being read from non-test settings file
 
         monkeypatch.setenv("ENABLED", True)
@@ -43,6 +44,8 @@ class TestInspectWandBBaseSettings:
         # When / Then
         with pytest.raises(ValidationError):
             InspectWandBBaseSettings.model_validate({})
+
+        os.chdir(cwd) # restore cwd
 
     def test_no_validation_errors_when_hooks_are_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
