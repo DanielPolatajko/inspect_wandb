@@ -184,23 +184,27 @@ class TestModelsSettings:
         assert models_settings.enabled is False
         assert weave_settings.enabled is False
 
-    def test_wandb_project_and_entity_are_set_if_hooks_are_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_validation_errors_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", True)
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", True)
+
+        # When / Then
+        with pytest.raises(ValidationError):
+            ModelsSettings.model_validate({})
+        with pytest.raises(ValidationError):
+            WeaveSettings.model_validate({})
+
+    def test_no_validation_errors_when_hooks_are_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
 
         monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", False)
 
-        # When
-        models_settings = ModelsSettings.model_validate({})
-        weave_settings = WeaveSettings.model_validate({})
-            
-        # Then
-        assert models_settings.enabled is False
-        assert models_settings.project == "default"
-        assert models_settings.entity == "default"
-        assert weave_settings.enabled is False
-        assert weave_settings.project == "default"
-        assert weave_settings.entity == "default"
+        # When / Then
+        ModelsSettings.model_validate({})
+        WeaveSettings.model_validate({})
 
     def test_errors_for_invalid_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
