@@ -3,6 +3,9 @@ from typing import Self
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource, PyprojectTomlConfigSettingsSource
 from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 class InspectWandBBaseSettings(BaseSettings):
     """
@@ -17,13 +20,14 @@ class InspectWandBBaseSettings(BaseSettings):
     )
 
     enabled: bool = Field(default=True, description="Whether to enable the InspectWandB integration")
-    project: str | None = Field(default=None, alias="WANDB_PROJECT", description="Project to write to for the Weave integration")
-    entity: str | None = Field(default=None, alias="WANDB_ENTITY", description="Entity to write to for the Weave integration")
+    project: str | None = Field(default=None, alias="WANDB_PROJECT", description="Project to write to for the wandb integrations")
+    entity: str | None = Field(default=None, alias="WANDB_ENTITY", description="Entity to write to for the wandb integrations")
 
     @model_validator(mode="after")
     def validate_project_and_entity(self) -> Self:
         if self.enabled and (not self.project or not self.entity):
-            raise ValueError("Project and entity must be set if the Models or Weave integrations are enabled")
+            logger.warning(f"Project and entity must be set if the wandb integrations are enabled. Disabling integrations for this run. {self.project=} {self.entity=}")
+            self.enabled = False
         return self
 
     @classmethod

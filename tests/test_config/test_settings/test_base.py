@@ -1,6 +1,5 @@
 from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 import pytest
-from pydantic import ValidationError
 from pathlib import Path
 from unittest.mock import patch
 import os
@@ -34,16 +33,18 @@ class TestInspectWandBBaseSettings:
         # Then
         assert settings.enabled is False
 
-    def test_validation_errors_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_hooks_disabled_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
         cwd = Path.cwd()
         os.chdir(tmp_path) # prevents settings being read from non-test settings file
 
         monkeypatch.setenv("ENABLED", True)
 
-        # When / Then
-        with pytest.raises(ValidationError):
-            InspectWandBBaseSettings.model_validate({})
+        # When
+        settings = InspectWandBBaseSettings.model_validate({})
+
+        # Then
+        assert settings.enabled is False
 
         os.chdir(cwd) # restore cwd
 
