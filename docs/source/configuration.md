@@ -35,6 +35,7 @@ The simplest way to configure WandB (Models and Weave) is with `wandb init`. For
    ```
 6. **TAGS**: Optional tags to add to the models run, e.g. `INSPECT_WANDB_MODELS_TAGS="['tag1','tag2']"`
 7. **ADD_METADATA_TO_CONFIG**: Whether or not to write the entire Inspect metadata to WandB run config. Defaults to `True`.
+8. **ENVIRONMENT_VALIDATIONS**: An optional dict with the format `{"wandb_base_url": "<your base url>", "wandb_api_key": "<your api key>"}`. This provides a secondary validation layer for environment variables which influence WandB's behaviour, but are not directly access by the Inspect WandB extension.
 
 
 ### WandB Weave Configuration
