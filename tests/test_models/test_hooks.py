@@ -57,7 +57,7 @@ class TestWandBModelHooks:
             assert not hooks.enabled()
 
     @pytest.mark.asyncio
-    async def test_wandb_initialised_on_task_start(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_wandb_initialised_on_task_start(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
         """
         Test that the on_task_start method initializes the WandB run.
         """
@@ -75,7 +75,7 @@ class TestWandBModelHooks:
             assert hooks.run.tags == ("inspect_task:test_task", "inspect_model:mockllm/model", "inspect_dataset:test-dataset")
 
     @pytest.mark.asyncio
-    async def test_wandb_config_updated_on_task_start_if_settings_config_is_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_wandb_config_updated_on_task_start_if_settings_config_is_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
         """
         Test that the on_task_start method initializes the WandB run with config.
         """
@@ -99,7 +99,7 @@ class TestWandBModelHooks:
             assert hooks.run.tags == ("inspect_task:test_task", "inspect_model:mockllm/model", "inspect_dataset:test-dataset")
 
     @pytest.mark.asyncio
-    async def test_wandb_init_called_with_eval_set_log_dir_if_eval_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_wandb_init_called_with_eval_set_log_dir_if_eval_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
         """
         Test that the on_task_start method initializes the WandB run with eval-set log dir.
         """
@@ -120,7 +120,7 @@ class TestWandBModelHooks:
             assert hooks._wandb_initialized is True
 
     @pytest.mark.asyncio
-    async def test_wandb_config_updated_with_eval_metadata(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_wandb_config_updated_with_eval_metadata(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
         """
         Test that the on_task_start method initializes the WandB run with config.
         """
@@ -141,7 +141,7 @@ class TestWandBModelHooks:
             hooks.run.config.update.assert_called_once_with({"test": "test"})
 
     @pytest.mark.asyncio
-    async def test_wandb_config_not_updated_with_eval_metadata_if_add_metadata_to_config_is_false(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_wandb_config_not_updated_with_eval_metadata_if_add_metadata_to_config_is_false(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
         """
         Test that the on_task_start method initializes the WandB run with config.
         """
@@ -165,7 +165,7 @@ class TestWandBModelHooks:
             hooks.run.config.update.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_wandb_tags_updated_on_task_start_if_settings_tags_are_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_wandb_tags_updated_on_task_start_if_settings_tags_are_set(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
         """
         Test that the on_task_start method adds settings tags to the run tags.
         """
@@ -571,3 +571,24 @@ class TestWandBModelHooks:
 
         # Then
         hooks.run.finish.assert_called_once_with(exit_code=0)
+
+    @pytest.mark.parametrize("metadata_key", [
+        "INSPECT_WANDB_MODELS_ENABLED",
+        "inspect_wandb_models_enabled",
+        "iNsPecT_wAnDb_MoDeLs_EnAbLeD",
+    ])
+    def parse_settings_from_metadata_is_case_insensitive(self, create_task_start: Callable[dict | None, TaskStart], metadata_key: str) -> None:
+        """Test that parse_settings_from_metadata is case insensitive"""
+        # Given
+        hooks = WandBModelHooks()
+        metadata = create_task_start({
+            metadata_key: True,
+        })
+        
+        
+        # When
+        settings = hooks._extract_settings_overrides_from_eval_metadata(metadata)
+
+        # Then
+        assert settings is not None
+        assert settings["enabled"] is True

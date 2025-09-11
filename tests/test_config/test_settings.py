@@ -15,10 +15,11 @@ class TestWandBSettingsSource:
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = source-test-entity
-project = source-test-project
-"""
+        settings_content = """
+        [default]
+        entity = source-test-entity
+        project = source-test-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -65,10 +66,11 @@ project = source-test-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = cached-entity
-project = cached-project
-"""
+        settings_content = """
+        [default]
+        entity = cached-entity
+        project = cached-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -91,10 +93,11 @@ class TestModelsSettings:
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -113,10 +116,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
@@ -144,10 +148,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
@@ -165,15 +170,30 @@ project = wandb-project
         assert settings.entity == "env-entity"
         assert settings.files == ["env-file1.txt", "env-file2.txt"]
 
+    def test_environment_variables_set_to_bools(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", False)
+
+        # When
+        models_settings = ModelsSettings.model_validate({})
+        weave_settings = WeaveSettings.model_validate({})
+            
+        # Then
+        assert models_settings.enabled is False
+        assert weave_settings.enabled is False
+
     def test_wandb_settings_third_priority(self, tmp_path: Path) -> None:
         # Given
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -190,10 +210,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "false")
@@ -221,17 +242,18 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         pyproject_content = """
-[tool.inspect-wandb.models]
-enabled = false
-files = ["toml-file.txt"]
-"""
+        [tool.inspect-wandb.models]
+        enabled = false
+        files = ["toml-file.txt"]
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
@@ -262,10 +284,11 @@ files = ["toml-file.txt"]
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = test-entity
-project = test-project
-"""
+        settings_content = """
+        [default]
+        entity = test-entity
+        project = test-project
+        """
         settings_file.write_text(settings_content)
         
         config_json = '{"learning_rate": 0.001, "batch_size": 32, "nested": {"value": true}}'
@@ -286,12 +309,12 @@ project = test-project
     def test_pyproject_toml_field_names(self, tmp_path: Path) -> None:
         # Given
         pyproject_content = """
-[tool.inspect-wandb.models]
-enabled = false
-entity = "field-entity"
-project = "field-project"
-files = ["field-file.txt"]
-"""
+        [tool.inspect-wandb.models]
+        enabled = false
+        entity = "field-entity"
+        project = "field-project"
+        files = ["field-file.txt"]
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
@@ -317,12 +340,12 @@ files = ["field-file.txt"]
     def test_pyproject_toml_alias_names(self, tmp_path: Path) -> None:
         # Given
         pyproject_content = """
-[tool.inspect-wandb.models]
-enabled = false
-WANDB_ENTITY = "alias-entity"
-WANDB_PROJECT = "alias-project"
-files = ["alias-file.txt"]
-"""
+        [tool.inspect-wandb.models]
+        enabled = false
+        WANDB_ENTITY = "alias-entity"
+        WANDB_PROJECT = "alias-project"
+        files = ["alias-file.txt"]
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
@@ -348,10 +371,10 @@ files = ["alias-file.txt"]
     def test_pyproject_toml_field_vs_alias_consistency(self, tmp_path: Path) -> None:
         # Given
         pyproject_content_field = """
-[tool.inspect-wandb.models]
-entity = "test-entity"
-project = "test-project"
-"""
+        [tool.inspect-wandb.models]
+        entity = "test-entity"
+        project = "test-project"
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content_field)
         
@@ -367,10 +390,10 @@ project = "test-project"
                 settings_field = ModelsSettings.model_validate({})
                 
             pyproject_content_alias = """
-[tool.inspect-wandb.models]
-WANDB_ENTITY = "test-entity"
-WANDB_PROJECT = "test-project"
-"""
+            [tool.inspect-wandb.models]
+            WANDB_ENTITY = "test-entity"
+            WANDB_PROJECT = "test-project"
+            """
             pyproject_path.write_text(pyproject_content_alias)
             
             with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
@@ -390,10 +413,11 @@ class TestWeaveSettings:
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -410,10 +434,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
@@ -438,10 +463,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
@@ -462,10 +488,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -482,10 +509,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
@@ -508,19 +536,20 @@ project = wandb-project
     def test_pyproject_toml_lowest_priority(self, tmp_path: Path) -> None:
         # Given
         pyproject_content = """
-[tool.inspect-wandb.weave]
-enabled = false
-"""
+        [tool.inspect-wandb.weave]
+        enabled = false
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         
         original_cwd = os.getcwd()
@@ -541,11 +570,11 @@ project = wandb-project
     def test_pyproject_toml_field_names(self, tmp_path: Path) -> None:
         # Given
         pyproject_content = """
-[tool.inspect-wandb.weave]
-enabled = false
-entity = "field-entity"
-project = "field-project"
-"""
+        [tool.inspect-wandb.weave]
+        enabled = false
+        entity = "field-entity"
+        project = "field-project"
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
@@ -570,11 +599,11 @@ project = "field-project"
     def test_pyproject_toml_alias_names(self, tmp_path: Path) -> None:
         # Given
         pyproject_content = """
-[tool.inspect-wandb.weave]
-enabled = false
-WANDB_ENTITY = "alias-entity"
-WANDB_PROJECT = "alias-project"
-"""
+        [tool.inspect-wandb.weave]
+        enabled = false
+        WANDB_ENTITY = "alias-entity"
+        WANDB_PROJECT = "alias-project"
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
@@ -599,10 +628,10 @@ WANDB_PROJECT = "alias-project"
     def test_pyproject_toml_field_vs_alias_consistency(self, tmp_path: Path) -> None:
         # Given
         pyproject_content_field = """
-[tool.inspect-wandb.weave]
-entity = "test-entity"
-project = "test-project"
-"""
+        [tool.inspect-wandb.weave]
+        entity = "test-entity"
+        project = "test-project"
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content_field)
         
@@ -618,10 +647,10 @@ project = "test-project"
                 settings_field = WeaveSettings.model_validate({})
                 
             pyproject_content_alias = """
-[tool.inspect-wandb.weave]
-WANDB_ENTITY = "test-entity"
-WANDB_PROJECT = "test-project"
-"""
+            [tool.inspect-wandb.weave]
+            WANDB_ENTITY = "test-entity"
+            WANDB_PROJECT = "test-project"
+            """
             pyproject_path.write_text(pyproject_content_alias)
             
             with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(wandb_dir)):
@@ -641,10 +670,11 @@ class TestInspectWeaveSettings:
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = test-entity
-project = test-project
-"""
+        settings_content = """
+        [default]
+        entity = test-entity
+        project = test-project
+        """
         settings_file.write_text(settings_content)
         
         # When
@@ -669,10 +699,11 @@ class TestSettingsLoader:
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = test-entity
-project = test-project
-"""
+        settings_content = """
+        [default]
+        entity = test-entity
+        project = test-project
+        """
         settings_file.write_text(settings_content)
         mock_wandb_dir.return_value = str(wandb_dir)
         
@@ -694,10 +725,11 @@ project = test-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         mock_wandb_dir.return_value = str(wandb_dir)
         
@@ -723,10 +755,11 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         mock_wandb_dir.return_value = str(wandb_dir)
         
@@ -755,21 +788,22 @@ project = wandb-project
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         mock_wandb_dir.return_value = str(wandb_dir)
         
         pyproject_content = """
-[tool.inspect-wandb.weave]
-enabled = false
+        [tool.inspect-wandb.weave]
+        enabled = false
 
-[tool.inspect-wandb.models]
-enabled = true
-files = ["model_config.yaml"]
-"""
+        [tool.inspect-wandb.models]
+        enabled = true
+        files = ["model_config.yaml"]
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         
@@ -811,22 +845,23 @@ class TestPriorityOrderIntegration:
         wandb_dir = tmp_path / "wandb"
         wandb_dir.mkdir()
         settings_file = wandb_dir / "settings"
-        settings_content = """[default]
-entity = wandb-entity
-project = wandb-project
-"""
+        settings_content = """
+        [default]
+        entity = wandb-entity
+        project = wandb-project
+        """
         settings_file.write_text(settings_content)
         mock_wandb_dir.return_value = str(wandb_dir)
         
         pyproject_content = """
-[tool.inspect-wandb.weave]
-enabled = false
+        [tool.inspect-wandb.weave]
+        enabled = false
 
-[tool.inspect-wandb.models]
-enabled = false
-files = ["pyproject-file.yaml"]
-config = {from = "pyproject"}
-"""
+        [tool.inspect-wandb.models]
+        enabled = false
+        files = ["pyproject-file.yaml"]
+        config = {from = "pyproject"}
+        """
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text(pyproject_content)
         

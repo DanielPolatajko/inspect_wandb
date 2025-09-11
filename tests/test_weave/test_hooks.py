@@ -215,6 +215,27 @@ class TestWeaveEvaluationHooks:
             display_name="test_task-sample-1-epoch-1"
         )
 
+    @pytest.mark.parametrize("metadata_key", [
+        "INSPECT_WANDB_WEAVE_ENABLED",
+        "inspect_wandb_weave_enabled",
+        "iNsPecT_wAnDb_WeAvE_EnAbLeD",
+    ])
+    def parse_settings_from_metadata_is_case_insensitive(self, create_task_start: Callable[dict | None, TaskStart], metadata_key: str) -> None:
+        """Test that parse_settings_from_metadata is case insensitive"""
+        # Given
+        hooks = WeaveEvaluationHooks()
+        metadata = create_task_start({
+            metadata_key: True,
+        })
+        
+        
+        # When
+        settings = hooks._extract_settings_overrides_from_eval_metadata(metadata)
+
+        # Then
+        assert settings is not None
+        assert settings["enabled"] is True
+
 
 class TestWeaveEnablementPriority:
     """

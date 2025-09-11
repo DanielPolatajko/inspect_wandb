@@ -3,6 +3,9 @@
 ## Added
 - Write wandb and weave URLs to Inspect eval metadata in log files
 
+## Fixed
+- Case sensitivity when parsing settings from eval(-set) metadata
+
 ## [v0.1.1](https://pypi.org/project/inspect-wandb/0.1.1/) (08 September 2025)
 
 ### Added

@@ -30,7 +30,7 @@ def wandb_path(tmp_path_factory: TempPathFactory) -> Path:
     os.chdir(path)
     return path / "wandb"
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def initialise_wandb(wandb_path: Path) -> None:
     """
     Writes a wandb settings file to the tmp_path directory, and changes the current working directory to the tmp_path.
