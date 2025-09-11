@@ -4,7 +4,6 @@ import weave
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
 from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
-from inspect_wandb.config.settings_loader import SettingsLoader
 from inspect_wandb.config.settings import WeaveSettings
 from logging import getLogger
 from inspect_wandb.weave.autopatcher import get_inspect_patcher, CustomAutopatchSettings
@@ -249,9 +248,7 @@ class WeaveEvaluationHooks(Hooks):
 
     def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
         if self.settings is None or overrides is not None:
-            self.settings = SettingsLoader.load_inspect_wandb_settings(
-                settings={"weave": overrides or {}, "models": {}}
-            ).weave
+            self.settings = WeaveSettings.model_validate(overrides or {})
 
     def _get_eval_metadata(self, data: TaskStart) -> dict[str, str | dict[str, Any]]:
 
