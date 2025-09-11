@@ -3,6 +3,7 @@ import pytest
 from pydantic import ValidationError
 from pathlib import Path
 from unittest.mock import patch
+import os
 
 class TestInspectWandBBaseSettings:
     """
@@ -33,8 +34,9 @@ class TestInspectWandBBaseSettings:
         # Then
         assert settings.enabled is False
 
-    def test_validation_errors_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_validation_errors_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # Given
+        os.chdir(tmp_path) # prevents settings being read from non-test settings file
 
         monkeypatch.setenv("ENABLED", True)
 

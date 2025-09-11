@@ -74,17 +74,15 @@ class TestWandBModelHooksE2ERetryScenarios:
         mock_run.url = "https://wandb.ai/test/test-project/runs/test_run"
         mock_wandb_init.return_value = mock_run
         
-        with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
+        with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings, patch('inspect_wandb.weave.hooks.WeaveSettings.model_validate') as mock_weave_settings:
             enabled_settings = ModelsSettings(
                 enabled=True,
                 entity="test-entity",
                 project="test-project"
             )
-            mock_loader.return_value.models = enabled_settings
-            mock_loader.return_value.weave = WeaveSettings(
-                enabled=False,
-                entity="test-entity",
-                project="test-project"
+            mock_models_settings.return_value = enabled_settings
+            mock_weave_settings.return_value = WeaveSettings(
+                enabled=False
             )
 
             # When
@@ -134,17 +132,15 @@ class TestWandBModelHooksE2ERetryScenarios:
         mock_run.url = "https://wandb.ai/test/test-project/runs/test_run"
         mock_wandb_init.return_value = mock_run
         
-        with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
+        with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings, patch('inspect_wandb.weave.hooks.WeaveSettings.model_validate') as mock_weave_settings:
             enabled_settings = ModelsSettings(
                 enabled=True,
                 entity="test-entity",
                 project="test-project"
             )
-            mock_loader.return_value.models = enabled_settings
-            mock_loader.return_value.weave = WeaveSettings(
-                enabled=False,
-                entity="test-entity",
-                project="test-project"
+            mock_models_settings.return_value = enabled_settings
+            mock_weave_settings.return_value = WeaveSettings(
+                enabled=False
             )
 
             # When            
@@ -215,17 +211,15 @@ class TestWandBModelHooksE2ERetryScenarios:
         temp_dir1.mkdir()
         temp_dir2.mkdir()
         
-        with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
+        with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings, patch('inspect_wandb.weave.hooks.WeaveSettings.model_validate') as mock_weave_settings:
             enabled_settings = ModelsSettings(
                 enabled=True,
                 entity="test-entity", 
                 project="test-project"
             )
-            mock_loader.return_value.models = enabled_settings
-            mock_loader.return_value.weave = WeaveSettings(
-                enabled=False,
-                entity="test-entity",
-                project="test-project"
+            mock_models_settings.return_value = enabled_settings
+            mock_weave_settings.return_value = WeaveSettings(
+                enabled=False
             )
 
             # When
@@ -274,17 +268,15 @@ class TestWandBModelHooksE2ERetryScenarios:
         # Given
         mock_wandb_init, _, _, _, _ = patch_wandb_client
         
-        with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
+        with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings, patch('inspect_wandb.weave.hooks.WeaveSettings.model_validate') as mock_weave_settings:
             disabled_settings = ModelsSettings(
                 enabled=False,
                 entity="test-entity",
                 project="test-project"
             )
-            mock_loader.return_value.models = disabled_settings
-            mock_loader.return_value.weave = WeaveSettings(
-                enabled=False,
-                entity="test-entity",
-                project="test-project"
+            mock_models_settings.return_value = disabled_settings
+            mock_weave_settings.return_value = WeaveSettings(
+                enabled=False
             )
 
             # When

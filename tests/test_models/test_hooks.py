@@ -50,9 +50,8 @@ class TestWandBModelHooks:
             entity="test-entity", 
             project="test-project",
         )
-        
-        with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
-            mock_loader.return_value.models = disabled_settings
+        with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings:
+            mock_models_settings.return_value = disabled_settings
             hooks = WandBModelHooks()
             assert not hooks.enabled()
 
