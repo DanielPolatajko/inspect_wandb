@@ -51,9 +51,10 @@ Please see {doc}`tutorial` for more details on how to navigate and use the WandB
 (features)=
 ### Features
 Inspect WandB boasts the following features:
-* **Zero Code Changes:** Inspect WandB can be installed to any existing Inspect project and works out of the box without any code changes. Requires `inspect_ai >= 0.3.130` since Inspect WandB depends on the latest updates to the recent "inspect hooks" feature.
+* **Zero Code Changes:** Inspect WandB can be installed to any existing Inspect project and works out of the box without any code changes. Requires `inspect_ai >= 0.3.130` since Inspect WandB depends on the latest updates to the recent [Inspect Hooks](https://inspect.aisi.org.uk/extensions.html#hooks) feature.
 * **Filtering across Inspect eval runs:** A common pain point with Inspect is the lack of a visualization/UI-friendly way to search and process data across eval runs. WandB Weave's rich filtering options solve this problem.
 * **Comparison across Inspect eval runs:** In addition to filtering, WandB Weave offers UI-interactive ways to compare data across eval runs and across different models on the same eval.
+* **Structured tracing through autopatching:** With `autopatch` enabled, each sample becomes a container, which Weave traces can be drill down to see every solver step, model call, and scoring operation that contributed to that sample's final result.
 * **Shareability & Persistence:** While evals are often developed and assessed collaboratively, by default, Inspect stores all logs locally, making it difficult for teams to share and collaborate and easy for data to be lost. WandB Models and WandB Weave natively store all the data in the cloud in a way that is easy for the entire team to access. WandB Models and WandB Weave are completely free for academic and personal use.
 
 

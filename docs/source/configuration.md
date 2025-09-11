@@ -15,7 +15,7 @@ The priority for settings is:
 
 ## WandB using env variables
 The simplest way to configure WandB (Models and Weave) is with `wandb init`. For use cases where an interactive terminal session is not an option or for finer config granularity, the following environment variables can be set. 
-> Note: `INSPECT_WANDB_MODELS_PROJECT` and `WANDB_INSPECT_WANDB_WEAVE_PROJECT` can be set to different values, pushing Models and Weave data to different projects. Likewise for `INSPECT_WANDB_MODELS_ENTITY` and `WANDB_INSPECT_WANDB_WEAVE_ENTITY`.
+> Note: `INSPECT_WANDB_MODELS_PROJECT` and `INSPECT_WANDB_WEAVE_PROJECT` can be set to different values, pushing Models and Weave data to different projects. Likewise for `INSPECT_WANDB_MODELS_ENTITY` and `INSPECT_WANDB_WEAVE_ENTITY`.
 
 ### WandB Models Configuration
 
@@ -29,7 +29,7 @@ The simplest way to configure WandB (Models and Weave) is with `wandb init`. For
    INSPECT_WANDB_MODELS_CONFIG='{"learning_rate":  1e-5}'
    ```
    See more details in https://docs.wandb.ai/guides/track/config/.
-5. **FILES**: Optional list of files to upload during the models run. File paths should be specified relative to the current working directory. Example: 
+5. **FILES**: Optional list of files/folders to upload during the models run. File paths should be specified relative to the current working directory. Example: 
    ```bash
    INSPECT_WANDB_MODELS_FILES='["README.md", "Makefile"]'
    ```
@@ -44,7 +44,7 @@ The simplest way to configure WandB (Models and Weave) is with `wandb init`. For
 1. **ENABLED**: Controls whether the WandB Weave integration is active. Defaults to `True`.
 2. **PROJECT**: Specifies the WandB project for the WandB Weave integration. Can also be set using the `WANDB_PROJECT` environment variable.
 3. **ENTITY**: Defines the WandB entity (team or username) for the WandB Weave integration. Can also be set using the `WANDB_ENTITY` environment variable.
-4. **AUTOPATCH**: Controls whether to automatically patch various Inspect calls through Inspect with WandB Weave for tracing. Defaults to `True`. We expect most users to want this as it allows for the nice traces seen in {doc}`example`. 
+4. **AUTOPATCH**: Controls whether to automatically patch various Inspect calls through Inspect with WandB Weave for tracing. Defaults to `True`. We expect most users to want this as it allows for the nice traces displayed per sample. 
 
 ## Sample display name configuration
 
@@ -109,7 +109,7 @@ As a general rule, settings in `pyproject.toml` are the same as the environment 
 
 This configuration level is **lowest priority** i.e. any environment variables or metadata settings will override settings in `pyproject.toml`
 
-## Alternate configuration methods: `eval` or `eval-set` metadata
+## Alternative configuration methods: `eval` or `eval-set` metadata
 For fine-grained control, you can override any settings at the script level using `eval` or `eval-set` metadata. The syntax for overriding this way is the same as environment variables (neither are case-sensitive). This takes **highest priority** over all other configuration methods.
 With script:
 ```python
