@@ -33,7 +33,7 @@ class TestWandBModelHooks:
     Tests for the WandBModelHooks class.
     """
 
-    def test_enabled(self) -> None:
+    def test_enabled(self, initialise_wandb: None) -> None:
         """
         Test that the enabled method returns True when the settings are set to True.
         """
