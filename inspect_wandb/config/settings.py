@@ -52,7 +52,7 @@ class ModelsSettings(BaseSettings):
     @model_validator(mode="before")
     @classmethod
     def set_wandb_project_and_entity_if_hooks_are_disabled(cls, v: dict[str, Any]) -> dict[str, Any]:
-        if not v.get("enabled", True):
+        if not bool(v.get("enabled", True)):
             v["project"] = v.get("project", "default")
             v["entity"] = v.get("entity", "default")
         return v
@@ -104,7 +104,7 @@ class WeaveSettings(BaseSettings):
     @model_validator(mode="before")
     @classmethod
     def set_wandb_project_and_entity_if_hooks_are_disabled(cls, v: dict[str, Any]) -> dict[str, Any]:
-        if not v.get("enabled", True):
+        if not bool(v.get("enabled", True)):
             v["project"] = v.get("project", "default")
             v["entity"] = v.get("entity", "default")
         return v
