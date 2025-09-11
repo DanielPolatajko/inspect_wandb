@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource, PyprojectTomlConfigSettingsSource
@@ -49,6 +49,14 @@ class ModelsSettings(BaseSettings):
                 raise ValueError(f"WANDB_API_KEY does not match the value in the environment. Validation Key: {v.wandb_api_key}, Environment Key: {env_wandb_api_key}")
         return v
     
+    @model_validator(mode="before")
+    @classmethod
+    def set_wandb_project_and_entity_if_hooks_are_disabled(cls, v: dict[str, Any]) -> dict[str, Any]:
+        if not v.get("enabled", True):
+            v["project"] = v.get("project", "default")
+            v["entity"] = v.get("entity", "default")
+        return v
+    
     @classmethod
     def settings_customise_sources(
         cls,
@@ -92,6 +100,14 @@ class WeaveSettings(BaseSettings):
 
     autopatch: bool = Field(default=True, description="Whether to automatically patch Inspect with Weave calls for tracing")
     sample_name_template: str = Field(default="{task_name}-sample-{sample_id}-epoch-{epoch}", description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}")
+
+    @model_validator(mode="before")
+    @classmethod
+    def set_wandb_project_and_entity_if_hooks_are_disabled(cls, v: dict[str, Any]) -> dict[str, Any]:
+        if not v.get("enabled", True):
+            v["project"] = v.get("project", "default")
+            v["entity"] = v.get("entity", "default")
+        return v
 
     @classmethod
     def settings_customise_sources(
