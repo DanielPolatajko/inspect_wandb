@@ -56,6 +56,8 @@
                 "5",
                 "--metadata",
                 "inspect_wandb_models_tags=['test']",
+                "--metadata",
+                "inspect_WANDB_models_environment_validations={\"wandb_base_url\": \"https://api.wandb.ai\", \"wandb_api_key\": \"1234567890\"}"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
