@@ -23,7 +23,7 @@ class InspectWandBBaseSettings(BaseSettings):
     @model_validator(mode="after")
     def validate_project_and_entity(self) -> Self:
         if self.enabled and (not self.project or not self.entity):
-            raise ValueError("Project and entity must be set if the Models integration is enabled")
+            raise ValueError("Project and entity must be set if the Models or Weave integrations are enabled")
         return self
 
     @classmethod
