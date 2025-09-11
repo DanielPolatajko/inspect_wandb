@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Any
+from typing import Any, Self
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource, PyprojectTomlConfigSettingsSource
 from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
@@ -27,8 +27,8 @@ class ModelsSettings(BaseSettings):
     )
 
     enabled: bool = Field(default=True, description="Whether to enable the Models integration")
-    project: str = Field(alias="WANDB_PROJECT", description="Project to write to for the Models integration")
-    entity: str = Field(alias="WANDB_ENTITY", description="Entity to write to for the Models integration")
+    project: str | None = Field(default=None, alias="WANDB_PROJECT", description="Project to write to for the Models integration")
+    entity: str | None = Field(default=None, alias="WANDB_ENTITY", description="Entity to write to for the Models integration")
     config: dict[str, Any] | None = Field(default=None, description="Configuration to pass directly to wandb.config for the Models integration")
     files: list[str] | None = Field(default=None, description="Files to upload to the models run. Paths should be relative to the wandb directory.")
     viz: bool = Field(default=False, description="Whether to enable the inspect_viz extra")
@@ -49,13 +49,11 @@ class ModelsSettings(BaseSettings):
                 raise ValueError(f"WANDB_API_KEY does not match the value in the environment. Validation Key: {v.wandb_api_key}, Environment Key: {env_wandb_api_key}")
         return v
     
-    @model_validator(mode="before")
-    @classmethod
-    def set_wandb_project_and_entity_if_hooks_are_disabled(cls, v: dict[str, Any]) -> dict[str, Any]:
-        if not bool(v.get("enabled", True)):
-            v["project"] = v.get("project", "default")
-            v["entity"] = v.get("entity", "default")
-        return v
+    @model_validator(mode="after")
+    def validate_project_and_entity(self) -> Self:
+        if self.enabled and (not self.project or not self.entity):
+            raise ValueError("Project and entity must be set if the Models integration is enabled")
+        return self
     
     @classmethod
     def settings_customise_sources(
@@ -95,19 +93,17 @@ class WeaveSettings(BaseSettings):
     )
     
     enabled: bool = Field(default=True, description="Whether to enable the Weave integration")
-    project: str = Field(alias="WANDB_PROJECT", description="Project to write to for the Weave integration")
-    entity: str = Field(alias="WANDB_ENTITY", description="Entity to write to for the Weave integration")
+    project: str | None = Field(default=None, alias="WANDB_PROJECT", description="Project to write to for the Weave integration")
+    entity: str | None = Field(default=None, alias="WANDB_ENTITY", description="Entity to write to for the Weave integration")
 
     autopatch: bool = Field(default=True, description="Whether to automatically patch Inspect with Weave calls for tracing")
     sample_name_template: str = Field(default="{task_name}-sample-{sample_id}-epoch-{epoch}", description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}")
 
-    @model_validator(mode="before")
-    @classmethod
-    def set_wandb_project_and_entity_if_hooks_are_disabled(cls, v: dict[str, Any]) -> dict[str, Any]:
-        if not bool(v.get("enabled", True)):
-            v["project"] = v.get("project", "default")
-            v["entity"] = v.get("entity", "default")
-        return v
+    @model_validator(mode="after")
+    def validate_project_and_entity(self) -> Self:
+        if self.enabled and (not self.project or not self.entity):
+            raise ValueError("Project and entity must be set if the Models integration is enabled")
+        return self
 
     @classmethod
     def settings_customise_sources(
