@@ -6,7 +6,7 @@ from unittest.mock import patch
 from inspect_wandb.config.settings import ModelsSettings, WeaveSettings, InspectWandBSettings
 from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
 from inspect_wandb.config.settings_loader import SettingsLoader
-
+from pydantic import ValidationError
 
 class TestWandBSettingsSource:
     
@@ -183,6 +183,54 @@ class TestModelsSettings:
         # Then
         assert models_settings.enabled is False
         assert weave_settings.enabled is False
+
+    def test_validation_errors_when_project_and_entity_are_not_set_but_hooks_are_enabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", True)
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", True)
+
+        # When / Then
+        with pytest.raises(ValidationError):
+            ModelsSettings.model_validate({})
+        with pytest.raises(ValidationError):
+            WeaveSettings.model_validate({})
+
+    def test_no_validation_errors_when_hooks_are_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", False)
+
+        # When / Then
+        ModelsSettings.model_validate({})
+        WeaveSettings.model_validate({})
+
+    def test_errors_for_invalid_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENVIRONMENT_VALIDATIONS", '{"wandb_base_url": "https://api.wandb.ai", "wandb_api_key": "1234567890"}')
+
+        # When / Then
+        with pytest.raises(ValidationError):
+            ModelsSettings.model_validate({})
+
+    def test_passes_validations_when_environment_variables_are_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
+        monkeypatch.setenv("WANDB_BASE_URL", "https://api.wandb.ai")
+        monkeypatch.setenv("WANDB_API_KEY", "1234567890")
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENVIRONMENT_VALIDATIONS", '{"wandb_base_url": "https://api.wandb.ai", "wandb_api_key": "1234567890"}')
+
+        # When
+        models_settings = ModelsSettings.model_validate({})
+
+        # Then
+        assert models_settings.enabled is False
+        assert models_settings.environment_validations.wandb_base_url == "https://api.wandb.ai"
+        assert models_settings.environment_validations.wandb_api_key == "1234567890"
 
     def test_wandb_settings_third_priority(self, tmp_path: Path) -> None:
         # Given
