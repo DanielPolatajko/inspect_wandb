@@ -7,7 +7,6 @@ import wandb
 from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, EvalSetStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
-from inspect_wandb.config.settings_loader import SettingsLoader
 from inspect_wandb.config.settings import ModelsSettings
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 if INSTALLED_EXTRAS["viz"]:
@@ -211,6 +210,4 @@ class WandBModelHooks(Hooks):
 
     def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
         if self.settings is None or overrides is not None:
-            self.settings = SettingsLoader.load_inspect_wandb_settings(
-                {"weave": {}, "models": overrides or {}}
-            ).models
+            self.settings = ModelsSettings.model_validate(overrides or {})
