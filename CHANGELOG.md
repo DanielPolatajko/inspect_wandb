@@ -2,6 +2,7 @@
 
 ## Added
 - Write wandb and weave URLs to Inspect eval metadata in log files
+- Environment variable validations for wandb base url and API key
 
 ## Fixed
 - Case sensitivity when parsing settings from eval(-set) metadata
