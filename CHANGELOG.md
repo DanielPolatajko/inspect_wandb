@@ -1,10 +1,12 @@
 ## Unreleased
 
-## Added
+## [v0.1.2](https://pypi.org/project/inspect-wandb/0.1.2/) (12 September 2025)
+
+### Added
 - Write wandb and weave URLs to Inspect eval metadata in log files
 - Environment variable validations for wandb base url and API key
 
-## Fixed
+### Fixed
 - Case sensitivity when parsing settings from eval(-set) metadata
 
 ## [v0.1.1](https://pypi.org/project/inspect-wandb/0.1.1/) (08 September 2025)
