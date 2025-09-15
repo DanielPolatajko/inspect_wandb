@@ -118,7 +118,7 @@ class WandBModelHooks(Hooks):
         if self._is_eval_set:
             wandb_run_id = data.eval_set_id
         else:
-            wandb_run_id = data.eval_id
+            wandb_run_id = data.run_id
 
         self._active_runs[data.run_id] = {
             "running": True,
