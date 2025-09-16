@@ -1,6 +1,6 @@
 [project]
 name = "inspect_wandb"
-version = "0.1.2"
+version = "0.1.3"
 authors = [
   { name="Daniel Polatajko", email="danielpolatajko@gmail.com" },
   { name="Qi Guo", email="special0831qi@gmail.com"},

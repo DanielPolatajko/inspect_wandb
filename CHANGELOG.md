@@ -1,5 +1,11 @@
 ## Unreleased
 
+## [v0.1.3](https://pypi.org/project/inspect-wandb/0.1.3/) (16 September 2025)
+
+### Fixed
+- Use `run_id` to track Models runs for `inspect eval` rather than `eval_id`
+
+
 ## [v0.1.2](https://pypi.org/project/inspect-wandb/0.1.2/) (12 September 2025)
 
 ### Added
