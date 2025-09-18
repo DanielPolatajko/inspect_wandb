@@ -31,23 +31,21 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.viewcode",
+    "sphinx_tabs.tabs",
+    "sphinx-prompt",
     "myst_parser",
+    "sphinx_copybutton"
 ]
+
 
 # MyST Parser configuration - enables macros and cross-references
 myst_enable_extensions = [
     "substitution",  # Enables {{ macro_name }} syntax
     "colon_fence",   # Enables {ref}`label` and {doc}`filename` links
+    "html_admonition",  # Enables HTML admonitions with details/summary
+    "deflist",  # Enables definition lists
 ]
-
-# Global substitutions (macros) - use {{ macro_name }} in .md files
-# Update these values once to change them everywhere in docs
-myst_substitutions = {
-    "repo_url": "https://github.com/DanielPolatajko/inspect_wandb.git",
-    "install_basic": "pip install git+https://github.com/DanielPolatajko/inspect_wandb.git",
-    "install_weave": 'pip install inspect_wandb @ "git+https://github.com/DanielPolatajko/inspect_wandb.git[weave]"',
-    "install_full": 'pip install inspect_wandb @ "git+https://github.com/DanielPolatajko/inspect_wandb.git[weave,viz]"',
-}
 
 intersphinx_mapping = {
     "rtd": ("https://docs.readthedocs.io/en/stable/", None),
@@ -74,6 +72,18 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
+
+# RTD Theme configuration for external links
+html_theme_options = {
+    'vcs_pageview_mode': 'blob',
+    'prev_next_buttons_location': 'bottom',
+    'style_external_links': False,
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

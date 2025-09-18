@@ -2,19 +2,27 @@
 
 ```{toctree}
 :titlesonly:
-index.md
 installation.md
 tutorial.md
+concepts.md
 configuration.md
 contributing.md
 faq.md
+```
+
+```{toctree}
+:hidden:
+:caption: Links
+
+GitHub <https://github.com/DanielPolatajko/inspect_wandb>
+PyPI <https://pypi.org/project/inspect-wandb/>
 ```
 
 **Inspect WandB** is a Python library for integrating the [Inspect AI framework](https://inspect.aisi.org.uk/) with Weights and Biases [Models](https://wandb.ai/site/models/) API and [Weave](https://wandb.ai/site/weave/).
 Inspect is a framework for developing and executing LLM evaluations developed by UK AI Security Institute.
 WandB Models and WandB Weave are tools for logging, managing, and visualizing AI model runs, where WandB Models is focused on experiment tracking and training runs while WandB Weave is specifically for LLM evaluations.
 
-### Quickstart
+## Quickstart
 
 For detailed installation instructions, see {doc}`installation`.
 ```bash
@@ -49,14 +57,15 @@ Clicking the second link will take you to the WandB Models UI tab for the eval.
 Please see {doc}`tutorial` for more details on how to navigate and use the WandB Models and Weave UIs!
 
 (features)=
-### Features
+## Features
 Inspect WandB boasts the following features:
-* **Zero Code Changes:** Inspect WandB can be installed to any existing Inspect project and works out of the box without any code changes. Requires `inspect_ai >= 0.3.130` since Inspect WandB depends on the latest updates to the recent "inspect hooks" feature.
+* **Zero Code Changes:** Inspect WandB can be installed to any existing Inspect project and works out of the box without any code changes. Requires `inspect_ai >= 0.3.130` since Inspect WandB depends on the latest updates to the recent [Inspect Hooks](https://inspect.aisi.org.uk/extensions.html#hooks) feature.
 * **Filtering across Inspect eval runs:** A common pain point with Inspect is the lack of a visualization/UI-friendly way to search and process data across eval runs. WandB Weave's rich filtering options solve this problem.
 * **Comparison across Inspect eval runs:** In addition to filtering, WandB Weave offers UI-interactive ways to compare data across eval runs and across different models on the same eval.
-* **Shareability & Persistence:** While evals are often developed and assessed collaboratively, by default, Inspect stores all logs locally, making it difficult for teams to share and collaborate and easy for data to be lost. WandB Models and WandB Weave natively store all the data in the cloud in a way that is easy for the entire team to access. WandB Models and WandB Weave are completely free for academic and personal use.
+* **Structured tracing:** Each sample becomes a container, which Weave traces can be drill down to see every solver step, model call, and scoring operation that contributed to that sample's final result.
+* **Shareability & Persistence:** While evals are often developed and assessed collaboratively, by default, Inspect stores all logs locally, making it difficult for teams to share and collaborate and easy for data to be lost. WandB Models and WandB Weave natively store all the data in the cloud in a way that is easy for the entire team to access.
 
 
-### Credits
+## Credits
 Inspect WandB is developed by Daniel Polatajko, Qi Guo, and Matan Shtepel with Justin Olive's mentorship as part of the Mentorship for Alignment Research Students (MARS) 3.0.
 We are grateful for invaluable feedback from Alex Remedios (UK AISI) and Sami Jawhar (METR) which shaped this package. 
