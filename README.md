@@ -19,6 +19,8 @@ Check out this brief demo video for an overview of Inspect WandB
     </a>
   </div>
 
+If you prefer to read, you can check out a tutorial on [the Inspect WandB docs site](https://inspect-wandb.readthedocs.io/en/latest/)
+
 ## Usage
 
 Inspect WandB can be installed with:
