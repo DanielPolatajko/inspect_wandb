@@ -7,7 +7,6 @@ import wandb
 from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, EvalSetStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
-from inspect_wandb.config.settings_loader import SettingsLoader
 from inspect_wandb.config.settings import ModelsSettings
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 if INSTALLED_EXTRAS["viz"]:
@@ -119,7 +118,7 @@ class WandBModelHooks(Hooks):
         if self._is_eval_set:
             wandb_run_id = data.eval_set_id
         else:
-            wandb_run_id = data.eval_id
+            wandb_run_id = data.run_id
 
         self._active_runs[data.run_id] = {
             "running": True,
@@ -206,10 +205,9 @@ class WandBModelHooks(Hooks):
         """
         if data.spec.metadata is None:
             return None
-        return { k[len("inspect_wandb_models_"):]: v for k,v in data.spec.metadata.items() if k.lower().startswith("inspect_wandb_models_")}
+        overrides = {k[len("inspect_wandb_models_"):]: v for k,v in data.spec.metadata.items() if k.lower().startswith("inspect_wandb_models_")}
+        return overrides
 
     def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
         if self.settings is None or overrides is not None:
-            self.settings = SettingsLoader.load_inspect_wandb_settings(
-                {"weave": {}, "models": overrides or {}}
-            ).models
+            self.settings = ModelsSettings.model_validate(overrides or {})

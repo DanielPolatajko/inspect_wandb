@@ -33,7 +33,7 @@ class TestWandBModelHooks:
     Tests for the WandBModelHooks class.
     """
 
-    def test_enabled(self) -> None:
+    def test_enabled(self, initialise_wandb: None) -> None:
         """
         Test that the enabled method returns True when the settings are set to True.
         """
@@ -50,9 +50,8 @@ class TestWandBModelHooks:
             entity="test-entity", 
             project="test-project",
         )
-        
-        with patch('inspect_wandb.models.hooks.SettingsLoader.load_inspect_wandb_settings') as mock_loader:
-            mock_loader.return_value.models = disabled_settings
+        with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings:
+            mock_models_settings.return_value = disabled_settings
             hooks = WandBModelHooks()
             assert not hooks.enabled()
 
@@ -67,7 +66,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()
@@ -91,7 +90,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_called_once_with({"test": "test"})
@@ -135,7 +134,7 @@ class TestWandBModelHooks:
         )
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_called_once_with({"test": "test"})
@@ -159,7 +158,7 @@ class TestWandBModelHooks:
         hooks._hooks_enabled = True
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()
@@ -181,7 +180,7 @@ class TestWandBModelHooks:
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
-            mock_init.assert_called_once_with(id="test_eval_id", name=None, entity="test-entity", project="test-project", resume="allow")
+            mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
             hooks.run.config.update.assert_not_called()

@@ -4,7 +4,7 @@ Integration between [Inspect](https://inspect.aisi.org.uk/) and [Weights & Biase
 
 ![Docs Build](https://app.readthedocs.org/projects/inspect-wandb/badge/?version=latest)
 [![Package Build](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/test-build.yml/badge.svg)](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/test-build.yml)
-[![Publish to PyPI](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/publish-to-pypi.yml/badge.svg)](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/publish-to-pypi.yml)
+[![Publish to PyPI](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/publish-to-pypi.yml/badge.svg?event=release)](https://github.com/DanielPolatajko/inspect_wandb/actions/workflows/publish-to-pypi.yml)
 
 ## Demo Video
 

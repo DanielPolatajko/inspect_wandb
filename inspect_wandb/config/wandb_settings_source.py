@@ -1,6 +1,6 @@
 import configparser
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings.sources import PydanticBaseSettingsSource
@@ -19,11 +19,11 @@ class WandBSettingsSource(PydanticBaseSettingsSource):
     for fields that have WANDB_PROJECT or WANDB_ENTITY aliases.
     """
     
-    def __init__(self, settings_cls: Type[BaseSettings]):
+    def __init__(self, settings_cls: type[BaseSettings]) -> None:
         super().__init__(settings_cls)
-        self._wandb_settings: Optional[Dict[str, str]] = None
+        self._wandb_settings: dict[str, str] | None = None
         
-    def _load_wandb_settings(self) -> Dict[str, str]:
+    def _load_wandb_settings(self) -> dict[str, str]:
         """Load wandb settings from the wandb settings file."""
         if self._wandb_settings is not None:
             return self._wandb_settings
