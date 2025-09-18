@@ -55,7 +55,7 @@
                 "--limit",
                 "5",
                 "--metadata",
-                "inspect_wandb_models_tags=['test']",
+                "inspect_wandb_models_tags=['test']"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
