@@ -1,5 +1,11 @@
 ## Unreleased
 
+## [v0.1.4](https://pypi.org/project/inspect-wandb/0.1.4/) (19 September 2025)
+
+### Added
+- Updated docs to include links and concepts page
+
+
 ## [v0.1.3](https://pypi.org/project/inspect-wandb/0.1.3/) (16 September 2025)
 
 ### Fixed
