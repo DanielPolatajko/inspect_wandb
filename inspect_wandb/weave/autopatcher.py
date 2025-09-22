@@ -72,7 +72,7 @@ class PatchedScorer:
         if is_registry_object(original_scorer):
             set_registry_info(self, registry_info(original_scorer))
     
-    async def __call__(self, state: TaskState, target: Target) -> Score:
+    async def __call__(self, state: TaskState, target: Target) -> Score | None:
         """Execute the scorer with Weave tracing under the current sample context."""
         current_call = call_context.get_current_call()
         
