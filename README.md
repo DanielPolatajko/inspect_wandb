@@ -38,6 +38,33 @@ Once Inspect WandB is installed in an environment authenticated with Weights & B
 
 Some configuration options are available, including adjusting `wandb` config, settings tags, and adjusting Weave trace naming. To dive deeper with Inspect WandB, please see the documentation at [https://inspect-wandb.readthedocs.io/en/latest/](https://inspect-wandb.readthedocs.io/en/latest/)
 
+## Examples
+
+The following are some examples of the types of data that can be automatically logged to W&B when Inspect WandB is enabled:
+
+### Models
+
+The Models integration allows you to track each Inspect `eval` or `eval-set` run as a WandB run. This can be useful for having a shared source-of-truth for which evals have been run, as well as storing exact configurations for faithful reproductions in future.
+
+![Screenshot of Runs table](./docs/source/_static/runs-table.png)
+*Inspect evals tracked in W&B Runs table*
+
+![Screenshot of run overview](./docs/source/_static/run-overview.png)
+*Reproduction information tracked in a W&B Run, including Inspect metadata*
+
+### Weave
+
+The Weave integration traces Inspect evaluations, allowing you to track and analyse performance of different models on multiple tasks, visualise and compare result sets, and dig into individual transcripts.
+
+![Screenshot of Weave evals table](./docs/source/_static/weave-evals-table.png)
+*Table of Inspect evaluations with score summaries in Weave*
+
+![Screenshot of Weave traces](./docs/source/_static/weave-traces.png)
+*Trace tree of an Inspect task, with the main solver transcript selected for a given sample*
+
+![Screenshot of Weave compare](./docs/source/_static/compare-weave.png)
+*Comparison of performance on AgentHarm between Claude 4 Sonnet and GPT 4o-mini*
+
 ## Contributing
 
 Please see our [contributing guidelines](./CONTRIBUTING.md) if you'd like to make contributions to Inspect WandB
