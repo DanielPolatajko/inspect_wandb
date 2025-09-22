@@ -684,6 +684,15 @@ wheels = [
 ]
 
 [[package]]
+name = "git-lfs"
+version = "1.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/dc/185ee56393de691e467465163476303c6c900891ff0d1012fc60c92c2344/git-lfs-1.6.tar.gz", hash = "sha256:93a5e8a2bf71d66a9a5bae0d28c8137dd40c108dc3e1031fa6d30511794fae3a", size = 6435, upload-time = "2020-03-07T08:59:21.374Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/40/cd243be7ba9bd9d83fd8515b1aed7e0b822c76cab4bf60398a1b7e024f00/git_lfs-1.6-py2.py3-none-any.whl", hash = "sha256:2fecacaefc93ab278933b7755d4a48972f0deca7f9ff27439594ad835decf8ed", size = 5616, upload-time = "2020-03-07T08:59:19.93Z" },
+]
+
+[[package]]
 name = "gitdb"
 version = "4.0.12"
 source = { registry = "https://pypi.org/simple" }
@@ -924,7 +933,7 @@ wheels = [
 
 [[package]]
 name = "inspect-ai"
-version = "0.3.130"
+version = "0.3.133"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioboto3" },
@@ -960,9 +969,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "zipp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/ca/c67ddccd850ea804d6ff44362c20bd2f125609573eb3c2a133f8f73870c3/inspect_ai-0.3.130.tar.gz", hash = "sha256:5480adc62430434c2123b9a065e496f5eaa568895e72773c5922391c3985d24b", size = 11980468, upload-time = "2025-09-07T01:26:16.663Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/95/a9cd5b34c1c1039b3b0fcf6f5796a949f61f0900450afa0770ead8bf69db/inspect_ai-0.3.133.tar.gz", hash = "sha256:aa49fe61711ecccacbdfc608de2086ec40e423fea5af649f8976a3c907bf7de9", size = 42620225, upload-time = "2025-09-22T14:56:47.41Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/c0/12728af73cd69fa42b4c5d06caa0cf8a59216c5a8887962afc4f6590ef49/inspect_ai-0.3.130-py3-none-any.whl", hash = "sha256:c3004d6b680208e40b59380196d62584b6e5a1318a93c6c8f2b42f046fffa70f", size = 3364207, upload-time = "2025-09-07T01:26:11.7Z" },
+    { url = "https://files.pythonhosted.org/packages/67/67/4ba06816c8055087e4d16a87789aef4d2b726febda2ca97c78bebe6c67cf/inspect_ai-0.3.133-py3-none-any.whl", hash = "sha256:08b6c729f930ee7aff44430e92cecacf2d4a7045dcde69ccb61a711e44d38776", size = 33943357, upload-time = "2025-09-22T14:56:37.757Z" },
 ]
 
 [[package]]
@@ -1017,6 +1026,7 @@ dev = [
     { name = "ruff" },
 ]
 docs-dev = [
+    { name = "git-lfs" },
     { name = "mypy" },
     { name = "myst-parser" },
     { name = "pre-commit" },
@@ -1027,7 +1037,7 @@ docs-dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "inspect-ai", specifier = ">=0.3.130" },
+    { name = "inspect-ai", specifier = ">=0.3.133" },
     { name = "inspect-viz", marker = "extra == 'viz'" },
     { name = "playwright", marker = "extra == 'viz'" },
     { name = "pydantic", specifier = ">=2.11,<3" },
@@ -1046,6 +1056,7 @@ dev = [
     { name = "ruff" },
 ]
 docs-dev = [
+    { name = "git-lfs", specifier = "==1.6" },
     { name = "mypy", specifier = ">=1.17.1" },
     { name = "myst-parser", specifier = ">=4.0.1" },
     { name = "pre-commit", specifier = ">=4.3.0" },
