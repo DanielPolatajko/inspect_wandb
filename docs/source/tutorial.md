@@ -50,7 +50,7 @@ Once the eval completes, you should see the following line in the console logs:
 wandb:  View project at: https://wandb.ai/YOUR-TEAM-NAME/YOUR-PROJECT-NAME
 ```
 Going to that link, your view should look something like:
-![initial view](img/initial.png)
+![initial view](_static/initial.png)
 
 (understanding-wandb-ui-tabs)=
 ## Understanding WandB UI tabs
@@ -62,7 +62,7 @@ The primary function of the WandB Models integration is to auto-log information 
 The rule of thumb is that one `inspect eval ...` or `inspect eval-set ...` produces one Run in WandB Models. So even if you execute multiple models or tasks, with one `inspect eval ...` command, all the data will belong to a single WandB Models Run. 
 
 Your workspace tab might look something like:
-![](img/workspace.png)
+![](_static/workspace.png)
 
 On the left we can see all the runs that we have executed and on the right we see:
 1. **Charts**: at present only logs the number of samples so far (usually `y=x` line) and the current `accuracy` metric if the eval has a scorer called `accuracy`. We plan to make this more useful in the future.
@@ -71,11 +71,11 @@ On the left we can see all the runs that we have executed and on the right we se
 ### WandB Models: specific run
 
 Clicking on a run on the left, we can see the Overview:
-![](img/run-models-overview.png)
+![](_static/run-models-overview.png)
 which contains information about the system, git state, and the `inspect eval ...` command used to trigger the evaluation.  
 
 Clicking on Files tab, we see:
-![](img/run-models-files.png)
+![](_static/run-models-files.png)
 which contains files auto-logged by WandB Models such as `requirements.txt` which contains versioning info.
 You can choose to have additional files auto-uploaded by setting:
 
@@ -87,7 +87,7 @@ The files and state information can be useful for reproducing and further invest
 (wandb-weave-evals)=
 ### WandB Weave: Evals
 The Evals tab under WandB Weave might look something like:
-![](img/weave-evals.png)
+![](_static/weave-evals.png)
 This tab contains evals which previously ran, alongs with attributes which primarily consist of an aggregation across samples of any Inspect Scorer in the eval, and some additional metadata.
 The rule of thumb is that one model on one Inspect task corresponds to one eval in the Evals dashboard.
 
@@ -98,16 +98,16 @@ Clicking on "Filter" at the top left, it's possible to filter by certain attribu
 Saved views can be edited and returned to at a later time. 
 
 The current view shows only `agentharm` runs:
-![](img/filtered-view.png)
+![](_static/filtered-view.png)
 
 ### WandB Weave: exploring a particular eval
 Clicking on an eval and then clicking on trace tree (the stack of cards at the top right) you will see all the traced function calls made during the eval run.
 
 The Trace tree will contain traces of every solver step, model call, and scoring operation that contributed to each sample's final result.
-![](img/sample-traces.png)
+![](_static/sample-traces.png)
 
 The model call traces also allow you to view transcripts for that model interaction.
-![](img/trace.png)
+![](_static/trace.png)
 Clicking on "Playground" at the top right opens an interactive chat view where the chat history is editable and it's possible to query various models and perform quick experiments.
 
 Individual traces can also be explored under the "Traces" tab.
@@ -119,9 +119,9 @@ To run multiple evals on the same dataset you can:
 uv run inspect eval inspect_evals/agentharm --model openai/gpt-4o,anthropic/claude-3.7-sonnet-latest
 ```
 Marking two evals on the left and clicking compare:
-![](img/compare-enter.png)
+![](_static/compare-enter.png)
 we see:
-![](img/compare.png)
+![](_static/compare.png)
 which shows various comparison metrics between gpt-4o and claude-3.7-sonnet on `agentharm`.
 It is also possible to compare more than two models on the same and different evals.
 
