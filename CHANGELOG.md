@@ -1,10 +1,12 @@
 ## Unreleased
 
+## [v0.1.6](https://pypi.org/project/inspect-wandb/0.1.6/) (23 September 2025)
+
 ### Added
 - Bumped Inspect to v0.3.133 in order to handle exit exceptions gracefully
 
 ### Fixed
-- Concurrency issues for Weave
+- Concurrency issues for Weave writes on sample end
 
 ## [v0.1.5](https://pypi.org/project/inspect-wandb/0.1.5/) (19 September 2025)
 
