@@ -132,8 +132,7 @@ class WandBModelHooks(Hooks):
                 name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
                 entity=self.settings.entity, 
                 project=self.settings.project,
-                resume="allow",
-                settings=wandb.Settings(silent=True)
+                resume="allow"
             ) 
 
             if self.run.summary:

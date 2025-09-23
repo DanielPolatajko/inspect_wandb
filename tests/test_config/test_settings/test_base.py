@@ -25,7 +25,7 @@ class TestInspectWandBBaseSettings:
     def test_environment_variables_set_to_bools(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
 
-        monkeypatch.setenv("ENABLED", False)
+        monkeypatch.setenv("ENABLED", "false")
 
         # When
         settings = InspectWandBBaseSettings.model_validate({})
@@ -38,7 +38,7 @@ class TestInspectWandBBaseSettings:
         cwd = Path.cwd()
         os.chdir(tmp_path) # prevents settings being read from non-test settings file
 
-        monkeypatch.setenv("ENABLED", True)
+        monkeypatch.setenv("ENABLED", "true")
 
         # When
         settings = InspectWandBBaseSettings.model_validate({})
@@ -51,7 +51,7 @@ class TestInspectWandBBaseSettings:
     def test_no_validation_errors_when_hooks_are_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
 
-        monkeypatch.setenv("ENABLED", False)
+        monkeypatch.setenv("ENABLED", "False")
 
         # When / Then
         InspectWandBBaseSettings.model_validate({})

@@ -55,7 +55,7 @@ class TestWeaveEvaluationHooks:
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
 
         # When
-        await hooks.on_sample_end(sample)
+        await hooks._log_sample_to_weave_async(sample)
 
         # Then
         mock_weave_eval_logger.log_prediction.assert_called_once_with(
@@ -63,7 +63,7 @@ class TestWeaveEvaluationHooks:
             output="test_output",
             parent_call=None
         )
-        mock_score_logger.log_score.assert_called_once_with(
+        mock_score_logger.alog_score.assert_called_once_with(
             scorer="test_score",
             score=1.0,
         )
@@ -96,7 +96,7 @@ class TestWeaveEvaluationHooks:
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
 
         # When
-        await hooks.on_sample_end(sample)
+        await hooks._log_sample_to_weave_async(sample)
 
         # Then
         mock_weave_eval_logger.log_prediction.assert_called_once_with(
@@ -104,7 +104,7 @@ class TestWeaveEvaluationHooks:
             output="test_output",
             parent_call=None
         )
-        mock_score_logger.log_score.assert_called_once_with(
+        mock_score_logger.alog_score.assert_called_once_with(
             scorer="test_score",
             score=1.0
         )

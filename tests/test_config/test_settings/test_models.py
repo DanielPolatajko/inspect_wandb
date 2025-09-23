@@ -29,7 +29,7 @@ class TestModelsSettings:
     def test_errors_for_invalid_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
 
-        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "False")
         monkeypatch.setenv("INSPECT_WANDB_MODELS_ENVIRONMENT_VALIDATIONS", '{"wandb_base_url": "https://api.wandb.ai", "wandb_api_key": "1234567890"}')
 
         # When / Then
@@ -39,7 +39,7 @@ class TestModelsSettings:
     def test_passes_validations_when_environment_variables_are_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Given
 
-        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", False)
+        monkeypatch.setenv("INSPECT_WANDB_MODELS_ENABLED", "False")
         monkeypatch.setenv("WANDB_BASE_URL", "https://api.wandb.ai")
         monkeypatch.setenv("WANDB_API_KEY", "1234567890")
         monkeypatch.setenv("INSPECT_WANDB_MODELS_ENVIRONMENT_VALIDATIONS", '{"wandb_base_url": "https://api.wandb.ai", "wandb_api_key": "1234567890"}')

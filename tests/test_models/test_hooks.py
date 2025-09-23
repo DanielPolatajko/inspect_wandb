@@ -93,7 +93,7 @@ class TestWandBModelHooks:
             mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
-            hooks.run.config.update.assert_called_once_with({"test": "test"})
+            hooks.run.config.update.assert_called_once_with({"test": "test"}, allow_val_change=True)
             hooks.run.define_metric.assert_called_once_with(step_metric=Metric.SAMPLES, name=Metric.ACCURACY)
             assert hooks.run.tags == ("inspect_task:test_task", "inspect_model:mockllm/model", "inspect_dataset:test-dataset")
 
@@ -137,7 +137,7 @@ class TestWandBModelHooks:
             mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
             assert hooks.run is mock_wandb_run
-            hooks.run.config.update.assert_called_once_with({"test": "test"})
+            hooks.run.config.update.assert_called_once_with({"test": "test"}, allow_val_change=True)
 
     @pytest.mark.asyncio
     async def test_wandb_config_not_updated_with_eval_metadata_if_add_metadata_to_config_is_false(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
