@@ -363,3 +363,153 @@ class TestWeaveEnablementPriority:
 
         # Then
         assert task_start.spec.metadata["weave_run_url"] == "test_url"
+
+
+class TestConcurrencyOnSampleEnd:
+    """
+    Tests for asynchronous Weave logging on sample end
+    """
+
+    @pytest.mark.asyncio
+    async def test_on_sample_end_returns_immediately_without_blocking(self, test_settings: WeaveSettings) -> None:
+        """Test that on_sample_end returns immediately without waiting for Weave operations"""
+        import time
+
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+
+        sample = SampleEnd(
+            eval_set_id=None,
+            run_id="test_run_id",
+            eval_id="test_eval_id",
+            sample_id="test_sample_id",
+            sample=EvalSample(
+                id=1,
+                epoch=1,
+                input="test_input",
+                target="test_output",
+                scores={"test_score": Score(value=1.0)},
+                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
+            )
+        )
+
+        mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
+        hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+
+        start_time = time.time()
+        await hooks.on_sample_end(sample)
+        duration = time.time() - start_time
+
+        assert duration < 0.01
+
+    @pytest.mark.asyncio
+    async def test_on_sample_end_creates_background_task(self, test_settings: WeaveSettings) -> None:
+        """Test that on_sample_end creates a background task for Weave operations"""
+        from unittest.mock import patch
+
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+
+        sample = SampleEnd(
+            eval_set_id=None,
+            run_id="test_run_id",
+            eval_id="test_eval_id",
+            sample_id="test_sample_id",
+            sample=EvalSample(
+                id=1,
+                epoch=1,
+                input="test_input",
+                target="test_output",
+                scores={},
+                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
+            )
+        )
+
+        with patch('asyncio.create_task') as mock_create_task:
+            await hooks.on_sample_end(sample)
+            mock_create_task.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_prevents_double_finish_on_concurrent_samples(self, test_settings: WeaveSettings) -> None:
+        """Test that finish() is only called once even with concurrent access"""
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+
+        sample = SampleEnd(
+            eval_set_id=None,
+            run_id="test_run_id",
+            eval_id="test_eval_id",
+            sample_id="test_sample_id",
+            sample=EvalSample(
+                id=1,
+                epoch=1,
+                input="test_input",
+                target="test_output",
+                scores={},
+                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
+            )
+        )
+
+        mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
+        mock_score_logger = MagicMock(spec=ScoreLogger)
+        mock_score_logger._has_finished = False
+        mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
+        hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+
+        await hooks._log_sample_to_weave_async(sample)
+
+        mock_score_logger._has_finished = True
+        await hooks._log_sample_to_weave_async(sample)
+
+        mock_score_logger.finish.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_uses_alog_score_instead_of_log_score(self, test_settings: WeaveSettings) -> None:
+        """Test that alog_score is used instead of log_score to avoid event loop conflicts"""
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+
+        sample = SampleEnd(
+            eval_set_id=None,
+            run_id="test_run_id",
+            eval_id="test_eval_id",
+            sample_id="test_sample_id",
+            sample=EvalSample(
+                id=1,
+                epoch=1,
+                input="test_input",
+                target="test_output",
+                scores={"test_score": Score(value=1.0)},
+                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
+            )
+        )
+
+        mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
+        mock_score_logger = MagicMock(spec=ScoreLogger)
+        mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
+        hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+
+        await hooks._log_sample_to_weave_async(sample)
+
+        mock_score_logger.alog_score.assert_called_once_with(
+            scorer="test_score",
+            score=1.0
+        )
+        mock_score_logger.log_score.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_background_task_exceptions_handled_properly(self, test_settings: WeaveSettings) -> None:
+        """Test that exceptions in background tasks are handled without crashing evaluation"""
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+
+        mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
+        mock_weave_eval_logger.log_prediction.side_effect = Exception("Weave error")
+        hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+        with pytest.raises(Exception, match="Weave error"):
+            hooks._handle_weave_task_result(MagicMock(exception=lambda: Exception("Weave error")))

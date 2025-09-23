@@ -1,7 +1,10 @@
 from typing import Callable
 from unittest.mock import MagicMock
 from pytest import MonkeyPatch
-from inspect_ai import Task, eval as inspect_eval
+from inspect_ai import Task, eval as inspect_eval, task
+from inspect_ai.dataset import Sample
+from inspect_ai.scorer import exact
+from inspect_ai.solver import generate
 
 class TestEndToEndInspectRuns:
     """
@@ -90,3 +93,47 @@ class TestEndToEndInspectRuns:
                 }
             }
         )
+
+    def test_eval_with_high_concurrency_completes_without_errors(self, patched_weave_evaluation_hooks: dict[str, MagicMock], monkeypatch: MonkeyPatch) -> None:
+        """
+        Test that evaluations with many samples and low max_connections complete without concurrency errors.
+        """
+        # Given
+        @task
+        def high_concurrency_eval():
+            return Task(
+                dataset=[
+                    Sample(
+                        input=f"Say 'test{i}'",
+                        target=f"test{i}",
+                    )
+                    for i in range(20)
+                ],
+                solver=[generate()],
+                scorer=exact(),
+                metadata={"test": "concurrency_test"},
+                name="high_concurrency_eval"
+            )
+
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "true")
+
+        weave_evaluation_logger = patched_weave_evaluation_hooks["weave_evaluation_logger"]
+        weave_evaluation_logger.finish = MagicMock()
+        weave_evaluation_logger._is_finalized = False
+
+        # When
+        eval_logs = inspect_eval(
+            high_concurrency_eval,
+            model="mockllm/model",
+            max_connections=3
+        )
+
+        # Then
+        assert len(eval_logs) == 1
+        assert eval_logs[0].status == "success"
+        assert len(eval_logs[0].samples) == 20
+
+        weave_evaluation_logger.assert_called_once()
+
+        # Cleanup
+        monkeypatch.delenv("INSPECT_WANDB_WEAVE_ENABLED")
