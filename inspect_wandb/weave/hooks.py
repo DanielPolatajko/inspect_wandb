@@ -1,5 +1,5 @@
 from typing import Any
-from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd
+from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd, EvalSetStart, EvalSetEnd
 import weave
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
@@ -12,6 +12,8 @@ from inspect_wandb.exceptions import WeaveEvaluationException
 from weave.trace.weave_client import Call
 from weave.trace.context import call_context
 from typing_extensions import override
+import os
+import asyncio
 
 logger = getLogger(__name__)
 
@@ -26,12 +28,28 @@ class WeaveEvaluationHooks(Hooks):
     task_mapping: dict[str, str] = {}
     _weave_initialized: bool = False
     _hooks_enabled: bool | None = None
+    _eval_set: bool = False
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        os.environ["WEAVE_CLIENT_PARALLELISM"] = "1000"
 
     @override
     def enabled(self) -> bool:
         self._load_settings()
         assert self.settings is not None
         return self.settings.enabled
+
+    @override
+    async def on_eval_set_start(self, data: EvalSetStart) -> None:
+        self._eval_set = True
+
+    @override
+    async def on_eval_set_end(self, data: EvalSetEnd) -> None:
+        self.weave_client.finish(use_progress_bar=False)
+        if self.settings is not None and self.settings.autopatch:
+            get_inspect_patcher().undo_patch()
+
 
     @override
     async def on_run_end(self, data: RunEnd) -> None:
@@ -57,9 +75,12 @@ class WeaveEvaluationHooks(Hooks):
         # Clear the loggers dict and task mapping
         self.weave_eval_loggers.clear()
         self.task_mapping.clear()
-        self.weave_client.finish(use_progress_bar=False)
-        if self.settings is not None and self.settings.autopatch:
-            get_inspect_patcher().undo_patch()
+
+        if not self._eval_set:
+            self.weave_client.finish(use_progress_bar=False)
+            if self.settings is not None and self.settings.autopatch:
+                get_inspect_patcher().undo_patch()
+
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
@@ -82,7 +103,8 @@ class WeaveEvaluationHooks(Hooks):
             self.weave_client = weave.init(
                 project_name=f"{self.settings.entity}/{self.settings.project}",
                 settings=UserSettings(
-                    print_call_link=False
+                    print_call_link=False,
+                    display_viewer="print"
                 )
             )
             if self.settings.autopatch:
@@ -155,13 +177,26 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
-        # Skip if hooks are disabled for this run
         if not self._hooks_enabled:
             return
-            
+
+        task = asyncio.create_task(self._log_sample_to_weave_async(data))
+        task.add_done_callback(self._handle_weave_task_result)
+
+    def _handle_weave_task_result(self, task: asyncio.Task) -> None:
+        """Handle results/exceptions from Weave logging tasks"""
+        if (e:= task.exception()):
+            raise e
+
+    async def _log_sample_to_weave_async(self, data: SampleEnd) -> None:
+        """
+        Log sample data to Weave asynchronously but outside Inspect's semaphore context.
+        This prevents Weave operations from interfering with Inspect's semaphore permits.
+        """
+
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
         assert weave_eval_logger is not None
-        
+
         sample_id = data.sample.id
         epoch = data.sample.epoch
         input_value = data.sample.input
@@ -171,72 +206,68 @@ class WeaveEvaluationHooks(Hooks):
                 output=data.sample.output.completion,
                 parent_call=self.sample_calls[data.sample_id] if self.settings is not None and self.settings.autopatch else None
             )
+
         if data.sample.scores is not None:
             for k,v in data.sample.scores.items():
                 score_metadata = (v.metadata or {}) | ({"explanation": v.explanation} if v.explanation is not None else {})
                 with weave.attributes(score_metadata):
-                    sample_score_logger.log_score(
+                    await sample_score_logger.alog_score(
                         scorer=k,
                         score=format_score_types(v.value)
                     )
 
-                    # Log various metrics to Weave
-        try:
-            # Total time
-            if (
-                hasattr(data.sample, "total_time")
-                and data.sample.total_time is not None
-            ):
-                sample_score_logger.log_score(
-                    scorer="total_time", score=data.sample.total_time
-                )
-
-            # Total tokens - model_usage is a dict of model_name -> ModelUsage
-            if hasattr(data.sample, "model_usage") and data.sample.model_usage:
-                # Get the first (and usually only) model's token usage
-                for model_name, usage in data.sample.model_usage.items():
-                    if usage.total_tokens is not None:
-                        sample_score_logger.log_score(
-                            scorer="total_tokens", score=usage.total_tokens
-                        )
-                        break  # Only log the first model's tokens
-
-            # Number of tools from metadata - metadata is a dict
-            if (
-                hasattr(data.sample, "metadata")
-                and data.sample.metadata
-                and "Annotator Metadata" in data.sample.metadata
-                and "Number of tools" in data.sample.metadata["Annotator Metadata"]
-            ):
-                sample_score_logger.log_score(
-                    scorer="num_tool_calls",
-                    score=int(
-                        data.sample.metadata["Annotator Metadata"]["Number of tools"]
-                    ),
-                )
-
-        except Exception as e:
-            logger.error(f"Failed to log metrics to Weave: {e}")
-            raise e
-
-        sample_score_logger.finish()
-        if self.settings is not None and self.settings.autopatch:
-            # Extract model tokens as {model_name: total_tokens} dict
-            model_tokens = {
-                format_model_name(model_name): usage.total_tokens 
-                for model_name, usage in data.sample.model_usage.items()
-            }
-            
-            self.weave_client.finish_call(
-                self.sample_calls[data.sample_id], 
-                output={
-                    "output": data.sample.output.completion, 
-                    "scores": data.sample.scores, 
-                    "total_time": data.sample.total_time, 
-                    "token_usage": model_tokens
-                }
+        # Total time
+        if (
+            hasattr(data.sample, "total_time")
+            and data.sample.total_time is not None
+        ):
+            await sample_score_logger.alog_score(
+                scorer="total_time", score=data.sample.total_time
             )
-            self.sample_calls.pop(data.sample_id)
+
+        # Total tokens
+        if hasattr(data.sample, "model_usage") and data.sample.model_usage:
+            for model_name, usage in data.sample.model_usage.items():
+                if usage.total_tokens is not None:
+                    await sample_score_logger.alog_score(
+                        scorer="total_tokens", score=usage.total_tokens
+                    )
+                    break
+
+        # Number of tools
+        if (
+            hasattr(data.sample, "metadata")
+            and data.sample.metadata
+            and "Annotator Metadata" in data.sample.metadata
+            and "Number of tools" in data.sample.metadata["Annotator Metadata"]
+        ):
+            await sample_score_logger.alog_score(
+                scorer="num_tool_calls",
+                score=int(
+                    data.sample.metadata["Annotator Metadata"]["Number of tools"]
+                ),
+            )
+
+        if not getattr(sample_score_logger, '_has_finished', False):
+            sample_score_logger.finish()
+
+        if self.settings is not None and self.settings.autopatch:
+            if data.sample_id in self.sample_calls:
+                model_tokens = {
+                    format_model_name(model_name): usage.total_tokens
+                    for model_name, usage in data.sample.model_usage.items()
+                }
+
+                self.weave_client.finish_call(
+                    self.sample_calls[data.sample_id],
+                    output={
+                        "output": data.sample.output.completion,
+                        "scores": data.sample.scores,
+                        "total_time": data.sample.total_time,
+                        "token_usage": model_tokens
+                    }
+                )
+                self.sample_calls.pop(data.sample_id)
 
     def _extract_settings_overrides_from_eval_metadata(self, data: TaskStart) -> dict[str, Any] | None:
         """
