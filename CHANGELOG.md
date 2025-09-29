@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Fixed
+- Compare dataset feature correctly compares samples
+
 ## [v0.1.6](https://pypi.org/project/inspect-wandb/0.1.6/) (23 September 2025)
 
 ### Added

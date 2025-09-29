@@ -161,9 +161,13 @@ class WeaveEvaluationHooks(Hooks):
         
         if self.settings is not None and self.settings.autopatch:
             task_name = self.task_mapping.get(data.eval_id, "unknown_task")
+            if isinstance(data.summary.input, str):
+                input_value = data.summary.input
+            else:
+                input_value = "\n".join([message.text for message in data.summary.input])
             self.sample_calls[data.sample_id] = self.weave_client.create_call(
                 op="inspect-sample",
-                inputs={"input": data.summary.input},
+                inputs={"input": input_value},
                 attributes={
                     "sample_id": data.summary.id, 
                     "sample_uuid": data.sample_id, 
@@ -199,7 +203,10 @@ class WeaveEvaluationHooks(Hooks):
 
         sample_id = data.sample.id
         epoch = data.sample.epoch
-        input_value = data.sample.input
+        if isinstance(data.sample.input, str):
+            input_value = data.sample.input
+        else:
+            input_value = "\n".join([message.text for message in data.sample.input])
         with weave.attributes({"sample_id": sample_id, "epoch": epoch}):
             sample_score_logger = weave_eval_logger.log_prediction(
                 inputs={"input": input_value},

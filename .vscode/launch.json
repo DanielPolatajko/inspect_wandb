@@ -30,7 +30,7 @@
                 "eval-set",
                 "test.py",
                 "--log-dir",
-                "test-hanging",
+                "test-logs",
                 "--model",
                 "openai/gpt-4o-mini,anthropic/claude-sonnet-4-0",
                 "--limit",
