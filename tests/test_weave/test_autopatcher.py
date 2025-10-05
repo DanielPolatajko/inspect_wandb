@@ -3,6 +3,7 @@ from inspect_ai.solver import generate
 from inspect_ai.scorer import exact, match, Target
 from inspect_ai.dataset import Sample
 from inspect_ai.solver import TaskState
+from inspect_ai.model import ModelOutput
 from typing import Generator
 import pytest
 from unittest.mock import MagicMock, patch
@@ -99,6 +100,153 @@ class TestPatchedScorerRegistryManagement:
         """Test that PatchedScorer maintains a reference to the original scorer."""
         original_scorer = exact()
         patched = PatchedScorer(original_scorer)
-        
+
         assert patched.original_scorer is original_scorer
+
+
+class TestPatchedScorerCall:
+    """Test suite for PatchedScorer.__call__ functionality."""
+
+    @pytest.mark.asyncio
+    async def test_patched_scorer_call_with_sample_context(self):
+        # Given
+        scorer = exact()
+        patched_scorer = PatchedScorer(scorer)
+
+        state = TaskState(
+            model="test_model",
+            sample_id=1,
+            epoch=1,
+            input="test input",
+            messages=[],
+            output=ModelOutput.from_content(model="test_model", content="Hello World"),
+            completed=False
+        )
+        target = Target("Hello World")
+
+        mock_sample_call = MagicMock()
+        mock_sample_call.id = "sample_call_123"
+        mock_sample_call.attributes = {"sample_id": 1, "epoch": 1}
+
+        mock_parent_call = MagicMock()
+        mock_parent_call._children = [mock_sample_call]
+
+        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+            mock_call_context.get_current_call.return_value = mock_parent_call
+
+            # When
+            result = await patched_scorer(state, target)
+
+            # Then
+            assert result is not None
+            mock_call_context.push_call.assert_called_once_with(mock_sample_call)
+            mock_call_context.pop_call.assert_called_once_with(mock_sample_call.id)
+
+    @pytest.mark.asyncio
+    async def test_patched_scorer_call_without_sample_context(self):
+        # Given
+        scorer = exact()
+        patched_scorer = PatchedScorer(scorer)
+
+        state = TaskState(
+            model="test_model",
+            sample_id=1,
+            epoch=1,
+            input="test input",
+            messages=[],
+            output=ModelOutput.from_content(model="test_model", content="Hello World"),
+            completed=False
+        )
+        target = Target("Hello World")
+
+        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+            mock_call_context.get_current_call.return_value = None
+
+            # When
+            result = await patched_scorer(state, target)
+
+            # Then
+            assert result is not None
+            mock_call_context.push_call.assert_not_called()
+            mock_call_context.pop_call.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_patched_scorer_call_pops_context_on_exception(self):
+        # Given
+        class FailingScorer:
+            __name__ = "FailingScorer"
+
+            async def __call__(self, state: TaskState, target: Target) -> Score:
+                raise ValueError("Test error")
+
+        failing_scorer = FailingScorer()
+
+        from inspect_ai._util.registry import RegistryInfo
+        mock_info = RegistryInfo(name="test/failing_scorer", type="scorer", doc="Test scorer")
+        set_registry_info(failing_scorer, mock_info)
+
+        patched_scorer = PatchedScorer(failing_scorer)
+
+        state = TaskState(
+            model="test_model",
+            sample_id=1,
+            epoch=1,
+            input="test input",
+            messages=[],
+            output=ModelOutput.from_content(model="test_model", content="test"),
+            completed=False
+        )
+        target = Target("test")
+
+        mock_sample_call = MagicMock()
+        mock_sample_call.id = "sample_call_123"
+        mock_sample_call.attributes = {"sample_id": 1, "epoch": 1}
+
+        mock_parent_call = MagicMock()
+        mock_parent_call._children = [mock_sample_call]
+
+        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+            mock_call_context.get_current_call.return_value = mock_parent_call
+
+            # When/Then
+            with pytest.raises(ValueError, match="Test error"):
+                await patched_scorer(state, target)
+
+            mock_call_context.push_call.assert_called_once_with(mock_sample_call)
+            mock_call_context.pop_call.assert_called_once_with(mock_sample_call.id)
+
+    @pytest.mark.asyncio
+    async def test_patched_scorer_call_with_no_matching_sample(self):
+        # Given
+        scorer = exact()
+        patched_scorer = PatchedScorer(scorer)
+
+        state = TaskState(
+            model="test_model",
+            sample_id=99,
+            epoch=5,
+            input="test input",
+            messages=[],
+            output=ModelOutput.from_content(model="test_model", content="Hello World"),
+            completed=False
+        )
+        target = Target("Hello World")
+
+        mock_sample_call = MagicMock()
+        mock_sample_call.id = "sample_call_123"
+        mock_sample_call.attributes = {"sample_id": 1, "epoch": 1}
+
+        mock_parent_call = MagicMock()
+        mock_parent_call._children = [mock_sample_call]
+
+        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+            mock_call_context.get_current_call.return_value = mock_parent_call
+
+            # When
+            result = await patched_scorer(state, target)
+
+            # Then
+            assert result is not None
+            mock_call_context.push_call.assert_not_called()
+            mock_call_context.pop_call.assert_not_called()
 

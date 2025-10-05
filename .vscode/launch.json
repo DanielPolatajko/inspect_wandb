@@ -28,15 +28,15 @@
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval-set",
-                "test.py",
+                "inspect_evals/agentic_misalignment",
                 "--log-dir",
-                "test-hanging",
+                "test-traces",
                 "--model",
-                "openai/gpt-4o-mini,anthropic/claude-sonnet-4-0",
-                "--limit",
-                "20",
+                "openrouter/openai/gpt-4o-mini",
                 "--display",
-                "plain"
+                "plain",
+                "--epochs",
+                "10"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
