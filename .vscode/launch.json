@@ -30,7 +30,7 @@
                 "eval-set",
                 "inspect_evals/agentic_misalignment",
                 "--log-dir",
-                "test-traces",
+                "test-logs",
                 "--model",
                 "openrouter/openai/gpt-4o-mini",
                 "--display",

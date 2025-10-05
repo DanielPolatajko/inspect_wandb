@@ -8,6 +8,8 @@ from weave.trace.weave_client import Call
 from weave.evaluation.eval_imperative import  EvaluationLogger, current_predict_call, IMPERATIVE_EVAL_MARKER
 from weave.evaluation.eval_imperative import ScoreLogger, _set_current_output, _set_current_summary
 from weave.trace.api import attributes
+from typing_extensions import override
+
 
 
 
@@ -95,3 +97,12 @@ class CustomEvaluationLogger(EvaluationLogger):
                 # Even if summarize fails, try to finalize with the calculated summary
 
         self._finalize_evaluation(output=final_summary)
+
+    @override
+    def __setattr__(self, key: str, value: Any) -> None:
+        """
+        Override the __setattr__ method to prevent the dataset attribute from being set
+        """
+        if key == "dataset":
+            self._pseudo_evaluation.dataset = value
+        super().__setattr__(key, value)

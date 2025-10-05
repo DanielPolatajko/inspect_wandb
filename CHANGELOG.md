@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Added
+- - Compare dataset feature correctly compares samples
+
 ### Fixed
 - Add scorer traces to correct parent sample when running with multiple epochs
 
