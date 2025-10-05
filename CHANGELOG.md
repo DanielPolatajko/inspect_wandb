@@ -1,7 +1,10 @@
 ## Unreleased
 
+### Added
+- - Compare dataset feature correctly compares samples
+
 ### Fixed
-- Compare dataset feature correctly compares samples
+- Add scorer traces to correct parent sample when running with multiple epochs
 
 ## [v0.1.6](https://pypi.org/project/inspect-wandb/0.1.6/) (23 September 2025)
 

@@ -81,9 +81,11 @@ class PatchedScorer:
             sample_calls = [child for child in current_call._children 
                            if hasattr(child, 'attributes') and 
                            child.attributes is not None and
-                           child.attributes.get('sample_id') == state.sample_id]
+                           child.attributes.get('sample_id') == state.sample_id and child.attributes.get("epoch") == state.epoch]
             
             if sample_calls:
+                if len(sample_calls) > 1:
+                    logger.warning(f"Found multiple sample calls for sample {state.sample_id} and epoch {state.epoch}. This could result in an incorrect Weave trace tree.")
                 sample_call = sample_calls[0]
                 # Manually activate this sample call as the context
                 call_context.push_call(sample_call)
