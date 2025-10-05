@@ -8,7 +8,7 @@ from typing import Generator
 import pytest
 from unittest.mock import MagicMock, patch
 from .conftest import WeaveTestClient
-from inspect_wandb.weave.autopatcher import PatchedScorer
+from inspect_wandb.weave.autopatcher.scorer import PatchedScorer
 from inspect_ai._util.registry import registry_info, is_registry_object, set_registry_info
 from inspect_ai.scorer._metric import Score
 
@@ -131,7 +131,7 @@ class TestPatchedScorerCall:
         mock_parent_call = MagicMock()
         mock_parent_call._children = [mock_sample_call]
 
-        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
             mock_call_context.get_current_call.return_value = mock_parent_call
 
             # When
@@ -159,7 +159,7 @@ class TestPatchedScorerCall:
         )
         target = Target("Hello World")
 
-        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
             mock_call_context.get_current_call.return_value = None
 
             # When
@@ -205,7 +205,7 @@ class TestPatchedScorerCall:
         mock_parent_call = MagicMock()
         mock_parent_call._children = [mock_sample_call]
 
-        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
             mock_call_context.get_current_call.return_value = mock_parent_call
 
             # When/Then
@@ -239,7 +239,7 @@ class TestPatchedScorerCall:
         mock_parent_call = MagicMock()
         mock_parent_call._children = [mock_sample_call]
 
-        with patch("inspect_wandb.weave.autopatcher.call_context") as mock_call_context:
+        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
             mock_call_context.get_current_call.return_value = mock_parent_call
 
             # When
