@@ -12,7 +12,8 @@ from inspect_wandb.exceptions import WeaveEvaluationException
 from weave.trace.weave_client import Call
 from weave.trace.context import call_context
 from typing_extensions import override
-import os
+from weave.evaluation.eval_imperative import Dataset as WeaveDataset, Table
+from inspect_ai.log import EvalDataset
 import asyncio
 
 logger = getLogger(__name__)
@@ -32,7 +33,6 @@ class WeaveEvaluationHooks(Hooks):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        os.environ["WEAVE_CLIENT_PARALLELISM"] = "1000"
 
     @override
     def enabled(self) -> bool:
@@ -104,7 +104,8 @@ class WeaveEvaluationHooks(Hooks):
                 project_name=f"{self.settings.entity}/{self.settings.project}",
                 settings=UserSettings(
                     print_call_link=False,
-                    display_viewer="print"
+                    display_viewer="print",
+                    client_parallelism=2
                 )
             )
             if self.settings.autopatch:
@@ -113,9 +114,10 @@ class WeaveEvaluationHooks(Hooks):
             logger.info(f"Weave initialized for task {data.spec.task}")
         
         model_name = format_model_name(data.spec.model) 
+        weave_dataset = self._create_weave_dataset(data.spec.dataset)
         weave_eval_logger = CustomEvaluationLogger(
             name=data.spec.task,
-            dataset=data.spec.dataset.name or "test_dataset", # TODO: set a default dataset name
+            dataset=weave_dataset,
             model=model_name,
             eval_attributes=self._get_eval_metadata(data)
         )
@@ -159,15 +161,22 @@ class WeaveEvaluationHooks(Hooks):
         if not self._hooks_enabled:
             return
         
+        weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
+        assert weave_eval_logger is not None and isinstance(weave_eval_logger.dataset, WeaveDataset)
+        weave_eval_logger.dataset = weave_eval_logger.dataset.add_rows([
+            {
+                "sample_id": data.summary.id,
+                "sample_uuid": data.sample_id,
+                "input": data.summary.input,
+                "label": data.summary.target,
+            }
+        ])
+        
         if self.settings is not None and self.settings.autopatch:
             task_name = self.task_mapping.get(data.eval_id, "unknown_task")
-            if isinstance(data.summary.input, str):
-                input_value = data.summary.input
-            else:
-                input_value = "\n".join([message.text for message in data.summary.input])
             self.sample_calls[data.sample_id] = self.weave_client.create_call(
                 op="inspect-sample",
-                inputs={"input": input_value},
+                inputs={"input": data.summary.input},
                 attributes={
                     "sample_id": data.summary.id, 
                     "sample_uuid": data.sample_id, 
@@ -203,10 +212,7 @@ class WeaveEvaluationHooks(Hooks):
 
         sample_id = data.sample.id
         epoch = data.sample.epoch
-        if isinstance(data.sample.input, str):
-            input_value = data.sample.input
-        else:
-            input_value = "\n".join([message.text for message in data.sample.input])
+        input_value = data.sample.input
         with weave.attributes({"sample_id": sample_id, "epoch": epoch}):
             sample_score_logger = weave_eval_logger.log_prediction(
                 inputs={"input": input_value},
@@ -313,3 +319,19 @@ class WeaveEvaluationHooks(Hooks):
         eval_metadata["inspect"] = inspect_data
         
         return eval_metadata
+
+    def _create_weave_dataset(self, dataset: EvalDataset) -> WeaveDataset:
+        """
+        Converts the Inspect dataset spec to a Weave dataset, which rows will be added to as we go
+        """
+        return WeaveDataset(
+            name=dataset.name,
+            description=f"Dataset: {dataset.name}, location: {dataset.location}, number of samples: {dataset.samples}",
+            rows=Table([{
+                "sample_id": "test",
+                "sample_uuid": "test",
+                "input": "test",
+                "label": "test",
+            }])
+        )
+
