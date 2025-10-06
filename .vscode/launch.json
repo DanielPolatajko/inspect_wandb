@@ -30,13 +30,13 @@
                 "eval-set",
                 "inspect_evals/agentic_misalignment",
                 "--log-dir",
-                "test-traces",
+                "test-openrouter",
                 "--model",
                 "openrouter/openai/gpt-4o-mini",
                 "--display",
                 "plain",
                 "--epochs",
-                "10"
+                "1"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false,

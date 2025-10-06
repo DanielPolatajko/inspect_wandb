@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Added
+- Custom trace names to differentiate OpenRouter API calls from OpenAI completions
+
 ### Fixed
 - Add scorer traces to correct parent sample when running with multiple epochs
 

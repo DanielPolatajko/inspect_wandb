@@ -14,6 +14,8 @@ from weave.trace.context import call_context
 from typing_extensions import override
 import os
 import asyncio
+from weave.trace.autopatch import IntegrationSettings, OpSettings
+from weave import integrations
 
 logger = getLogger(__name__)
 
@@ -98,17 +100,18 @@ class WeaveEvaluationHooks(Hooks):
 
         assert self.settings is not None
         
+        
         # Lazy initialization: only init Weave when first task starts
         if not self._weave_initialized:
             self.weave_client = weave.init(
                 project_name=f"{self.settings.entity}/{self.settings.project}",
                 settings=UserSettings(
                     print_call_link=False,
-                    display_viewer="print"
-                )
+                    display_viewer="print",
+                    implicitly_patch_integrations=False
+                ),
             )
-            if self.settings.autopatch:
-                get_inspect_patcher(CustomAutopatchSettings().inspect).attempt_patch()
+            self._autopatch(model=data.spec.model)
             self._weave_initialized = True
             logger.info(f"Weave initialized for task {data.spec.task}")
         
@@ -306,3 +309,28 @@ class WeaveEvaluationHooks(Hooks):
         eval_metadata["inspect"] = inspect_data
         
         return eval_metadata
+
+    def _autopatch(self, model: str) -> None:
+        assert self.settings is not None
+        if model.startswith("openrouter"):
+            openai_settings=IntegrationSettings(
+                op_settings=OpSettings(
+                    name="openrouter.api.call"
+                )
+            )
+        else:
+            openai_settings = None
+        autopatch_settings = CustomAutopatchSettings(
+            openai=openai_settings
+        )
+        integrations.patch_openai(autopatch_settings.openai)
+        integrations.patch_anthropic(autopatch_settings.anthropic)
+        integrations.patch_google_genai(autopatch_settings.google_genai)
+        integrations.patch_groq(autopatch_settings.groq)
+        integrations.patch_huggingface(autopatch_settings.huggingface)
+        integrations.patch_mistral(autopatch_settings.mistral)
+        integrations.patch_vertexai(autopatch_settings.vertexai)
+        integrations.patch_cohere(autopatch_settings.cohere)
+        integrations.patch_llamaindex()
+        if self.settings.autopatch:
+            get_inspect_patcher(autopatch_settings.inspect).attempt_patch()
