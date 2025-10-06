@@ -1033,7 +1033,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "pydantic-settings" },
     { name = "wandb" },
-    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.52.1" },
+    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.52.7" },
 ]
 provides-extras = ["weave", "viz"]
 
@@ -3120,7 +3120,7 @@ wheels = [
 
 [[package]]
 name = "weave"
-version = "0.52.6"
+version = "0.52.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -3136,9 +3136,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "wandb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/07/c44cc76f132deffd9a767f9ea1e059a4cc6b26773b9c658761c744a8c124/weave-0.52.6.tar.gz", hash = "sha256:5b074cea6702b18bf12020feb8078ec6a5c2d9ed048f082f936f02d178201c1e", size = 518689, upload-time = "2025-09-04T19:39:43.94Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/6b/4dd68fa1148f59c137187730062fd688608094d88e6f7b3df67e7b24071e/weave-0.52.8.tar.gz", hash = "sha256:68323b7faa5308239b77e3bf5f6ec837222083867c0a964627b35110a446c5ae", size = 531255, upload-time = "2025-09-17T15:17:31.705Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/48/f0489e3bd901eab56c1d4ff3824005606d53676a2b0dd180e716a4fd10a8/weave-0.52.6-py3-none-any.whl", hash = "sha256:2c2075778c12333cdc66f96f36afde4ab4421d34df84f008e6f3fb62628748d3", size = 661206, upload-time = "2025-09-04T19:39:41.648Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/bf/bfb2faa67bedd838df982e016882ff71539e6f40d0efcccda9a05d3a7399/weave-0.52.8-py3-none-any.whl", hash = "sha256:b5ae1d0208b8dd25227ee8e3b42522b6f272a5b11e1eda30bfcf73b060de365b", size = 677061, upload-time = "2025-09-17T15:17:29.567Z" },
 ]
 
 [[package]]
