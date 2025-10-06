@@ -1,5 +1,8 @@
 ## Unreleased
 
+## [v0.1.7](https://pypi.org/project/inspect-wandb/0.1.7/) (06 October 2025)
+
+
 ### Added
 - Custom trace names to differentiate OpenRouter API calls from OpenAI completions
 
