@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Added
+- Add eval-set log dir to Weave Evaluation metadata
+
 ## [v0.1.7](https://pypi.org/project/inspect-wandb/0.1.7/) (06 October 2025)
 
 

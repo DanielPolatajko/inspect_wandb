@@ -12,7 +12,6 @@ from inspect_wandb.exceptions import WeaveEvaluationException
 from weave.trace.weave_client import Call
 from weave.trace.context import call_context
 from typing_extensions import override
-import os
 import asyncio
 from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
@@ -31,10 +30,7 @@ class WeaveEvaluationHooks(Hooks):
     _weave_initialized: bool = False
     _hooks_enabled: bool | None = None
     _eval_set: bool = False
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        os.environ["WEAVE_CLIENT_PARALLELISM"] = "1000"
+    _eval_set_log_dir: str | None = None
 
     @override
     def enabled(self) -> bool:
@@ -45,6 +41,7 @@ class WeaveEvaluationHooks(Hooks):
     @override
     async def on_eval_set_start(self, data: EvalSetStart) -> None:
         self._eval_set = True
+        self._eval_set_log_dir = data.log_dir
 
     @override
     async def on_eval_set_end(self, data: EvalSetEnd) -> None:
@@ -120,7 +117,7 @@ class WeaveEvaluationHooks(Hooks):
             name=data.spec.task,
             dataset=data.spec.dataset.name or "test_dataset", # TODO: set a default dataset name
             model=model_name,
-            eval_attributes=self._get_eval_metadata(data)
+            eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir)
         )
         
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
@@ -284,7 +281,7 @@ class WeaveEvaluationHooks(Hooks):
         if self.settings is None or overrides is not None:
             self.settings = WeaveSettings.model_validate(overrides or {})
 
-    def _get_eval_metadata(self, data: TaskStart) -> dict[str, str | dict[str, Any]]:
+    def _get_eval_metadata(self, data: TaskStart, log_dir: str | None = None) -> dict[str, str | dict[str, Any]]:
 
         eval_metadata = data.spec.metadata or {}
         
@@ -293,6 +290,9 @@ class WeaveEvaluationHooks(Hooks):
             "task_id": data.spec.task_id,
             "eval_id": data.eval_id,
         }
+
+        if log_dir is not None:
+            eval_metadata["eval_set_log_dir"] = log_dir
         
         # Add task_args key-value pairs
         if data.spec.task_args:
