@@ -37,8 +37,8 @@ class WandBModelHooks(Hooks):
 
     @override
     def enabled(self) -> bool:
-        self._load_settings()
-        assert self.settings is not None
+        # Always reload settings from scratch to pick up any runtime changes
+        self.settings = ModelsSettings.model_validate({})
         return self.settings.enabled
 
     @override
