@@ -1033,7 +1033,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "pydantic-settings" },
     { name = "wandb" },
-    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.52.7" },
+    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.52.11" },
 ]
 provides-extras = ["weave", "viz"]
 
@@ -3120,7 +3120,7 @@ wheels = [
 
 [[package]]
 name = "weave"
-version = "0.52.8"
+version = "0.52.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -3128,17 +3128,17 @@ dependencies = [
     { name = "eval-type-backport" },
     { name = "gql", extra = ["aiohttp", "requests"] },
     { name = "jsonschema" },
-    { name = "nest-asyncio" },
     { name = "packaging" },
     { name = "polyfile-weave" },
     { name = "pydantic" },
     { name = "sentry-sdk" },
     { name = "tenacity" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "wandb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/6b/4dd68fa1148f59c137187730062fd688608094d88e6f7b3df67e7b24071e/weave-0.52.8.tar.gz", hash = "sha256:68323b7faa5308239b77e3bf5f6ec837222083867c0a964627b35110a446c5ae", size = 531255, upload-time = "2025-09-17T15:17:31.705Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/25/d92f2df41fbadc82cba6628851de8af1949f8d64c5f252bdaaa50882369c/weave-0.52.11.tar.gz", hash = "sha256:2f64a9312e24418da180f968afff53e58388a53a7c849ea60883d4208d99ed23", size = 579749, upload-time = "2025-10-23T01:25:09.519Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/bf/bfb2faa67bedd838df982e016882ff71539e6f40d0efcccda9a05d3a7399/weave-0.52.8-py3-none-any.whl", hash = "sha256:b5ae1d0208b8dd25227ee8e3b42522b6f272a5b11e1eda30bfcf73b060de365b", size = 677061, upload-time = "2025-09-17T15:17:29.567Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/26/947895c54838481876bfc3b91e9514218e29b86e3d52a005d542d47fc738/weave-0.52.11-py3-none-any.whl", hash = "sha256:3fbcde407deab4b420401e0f43debeb6f06eb21c645f2a2e869781afc7b4065f", size = 732624, upload-time = "2025-10-23T01:25:06.933Z" },
 ]
 
 [[package]]
