@@ -34,19 +34,7 @@ To install the optional Weave extra:
 pip install inspect-wandb[weave]
 ```
 
-Once Inspect WandB is installed in an environment authenticated with Weights & Biases (either by running `wandb login` or setting `WANDB_API_KEY`), you can enable it for future Inspect runs by:
-- Setting the `INSPECT_WANDB_MODELS_ENABLED` and/or `INSPECT_WANDB_WEAVE_ENABLED` environment variables to `true`
-- Adding the following block to your project's `pyproject.toml`:
-```toml
-[tool.inspect-wandb.models]
-enabled = true
-
-[tool.inspect-wandb.weave]
-enabled = true
-```
-- Passing the following metadata to your `inspect` command: `--metadata inspect_wandb_models_enabled=true --metadata inspect_wandb_weave_enabled=true`
-
-The Inspect logger output will link to the Models dashboard where you can track runs, and also, if you have enabled the `weave` extra, to the Weave dashboard where you can visualise eval results.
+Once Inspect WandB is installed in an environment authenticated with Weights & Biases (either by running `wandb login` or setting `WANDB_API_KEY`), the integration will be enabled for future Inspect runs by default. The Inspect logger output will link to the Models dashboard where you can track runs, and also, if you have enabled the `weave` extra, to the Weave dashboard where you can visualise eval results.
 
 Some configuration options are available, including adjusting `wandb` config, settings tags, and adjusting Weave trace naming. To dive deeper with Inspect WandB, please see the documentation at [https://inspect-wandb.readthedocs.io/en/latest/](https://inspect-wandb.readthedocs.io/en/latest/)
 
