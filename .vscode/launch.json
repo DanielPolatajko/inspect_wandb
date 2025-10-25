@@ -6,7 +6,7 @@
             "name": "Debug Inspect",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv_test/bin/inspect", // Replace inspect_wandb_test_venv with your venv
+            "program": "${workspaceFolder}/.venv/bin/inspect",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",
@@ -24,19 +24,19 @@
             "name": "Debug Inspect (eval-set)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_weave_venv with your venv
+            "program": "${workspaceFolder}/.venv/Scripts/inspect.exe",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval-set",
                 "inspect_evals/agentic_misalignment",
                 "--log-dir",
-                "test-openrouter",
+                "test-openrouter-2",
                 "--model",
                 "openrouter/openai/gpt-4o-mini",
                 "--display",
                 "plain",
                 "--epochs",
-                "1"
+                "10"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
@@ -45,7 +45,7 @@
             "name": "Debug Inspect (Windows)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_wandb_venv with your venv
+            "program": "${workspaceFolder}/.venv/Scripts/inspect.exe",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",

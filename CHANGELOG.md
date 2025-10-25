@@ -3,6 +3,9 @@
 ### Added
 - Add eval-set log dir to Weave Evaluation metadata
 
+### Fixed
+- Bump minimum Weave version to fix Pydantic validation error on summary aggregation
+
 ## [v0.1.7](https://pypi.org/project/inspect-wandb/0.1.7/) (06 October 2025)
 
 
