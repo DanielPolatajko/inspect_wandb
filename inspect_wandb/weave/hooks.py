@@ -31,11 +31,12 @@ class WeaveEvaluationHooks(Hooks):
     _hooks_enabled: bool | None = None
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
+    _metadata_overrides: dict[str, Any] | None = None
 
     @override
     def enabled(self) -> bool:
         # Always reload settings from scratch to pick up any runtime changes
-        self.settings = WeaveSettings.model_validate({})
+        self.settings = WeaveSettings.model_validate(self._metadata_overrides or {})
         return self.settings.enabled
 
     @override
@@ -83,11 +84,13 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
+
+        print("before", self.settings)
         
         # Check enablement only on first task (all tasks share same metadata)
         if self._hooks_enabled is None:
-            metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self._load_settings(overrides=metadata_overrides)
+            self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
+            self.settings = WeaveSettings.model_validate(self._metadata_overrides or {})
             assert self.settings is not None
             self._hooks_enabled = self.settings.enabled
         
@@ -96,6 +99,7 @@ class WeaveEvaluationHooks(Hooks):
             return
 
         assert self.settings is not None
+        print("after", self.settings)
         
         
         # Lazy initialization: only init Weave when first task starts
@@ -117,7 +121,8 @@ class WeaveEvaluationHooks(Hooks):
             name=data.spec.task,
             dataset=data.spec.dataset.name or "test_dataset", # TODO: set a default dataset name
             model=model_name,
-            eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir)
+            eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir),
+            scorers=None
         )
         
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
@@ -180,11 +185,14 @@ class WeaveEvaluationHooks(Hooks):
         if not self._hooks_enabled:
             return
 
+        print("creating end task")
+
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         task.add_done_callback(self._handle_weave_task_result)
 
     def _handle_weave_task_result(self, task: asyncio.Task) -> None:
         """Handle results/exceptions from Weave logging tasks"""
+        print("done")
         if (e:= task.exception()):
             raise e
 
@@ -276,10 +284,6 @@ class WeaveEvaluationHooks(Hooks):
         if data.spec.metadata is None:
             return None
         return { k[len("inspect_wandb_weave_"):]: v for k,v in data.spec.metadata.items() if k.lower().startswith("inspect_wandb_weave_")} or None
-
-    def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
-        if self.settings is None or overrides is not None:
-            self.settings = WeaveSettings.model_validate(overrides or {})
 
     def _get_eval_metadata(self, data: TaskStart, log_dir: str | None = None) -> dict[str, str | dict[str, Any]]:
 

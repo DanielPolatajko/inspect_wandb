@@ -41,6 +41,7 @@ def test_inspect_quickstart(
     eval(hello_world, model="mockllm/model")
 
     calls = list(patch_weave_client_in_hooks.get_test_calls())
+    print(calls)
 
     assert len([call.name for call in calls]) == 9
 

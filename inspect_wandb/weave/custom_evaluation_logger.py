@@ -8,6 +8,7 @@ from weave.trace.weave_client import Call
 from weave.evaluation.eval_imperative import  EvaluationLogger, current_predict_call, IMPERATIVE_EVAL_MARKER
 from weave.evaluation.eval_imperative import ScoreLogger, _set_current_output, _set_current_summary
 from weave.trace.api import attributes
+from typing import override
 
 
 
@@ -25,7 +26,8 @@ class CustomEvaluationLogger(EvaluationLogger):
     This allows us to specify an Inspect specific call as the parent when autopatching Inspect.
     """
 
-    def log_prediction(self, inputs: dict, output: Any, parent_call: Call | None = None) -> ScoreLogger:
+    @override
+    def log_prediction(self, inputs: dict, output: Any = None, parent_call: Call | None = None) -> ScoreLogger:
         """Log a prediction to the Evaluation, and return a reference.
 
         The reference can be used to log scores which are attached to the specific
@@ -56,6 +58,7 @@ class CustomEvaluationLogger(EvaluationLogger):
                 predict_and_score_call=predict_and_score_call,
                 evaluate_call=parent_call if parent_call is not None else self._evaluate_call,
                 predict_call=predict_call,
+                predefined_scorers=self.scorers
             )
             self._accumulated_predictions.append(pred)
             return pred

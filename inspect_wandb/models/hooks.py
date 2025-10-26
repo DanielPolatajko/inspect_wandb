@@ -28,6 +28,7 @@ class WandBModelHooks(Hooks):
     _is_eval_set: bool = False
     _hooks_enabled: bool | None = None
     _active_runs: dict[str, dict[str, bool | BaseException | None]] = {}
+    _metadata_overrides: dict[str, Any] | None = None
 
     def __init__(self):
         if INSTALLED_EXTRAS["viz"]:
@@ -38,7 +39,7 @@ class WandBModelHooks(Hooks):
     @override
     def enabled(self) -> bool:
         # Always reload settings from scratch to pick up any runtime changes
-        self.settings = ModelsSettings.model_validate({})
+        self.settings = ModelsSettings.model_validate(self._metadata_overrides or {})
         return self.settings.enabled
 
     @override
@@ -101,14 +102,12 @@ class WandBModelHooks(Hooks):
         Initializes WandB run if not already initialized.
         Updates tags, config, and other metadata based on user-provided settings.
         """
-
-        self._load_settings()
         assert self.settings is not None
         
         # Override settings from eval metadata on first task only
         if self._hooks_enabled is None:
-            metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self._load_settings(overrides=metadata_overrides)
+            self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
+            self.settings = ModelsSettings.model_validate(self._metadata_overrides or {})
             self._hooks_enabled = self.settings.enabled
         
         if not self._hooks_enabled:
@@ -210,7 +209,3 @@ class WandBModelHooks(Hooks):
             return None
         overrides = {k[len("inspect_wandb_models_"):]: v for k,v in data.spec.metadata.items() if k.lower().startswith("inspect_wandb_models_")}
         return overrides
-
-    def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
-        if self.settings is None or overrides is not None:
-            self.settings = ModelsSettings.model_validate(overrides or {})
