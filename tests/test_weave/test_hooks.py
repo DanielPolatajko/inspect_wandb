@@ -50,6 +50,7 @@ class TestWeaveEvaluationHooks:
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
         mock_score_logger = MagicMock(spec=ScoreLogger)
+        mock_score_logger._has_finished = False
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
         hooks.sample_calls["test_sample_id"] = mock_score_logger
@@ -87,6 +88,7 @@ class TestWeaveEvaluationHooks:
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
         mock_score_logger = MagicMock(spec=ScoreLogger)
+        mock_score_logger._has_finished = False
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
         hooks.sample_calls["test_sample_id"] = mock_score_logger
@@ -437,6 +439,7 @@ class TestConcurrencyOnSampleEnd:
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
         mock_score_logger = MagicMock(spec=ScoreLogger)
+        mock_score_logger._has_finished = False
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
         hooks.sample_calls["test_sample_id"] = mock_score_logger
