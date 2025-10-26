@@ -131,7 +131,8 @@ class TestWeaveEvaluationHooks:
             "sample_count": 1
         }
         mock_weave_eval_logger.log_summary.assert_called_once_with(
-            expected_summary
+            {"summary": expected_summary},
+            auto_summarize=False
         )
 
     @pytest.mark.asyncio
