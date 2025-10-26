@@ -6,7 +6,7 @@
             "name": "Debug Inspect",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv_test/bin/inspect", // Replace inspect_wandb_test_venv with your venv
+            "program": "${workspaceFolder}/.venv/bin/inspect",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",
@@ -24,19 +24,23 @@
             "name": "Debug Inspect (eval-set)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_weave_venv with your venv
+            "program": "${workspaceFolder}/.venv/Scripts/inspect.exe",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval-set",
-                "test.py",
+                "inspect_evals/agentic_misalignment",
                 "--log-dir",
+<<<<<<< HEAD
                 "test-logs",
+=======
+                "test-openrouter-2",
+>>>>>>> origin
                 "--model",
-                "openai/gpt-4o-mini,anthropic/claude-sonnet-4-0",
-                "--limit",
-                "20",
+                "openrouter/openai/gpt-4o-mini",
                 "--display",
-                "plain"
+                "plain",
+                "--epochs",
+                "10"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
@@ -45,7 +49,7 @@
             "name": "Debug Inspect (Windows)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/inspect_wandb_venv/Scripts/inspect.exe", // Replace inspect_wandb_venv with your venv
+            "program": "${workspaceFolder}/.venv/Scripts/inspect.exe",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",

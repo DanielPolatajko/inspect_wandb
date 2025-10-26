@@ -1,14 +1,11 @@
 from __future__ import annotations
-from typing import Any, TypeVar, Union
+from typing import TypeVar, Union
 import logging
 
-import weave
 from weave.trace.context import call_context
-from weave.trace.weave_client import Call
-from weave.evaluation.eval_imperative import  EvaluationLogger, current_predict_call, IMPERATIVE_EVAL_MARKER
-from weave.evaluation.eval_imperative import ScoreLogger, _set_current_output, _set_current_summary
+from weave.evaluation.eval_imperative import  EvaluationLogger, IMPERATIVE_EVAL_MARKER
+from weave.evaluation.eval_imperative import _set_current_summary
 from weave.trace.api import attributes
-from typing_extensions import override
 
 
 
@@ -26,41 +23,6 @@ class CustomEvaluationLogger(EvaluationLogger):
     This class is a modified version of the EvaluationLogger class which allows for the parent call to be specified.
     This allows us to specify an Inspect specific call as the parent when autopatching Inspect.
     """
-
-    def log_prediction(self, inputs: dict, output: Any, parent_call: Call | None = None) -> ScoreLogger:
-        """Log a prediction to the Evaluation, and return a reference.
-
-        The reference can be used to log scores which are attached to the specific
-        prediction instance."""
-        # Use set_call_stack to temporarily set the evaluation as the parent
-        assert self._evaluate_call is not None
-        call_stack = [self._evaluate_call] if parent_call is None else [parent_call]
-
-        with call_context.set_call_stack(call_stack):
-            # Make the prediction call
-            with _set_current_output(output):
-                with weave.attributes(IMPERATIVE_EVAL_MARKER):
-                    _, predict_and_score_call = (
-                        self._pseudo_evaluation.predict_and_score.call(
-                            self._pseudo_evaluation,
-                            self.model,
-                            inputs,
-                            __require_explicit_finish=True,
-                        )
-                    )
-
-            # Get the predict_call from the context variable
-            predict_call = current_predict_call.get()
-            if predict_call is None:
-                raise ValueError("predict_call should not be None")
-
-            pred = ScoreLogger(
-                predict_and_score_call=predict_and_score_call,
-                evaluate_call=parent_call if parent_call is not None else self._evaluate_call,
-                predict_call=predict_call,
-            )
-            self._accumulated_predictions.append(pred)
-            return pred
         
     def log_summary(
         self,
@@ -97,12 +59,3 @@ class CustomEvaluationLogger(EvaluationLogger):
                 # Even if summarize fails, try to finalize with the calculated summary
 
         self._finalize_evaluation(output=final_summary)
-
-    @override
-    def __setattr__(self, key: str, value: Any) -> None:
-        """
-        Override the __setattr__ method to prevent the dataset attribute from being set
-        """
-        if key == "dataset":
-            self._pseudo_evaluation.dataset = value
-        super().__setattr__(key, value)

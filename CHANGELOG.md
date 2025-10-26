@@ -1,7 +1,29 @@
 ## Unreleased
 
+<<<<<<< HEAD
 ### Fixed
 - Compare dataset feature correctly compares samples
+=======
+### Added
+- Add eval-set log dir to Weave Evaluation metadata
+
+### Fixed
+- Bump minimum Weave version to fix Pydantic validation error on summary aggregation
+- Autopatch based on installed libs, rather than blanket patching
+- Load settings every time enabled is called
+
+### New Contributors
+- [@alex-remedios-aisi](https://github.com/alex-remedios-aisi)
+
+## [v0.1.7](https://pypi.org/project/inspect-wandb/0.1.7/) (06 October 2025)
+
+
+### Added
+- Custom trace names to differentiate OpenRouter API calls from OpenAI completions
+
+### Fixed
+- Add scorer traces to correct parent sample when running with multiple epochs
+>>>>>>> origin
 
 ## [v0.1.6](https://pypi.org/project/inspect-wandb/0.1.6/) (23 September 2025)
 

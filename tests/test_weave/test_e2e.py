@@ -91,7 +91,8 @@ class TestEndToEndInspectRuns:
                     'log_images': log_images, 
                     'score_display': score_display
                 }
-            }
+            },
+            scorers=None
         )
 
     def test_eval_with_high_concurrency_completes_without_errors(self, patched_weave_evaluation_hooks: dict[str, MagicMock], monkeypatch: MonkeyPatch) -> None:

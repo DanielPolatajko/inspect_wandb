@@ -61,6 +61,7 @@ class TestWandBModelHooks:
         Test that the on_task_start method initializes the WandB run.
         """
         hooks = WandBModelHooks()
+        hooks.enabled()
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
@@ -79,14 +80,10 @@ class TestWandBModelHooks:
         Test that the on_task_start method initializes the WandB run with config.
         """
         hooks = WandBModelHooks()
+        hooks.enabled()
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
-        hooks.settings = ModelsSettings(
-            enabled=True, 
-            entity="test-entity", 
-            project="test-project",
-            config={"test": "test"}
-        )
+        task_start.spec.metadata = {"inspect_wandb_models_config": {"test": "test"}, "inspect_wandb_models_add_metadata_to_config": False}
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
@@ -103,6 +100,7 @@ class TestWandBModelHooks:
         Test that the on_task_start method initializes the WandB run with eval-set log dir.
         """
         hooks = WandBModelHooks()
+        hooks.enabled()
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
         hooks.settings = ModelsSettings(
@@ -169,14 +167,10 @@ class TestWandBModelHooks:
         Test that the on_task_start method adds settings tags to the run tags.
         """
         hooks = WandBModelHooks()
+        hooks.enabled()
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
-        hooks.settings = ModelsSettings(
-            enabled=True, 
-            entity="test-entity", 
-            project="test-project",
-            tags=["custom-tag1", "custom-tag2"]
-        )
+        task_start.spec.metadata = {"inspect_wandb_models_tags": ["custom-tag1", "custom-tag2"], "inspect_wandb_models_add_metadata_to_config": False}
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
 
