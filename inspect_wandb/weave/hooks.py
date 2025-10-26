@@ -14,7 +14,7 @@ from typing_extensions import override
 import asyncio
 from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
-import importlib
+import importlib.util
 
 logger = getLogger(__name__)
 
