@@ -108,7 +108,7 @@ def patched_weave_evaluation_hooks(reset_inspect_ai_hooks: None):
     with (
         patch("inspect_wandb.weave.hooks.weave.init", MagicMock()) as weave_init,
         patch("inspect_wandb.weave.hooks.weave.finish", MagicMock()) as weave_finish,
-        patch("inspect_wandb.weave.hooks.CustomEvaluationLogger", patched_evaluation_logger_class)
+        patch("inspect_wandb.weave.hooks.EvaluationLogger", patched_evaluation_logger_class)
     ):
         weave_evaluation_hooks_instance = weave_evaluation_hooks() # type: ignore
         with patch("inspect_wandb._registry.weave_evaluation_hooks", lambda: weave_evaluation_hooks_instance):

@@ -1,7 +1,7 @@
 from typing import Any
 from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd, EvalSetStart, EvalSetEnd
 import weave
-from weave.evaluation.eval_imperative import ScoreLogger
+from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
 from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
@@ -15,7 +15,6 @@ import asyncio
 from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
 import importlib
-from inspect_wandb.weave.custom_evaluation_logger import CustomEvaluationLogger
 
 logger = getLogger(__name__)
 
@@ -24,7 +23,7 @@ class WeaveEvaluationHooks(Hooks):
     Provides Inspect hooks for writing eval scores to the Weave Evaluations API.
     """
 
-    weave_eval_loggers: dict[str, CustomEvaluationLogger] = {}
+    weave_eval_loggers: dict[str, EvaluationLogger] = {}
     settings: WeaveSettings | None = None
     sample_calls: dict[str, ScoreLogger] = {}
     task_mapping: dict[str, str] = {}
@@ -114,7 +113,7 @@ class WeaveEvaluationHooks(Hooks):
             logger.info(f"Weave initialized for task {data.spec.task}")
         
         model_name = format_model_name(data.spec.model) 
-        weave_eval_logger = CustomEvaluationLogger(
+        weave_eval_logger = EvaluationLogger(
             name=data.spec.task,
             dataset=data.spec.dataset.name or "test_dataset",
             model=model_name,
@@ -154,7 +153,7 @@ class WeaveEvaluationHooks(Hooks):
                     for metric_name, metric in score.metrics.items():
                         summary[scorer_name][metric_name] = metric.value
             summary["sample_count"] = data.log.results.total_samples
-        weave_eval_logger.log_summary(summary)
+        weave_eval_logger.log_summary({"summary": summary}, auto_summarize=False)
 
     @override
     async def on_sample_start(self, data: SampleStart) -> None:

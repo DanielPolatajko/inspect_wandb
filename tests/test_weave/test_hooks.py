@@ -131,7 +131,8 @@ class TestWeaveEvaluationHooks:
             "sample_count": 1
         }
         mock_weave_eval_logger.log_summary.assert_called_once_with(
-            expected_summary
+            {"summary": expected_summary},
+            auto_summarize=False
         )
 
     @pytest.mark.asyncio
@@ -295,13 +296,13 @@ class TestWeaveEnablementPriority:
         hooks._hooks_enabled = True  # Enable hooks for this test
         hooks._weave_initialized = True  # Mark as initialized for cleanup
         
-        # Mock CustomEvaluationLogger to return our mock with proper ui_url
+        # Mock EvaluationLogger to return our mock with proper ui_url
         mock_evaluation_logger = MagicMock(spec=EvaluationLogger)
         mock_call = MagicMock()
         type(mock_call).ui_url = PropertyMock(return_value="test_url")
         mock_evaluation_logger._evaluate_call = mock_call
         
-        with patch('inspect_wandb.weave.hooks.CustomEvaluationLogger', return_value=mock_evaluation_logger):
+        with patch('inspect_wandb.weave.hooks.EvaluationLogger', return_value=mock_evaluation_logger):
             task_start = create_task_start()
             
             # When
