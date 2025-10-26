@@ -15,7 +15,6 @@ class TestWeaveSettings:
             
         # Then
         assert settings.enabled is True
-        assert settings.autopatch is True
         assert settings.sample_name_template == "{task_name}-sample-{sample_id}-epoch-{epoch}"
         assert settings.entity == "test-entity"
         assert settings.project == "test-project"
@@ -61,7 +60,6 @@ class TestWeaveSettings:
         enabled = false
         entity = "field-entity"
         project = "field-project"
-        autopatch = false
         sample_name_template = "field-sample-name-template"
         """
         pyproject_path = tmp_path / "pyproject.toml"
@@ -81,8 +79,7 @@ class TestWeaveSettings:
         # Then
             assert settings.enabled is False
             assert settings.entity == "field-entity"
-            assert settings.project == "field-project"
-            assert settings.autopatch is False
+            assert settings.project == "field-project"            
             assert settings.sample_name_template == "field-sample-name-template"
         finally:
             os.chdir(original_cwd)

@@ -1,21 +1,21 @@
 from typing import Any
 from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd, EvalSetStart, EvalSetEnd
 import weave
+from weave.evaluation.eval_imperative import ScoreLogger
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
 from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
 from inspect_wandb.config.settings import WeaveSettings
 from logging import getLogger
 from inspect_wandb.weave.autopatcher import get_inspect_patcher, CustomAutopatchSettings
-from inspect_wandb.weave.custom_evaluation_logger import CustomEvaluationLogger
 from inspect_wandb.exceptions import WeaveEvaluationException
-from weave.trace.weave_client import Call
 from weave.trace.context import call_context
 from typing_extensions import override
 import asyncio
 from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
 import importlib
+from inspect_wandb.weave.custom_evaluation_logger import CustomEvaluationLogger
 
 logger = getLogger(__name__)
 
@@ -26,7 +26,7 @@ class WeaveEvaluationHooks(Hooks):
 
     weave_eval_loggers: dict[str, CustomEvaluationLogger] = {}
     settings: WeaveSettings | None = None
-    sample_calls: dict[str, Call] = {}
+    sample_calls: dict[str, ScoreLogger] = {}
     task_mapping: dict[str, str] = {}
     _weave_initialized: bool = False
     _hooks_enabled: bool | None = None
@@ -48,7 +48,7 @@ class WeaveEvaluationHooks(Hooks):
     @override
     async def on_eval_set_end(self, data: EvalSetEnd) -> None:
         self.weave_client.finish(use_progress_bar=False)
-        if self.settings is not None and self.settings.autopatch:
+        if self.settings is not None:
             get_inspect_patcher().undo_patch()
 
 
@@ -79,7 +79,7 @@ class WeaveEvaluationHooks(Hooks):
 
         if not self._eval_set:
             self.weave_client.finish(use_progress_bar=False)
-            if self.settings is not None and self.settings.autopatch:
+            if self.settings is not None:
                 get_inspect_patcher().undo_patch()
 
 
@@ -116,7 +116,7 @@ class WeaveEvaluationHooks(Hooks):
         model_name = format_model_name(data.spec.model) 
         weave_eval_logger = CustomEvaluationLogger(
             name=data.spec.task,
-            dataset=data.spec.dataset.name or "test_dataset", # TODO: set a default dataset name
+            dataset=data.spec.dataset.name or "test_dataset",
             model=model_name,
             eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir),
             scorers=None
@@ -160,22 +160,34 @@ class WeaveEvaluationHooks(Hooks):
     async def on_sample_start(self, data: SampleStart) -> None:
         if not self._hooks_enabled:
             return
+
+        weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
+        assert weave_eval_logger is not None
+
+        task_name = self.task_mapping.get(data.eval_id, "unknown_task")
         
-        if self.settings is not None and self.settings.autopatch:
-            task_name = self.task_mapping.get(data.eval_id, "unknown_task")
-            self.sample_calls[data.sample_id] = self.weave_client.create_call(
-                op="inspect-sample",
-                inputs={"input": data.summary.input},
-                attributes={
+        if self.settings is not None:
+            with weave.attributes(
+                {
                     "sample_id": data.summary.id, 
                     "sample_uuid": data.sample_id, 
                     "epoch": data.summary.epoch,
                     "task_name": task_name,
                     "task_id": data.eval_id,
                     "metadata": data.summary.metadata,
-                },
-                display_name=format_sample_display_name(self.settings.sample_name_template, task_name, data.summary.id, data.summary.epoch)
+                }
+            ):
+                sample_logger = weave_eval_logger.log_prediction(
+                    inputs={"input": data.summary.input},
+                )
+
+            sample_logger.predict_call.display_name = format_sample_display_name(
+                self.settings.sample_name_template, task_name=task_name, sample_id=data.summary.id, epoch=data.summary.epoch
             )
+
+            call_context.push_call(sample_logger.predict_call)
+
+            self.sample_calls[data.sample_id] = sample_logger
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
@@ -199,15 +211,11 @@ class WeaveEvaluationHooks(Hooks):
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
         assert weave_eval_logger is not None
 
-        sample_id = data.sample.id
-        epoch = data.sample.epoch
-        input_value = data.sample.input
-        with weave.attributes({"sample_id": sample_id, "epoch": epoch}):
-            sample_score_logger = weave_eval_logger.log_prediction(
-                inputs={"input": input_value},
-                output=data.sample.output.completion,
-                parent_call=self.sample_calls[data.sample_id] if self.settings is not None and self.settings.autopatch else None
-            )
+        sample_score_logger = self.sample_calls.get(data.sample_id)
+        if sample_score_logger is None or sample_score_logger._has_finished:
+            logger.info(f"Sample {data.sample_id} already logged, skipping")
+            return
+        sample_score_logger.output = data.sample.output.completion
 
         if data.sample.scores is not None:
             for k,v in data.sample.scores.items():
@@ -252,24 +260,7 @@ class WeaveEvaluationHooks(Hooks):
 
         if not getattr(sample_score_logger, '_has_finished', False):
             sample_score_logger.finish()
-
-        if self.settings is not None and self.settings.autopatch:
-            if data.sample_id in self.sample_calls:
-                model_tokens = {
-                    format_model_name(model_name): usage.total_tokens
-                    for model_name, usage in data.sample.model_usage.items()
-                }
-
-                self.weave_client.finish_call(
-                    self.sample_calls[data.sample_id],
-                    output={
-                        "output": data.sample.output.completion,
-                        "scores": data.sample.scores,
-                        "total_time": data.sample.total_time,
-                        "token_usage": model_tokens
-                    }
-                )
-                self.sample_calls.pop(data.sample_id)
+        self.sample_calls.pop(data.sample_id)
 
     def _extract_settings_overrides_from_eval_metadata(self, data: TaskStart) -> dict[str, Any] | None:
         """
@@ -339,5 +330,4 @@ class WeaveEvaluationHooks(Hooks):
             integrations.patch_cohere(autopatch_settings.cohere)
         if importlib.util.find_spec("llama_index"):
             integrations.patch_llamaindex()
-        if self.settings.autopatch:
-            get_inspect_patcher(autopatch_settings.inspect).attempt_patch()
+        get_inspect_patcher(autopatch_settings.inspect).attempt_patch()
