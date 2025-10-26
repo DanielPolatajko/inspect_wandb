@@ -301,7 +301,7 @@ class TestWeaveEnablementPriority:
         
         # When
         metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        hooks._load_settings(overrides=metadata_overrides)
+        hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
         
         # Then
         assert hooks.settings.enabled is True
@@ -317,7 +317,7 @@ class TestWeaveEnablementPriority:
         
         # When
         metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        hooks._load_settings(overrides=metadata_overrides)
+        hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
         
         # Then
         assert hooks.settings.enabled
@@ -333,7 +333,7 @@ class TestWeaveEnablementPriority:
         
         # When
         metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        hooks._load_settings(overrides=metadata_overrides)
+        hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
         
         # Then
         assert not hooks.settings.enabled
