@@ -301,7 +301,7 @@ class TestWeaveEnablementPriority:
         
         # When
         metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        hooks._load_settings(overrides=metadata_overrides)
+        hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
         
         # Then
         assert hooks.settings.enabled is True
@@ -317,23 +317,22 @@ class TestWeaveEnablementPriority:
         
         # When
         metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        hooks._load_settings(overrides=metadata_overrides)
+        hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
         
         # Then
         assert hooks.settings.enabled
 
     @pytest.mark.asyncio
-    async def test_fallback_to_settings_when_metadata_has_no_weave_enabled_key(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    async def test_fallback_to_settings_when_metadata_has_no_weave_enabled_key(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart], monkeypatch: pytest.MonkeyPatch) -> None:
         """Test falls back to settings.enabled when metadata exists but has no weave_enabled key"""
         # Given
-        test_settings.enabled = False  # Project config says disabled
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
         hooks = WeaveEvaluationHooks()
-        hooks.settings = test_settings
         task_start = create_task_start(metadata={"other_key": "value"})  # No weave_enabled key
         
         # When
         metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        hooks._load_settings(overrides=metadata_overrides)
+        hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
         
         # Then
         assert not hooks.settings.enabled

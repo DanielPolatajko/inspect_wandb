@@ -32,11 +32,12 @@ class WeaveEvaluationHooks(Hooks):
     _hooks_enabled: bool | None = None
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
+    _metadata_overrides: dict[str, Any] | None = None
 
     @override
     def enabled(self) -> bool:
-        self._load_settings()
-        assert self.settings is not None
+        # Always reload settings from scratch to pick up any runtime changes
+        self.settings = WeaveSettings.model_validate(self._metadata_overrides or {})
         return self.settings.enabled
 
     @override
@@ -87,8 +88,8 @@ class WeaveEvaluationHooks(Hooks):
         
         # Check enablement only on first task (all tasks share same metadata)
         if self._hooks_enabled is None:
-            metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self._load_settings(overrides=metadata_overrides)
+            self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
+            self.settings = WeaveSettings.model_validate(self._metadata_overrides or {})
             assert self.settings is not None
             self._hooks_enabled = self.settings.enabled
         
@@ -97,7 +98,6 @@ class WeaveEvaluationHooks(Hooks):
             return
 
         assert self.settings is not None
-        
         
         # Lazy initialization: only init Weave when first task starts
         if not self._weave_initialized:
@@ -278,10 +278,6 @@ class WeaveEvaluationHooks(Hooks):
         if data.spec.metadata is None:
             return None
         return { k[len("inspect_wandb_weave_"):]: v for k,v in data.spec.metadata.items() if k.lower().startswith("inspect_wandb_weave_")} or None
-
-    def _load_settings(self, overrides: dict[str, Any] | None = None) -> None:
-        if self.settings is None or overrides is not None:
-            self.settings = WeaveSettings.model_validate(overrides or {})
 
     def _get_eval_metadata(self, data: TaskStart, log_dir: str | None = None) -> dict[str, str | dict[str, Any]]:
 

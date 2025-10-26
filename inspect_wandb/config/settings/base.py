@@ -26,7 +26,12 @@ class InspectWandBBaseSettings(BaseSettings):
     @model_validator(mode="after")
     def validate_project_and_entity(self) -> Self:
         if self.enabled and (not self.project or not self.entity):
-            logger.warning(f"Project and entity must be set if the wandb integrations are enabled. Disabling integrations for this run. {self.project=} {self.entity=}")
+            missing = []
+            if not self.project:
+                missing.append("project")
+            if not self.entity:
+                missing.append("entity")
+            logger.debug(f"WandB integration disabled: missing required field(s): {', '.join(missing)}. Set via environment variables (WANDB_PROJECT, WANDB_ENTITY), wandb settings file, or pyproject.toml.")
             self.enabled = False
         return self
 
