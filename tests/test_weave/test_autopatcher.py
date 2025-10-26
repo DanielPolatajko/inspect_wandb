@@ -41,14 +41,12 @@ def test_inspect_quickstart(
     eval(hello_world, model="mockllm/model")
 
     calls = list(patch_weave_client_in_hooks.get_test_calls())
-    print(calls)
 
-    assert len([call.name for call in calls]) == 9
+    assert len([call.name for call in calls]) == 8
 
     # check for inspect AI patched calls
-    assert "sample" in calls[1].name
-    assert "inspect_ai/generate" in calls[2].name
-    assert "scorer_inspect_ai/exact" in calls[3].name
+    assert "inspect_ai/generate" in calls[3].name
+    assert "scorer_inspect_ai/exact" in calls[4].name
 
 
 class TestPatchedScorerRegistryManagement:

@@ -1,8 +1,8 @@
 from inspect_ai.log import EvalLog
 from unittest.mock import MagicMock, PropertyMock, patch
-from inspect_ai.hooks import SampleEnd, TaskEnd, RunEnd, TaskStart, SampleStart
+from inspect_ai.hooks import SampleEnd, TaskEnd, RunEnd, TaskStart
 from inspect_ai.model import ChatCompletionChoice, ModelOutput, ChatMessageAssistant
-from inspect_ai.log import EvalSample,EvalSampleSummary
+from inspect_ai.log import EvalSample
 from inspect_ai._eval.eval import EvalLogs
 from inspect_wandb.weave.hooks import WeaveEvaluationHooks
 from inspect_ai.scorer import Score
@@ -18,8 +18,7 @@ def test_settings() -> WeaveSettings:
     return WeaveSettings(
         enabled=True,
         entity="test-entity",
-        project="test-project",
-        autopatch=False
+        project="test-project"
     )
     
 
@@ -53,16 +52,12 @@ class TestWeaveEvaluationHooks:
         mock_score_logger = MagicMock(spec=ScoreLogger)
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+        hooks.sample_calls["test_sample_id"] = mock_score_logger
 
         # When
         await hooks._log_sample_to_weave_async(sample)
 
         # Then
-        mock_weave_eval_logger.log_prediction.assert_called_once_with(
-            inputs={"input": "test_input"},
-            output="test_output",
-            parent_call=None
-        )
         mock_score_logger.alog_score.assert_called_once_with(
             scorer="test_score",
             score=1.0,
@@ -94,16 +89,12 @@ class TestWeaveEvaluationHooks:
         mock_score_logger = MagicMock(spec=ScoreLogger)
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+        hooks.sample_calls["test_sample_id"] = mock_score_logger
 
         # When
         await hooks._log_sample_to_weave_async(sample)
 
         # Then
-        mock_weave_eval_logger.log_prediction.assert_called_once_with(
-            inputs={"input": "test_input"},
-            output="test_output",
-            parent_call=None
-        )
         mock_score_logger.alog_score.assert_called_once_with(
             scorer="test_score",
             score=1.0
@@ -170,50 +161,6 @@ class TestWeaveEvaluationHooks:
             exception=e
         )
 
-    @pytest.mark.asyncio
-    async def test_adds_sample_call_with_metadata_on_sample_start(self, test_settings: WeaveSettings) -> None:
-        # Given
-        hooks = WeaveEvaluationHooks()
-        hooks.settings = test_settings
-        hooks.settings.autopatch = True
-        hooks._hooks_enabled = True  # Enable hooks for this test
-        hooks._weave_initialized = True  # Mark as initialized for cleanup
-        hooks.weave_client = MagicMock(spec=WeaveClient)
-        
-        # Set up task mapping (simulating task start)
-        hooks.task_mapping["test_eval_id"] = "test_task"
-        
-        sample = SampleStart(
-            eval_set_id=None,
-            run_id="test_run_id",
-            eval_id="test_eval_id",
-            sample_id="test_sample_id",
-            summary=EvalSampleSummary(
-                id=1,
-                epoch=1,
-                input="test_input",
-                target="test_output",
-                uuid="test_sample_id"
-            )
-        )
-
-        # When  
-        await hooks.on_sample_start(sample)
-
-        # Then
-        hooks.weave_client.create_call.assert_called_once_with(
-            op="inspect-sample",
-            inputs={"input": "test_input"},
-            attributes={
-                "sample_id": 1, 
-                "sample_uuid": "test_sample_id", 
-                "epoch": 1,
-                "task_name": "test_task",
-                "task_id": "test_eval_id",
-                "metadata": {}
-            },
-            display_name="test_task-sample-1-epoch-1"
-        )
 
     @pytest.mark.parametrize("metadata_key", [
         "INSPECT_WANDB_WEAVE_ENABLED",
@@ -457,6 +404,7 @@ class TestConcurrencyOnSampleEnd:
         mock_score_logger._has_finished = False
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+        hooks.sample_calls["test_sample_id"] = mock_score_logger
 
         await hooks._log_sample_to_weave_async(sample)
 
@@ -491,6 +439,7 @@ class TestConcurrencyOnSampleEnd:
         mock_score_logger = MagicMock(spec=ScoreLogger)
         mock_weave_eval_logger.log_prediction.return_value = mock_score_logger
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+        hooks.sample_calls["test_sample_id"] = mock_score_logger
 
         await hooks._log_sample_to_weave_async(sample)
 

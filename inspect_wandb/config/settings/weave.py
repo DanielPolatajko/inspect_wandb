@@ -14,5 +14,4 @@ class WeaveSettings(InspectWandBBaseSettings):
         pyproject_toml_table_header=("tool", "inspect-wandb", "weave"),
     )
 
-    autopatch: bool = Field(default=True, description="Whether to automatically patch Inspect with Weave calls for tracing")
     sample_name_template: str = Field(default="{task_name}-sample-{sample_id}-epoch-{epoch}", description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}")

@@ -10,16 +10,19 @@ from uuid import uuid4
 class TestCall:
 
     name: str
+    display_name: str
     inputs: dict[str, Any]
     attributes: dict[str, Any] | None
 
     def __init__(
         self,
         name: str,
+        display_name: str | None,
         inputs: dict[str, Any],
         attributes: dict[str, Any] | None = None
     ):
         self.name = name
+        self.display_name = display_name
         self.inputs = inputs
         self.attributes = attributes
 
@@ -49,7 +52,7 @@ class WeaveTestClient(MagicMock):
             op_name = op
         else:
             op_name = op.name
-        self.calls[op_name] = TestCall(name=op_name, inputs=inputs, attributes=attributes)
+        self.calls[op_name] = TestCall(name=op_name, display_name=display_name, inputs=inputs, attributes=attributes)
 
         # returning an actual call rather than a mock here is required to ensure downstream calls are passed correctly to the test client
         mock_call = Call(
@@ -71,6 +74,7 @@ class WeaveTestClient(MagicMock):
     ) -> Future[str]:
         self.calls[score_call._op_name] = TestCall(
             name=score_call._op_name,
+            display_name=score_call.display_name,
             inputs=score_call.inputs,
             attributes=score_call.attributes
         )

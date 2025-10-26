@@ -48,7 +48,7 @@ class WeaveEvaluationHooks(Hooks):
     @override
     async def on_eval_set_end(self, data: EvalSetEnd) -> None:
         self.weave_client.finish(use_progress_bar=False)
-        if self.settings is not None and self.settings.autopatch:
+        if self.settings is not None:
             get_inspect_patcher().undo_patch()
 
 
@@ -79,7 +79,7 @@ class WeaveEvaluationHooks(Hooks):
 
         if not self._eval_set:
             self.weave_client.finish(use_progress_bar=False)
-            if self.settings is not None and self.settings.autopatch:
+            if self.settings is not None:
                 get_inspect_patcher().undo_patch()
 
 
@@ -116,7 +116,7 @@ class WeaveEvaluationHooks(Hooks):
         model_name = format_model_name(data.spec.model) 
         weave_eval_logger = CustomEvaluationLogger(
             name=data.spec.task,
-            dataset=data.spec.dataset.name or "placeholder",
+            dataset=data.spec.dataset.name or "test_dataset",
             model=model_name,
             eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir),
             scorers=None
@@ -166,7 +166,7 @@ class WeaveEvaluationHooks(Hooks):
 
         task_name = self.task_mapping.get(data.eval_id, "unknown_task")
         
-        if self.settings is not None and self.settings.autopatch:
+        if self.settings is not None:
             with weave.attributes(
                 {
                     "sample_id": data.summary.id, 
@@ -211,7 +211,10 @@ class WeaveEvaluationHooks(Hooks):
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
         assert weave_eval_logger is not None
 
-        sample_score_logger = self.sample_calls[data.sample_id]
+        sample_score_logger = self.sample_calls.get(data.sample_id)
+        if sample_score_logger is None or sample_score_logger._has_finished:
+            logger.info(f"Sample {data.sample_id} already logged, skipping")
+            return
         sample_score_logger.output = data.sample.output.completion
 
         if data.sample.scores is not None:
@@ -327,5 +330,4 @@ class WeaveEvaluationHooks(Hooks):
             integrations.patch_cohere(autopatch_settings.cohere)
         if importlib.util.find_spec("llama_index"):
             integrations.patch_llamaindex()
-        if self.settings.autopatch:
-            get_inspect_patcher(autopatch_settings.inspect).attempt_patch()
+        get_inspect_patcher(autopatch_settings.inspect).attempt_patch()
