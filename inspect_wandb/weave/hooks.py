@@ -85,8 +85,6 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
-
-        print("before", self.settings)
         
         # Check enablement only on first task (all tasks share same metadata)
         if self._hooks_enabled is None:
@@ -100,8 +98,6 @@ class WeaveEvaluationHooks(Hooks):
             return
 
         assert self.settings is not None
-        print("after", self.settings)
-        
         
         # Lazy initialization: only init Weave when first task starts
         if not self._weave_initialized:
@@ -186,14 +182,11 @@ class WeaveEvaluationHooks(Hooks):
         if not self._hooks_enabled:
             return
 
-        print("creating end task")
-
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         task.add_done_callback(self._handle_weave_task_result)
 
     def _handle_weave_task_result(self, task: asyncio.Task) -> None:
         """Handle results/exceptions from Weave logging tasks"""
-        print("done")
         if (e:= task.exception()):
             raise e
 
