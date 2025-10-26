@@ -5,6 +5,7 @@
 
 ### Fixed
 - Bump minimum Weave version to fix Pydantic validation error on summary aggregation
+- Autopatch based on installed libs, rather than blanket patching
 
 ## [v0.1.7](https://pypi.org/project/inspect-wandb/0.1.7/) (06 October 2025)
 
