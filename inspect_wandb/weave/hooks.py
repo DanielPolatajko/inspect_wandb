@@ -15,6 +15,7 @@ from typing_extensions import override
 import asyncio
 from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
+import importlib
 
 logger = getLogger(__name__)
 
@@ -117,7 +118,8 @@ class WeaveEvaluationHooks(Hooks):
             name=data.spec.task,
             dataset=data.spec.dataset.name or "test_dataset", # TODO: set a default dataset name
             model=model_name,
-            eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir)
+            eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir),
+            scorers=None
         )
         
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
@@ -323,14 +325,23 @@ class WeaveEvaluationHooks(Hooks):
         autopatch_settings = CustomAutopatchSettings(
             openai=openai_settings
         )
-        integrations.patch_openai(autopatch_settings.openai)
-        integrations.patch_anthropic(autopatch_settings.anthropic)
-        integrations.patch_google_genai(autopatch_settings.google_genai)
-        integrations.patch_groq(autopatch_settings.groq)
-        integrations.patch_huggingface(autopatch_settings.huggingface)
-        integrations.patch_mistral(autopatch_settings.mistral)
-        integrations.patch_vertexai(autopatch_settings.vertexai)
-        integrations.patch_cohere(autopatch_settings.cohere)
-        integrations.patch_llamaindex()
+        if importlib.util.find_spec("openai"):
+            integrations.patch_openai(autopatch_settings.openai)
+        if importlib.util.find_spec("anthropic"):
+            integrations.patch_anthropic(autopatch_settings.anthropic)
+        if importlib.util.find_spec("google.genai"):
+            integrations.patch_google_genai(autopatch_settings.google_genai)
+        if importlib.util.find_spec("groq"):
+            integrations.patch_groq(autopatch_settings.groq)
+        if importlib.util.find_spec("huggingface_hub"):
+            integrations.patch_huggingface(autopatch_settings.huggingface)
+        if importlib.util.find_spec("mistralai"):
+            integrations.patch_mistral(autopatch_settings.mistral)
+        if importlib.util.find_spec("vertexai"):
+            integrations.patch_vertexai(autopatch_settings.vertexai)
+        if importlib.util.find_spec("cohere"):
+            integrations.patch_cohere(autopatch_settings.cohere)
+        if importlib.util.find_spec("llama_index"):
+            integrations.patch_llamaindex()
         if self.settings.autopatch:
             get_inspect_patcher(autopatch_settings.inspect).attempt_patch()
