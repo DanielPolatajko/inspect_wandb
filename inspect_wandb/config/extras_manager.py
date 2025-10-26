@@ -1,4 +1,4 @@
-import importlib
+import importlib.util
 
 class ExtrasManager:
     def __init__(self):
