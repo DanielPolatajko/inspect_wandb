@@ -323,12 +323,11 @@ class TestWeaveEnablementPriority:
         assert hooks.settings.enabled
 
     @pytest.mark.asyncio
-    async def test_fallback_to_settings_when_metadata_has_no_weave_enabled_key(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    async def test_fallback_to_settings_when_metadata_has_no_weave_enabled_key(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart], monkeypatch: pytest.MonkeyPatch) -> None:
         """Test falls back to settings.enabled when metadata exists but has no weave_enabled key"""
         # Given
-        test_settings.enabled = False  # Project config says disabled
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
         hooks = WeaveEvaluationHooks()
-        hooks.settings = test_settings
         task_start = create_task_start(metadata={"other_key": "value"})  # No weave_enabled key
         
         # When
