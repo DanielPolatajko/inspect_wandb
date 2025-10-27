@@ -220,10 +220,18 @@ class WeaveEvaluationHooks(Hooks):
             for k,v in data.sample.scores.items():
                 score_metadata = (v.metadata or {}) | ({"explanation": v.explanation} if v.explanation is not None else {})
                 with weave.attributes(score_metadata):
-                    await sample_score_logger.alog_score(
-                        scorer=k,
-                        score=format_score_types(v.value)
-                    )
+                    if isinstance(v.value, dict):
+                        for k2,v2 in v.value.items():
+                            await sample_score_logger.alog_score(
+                                scorer=f"{k}_{k2}",
+                                score=format_score_types(v2)
+                            )
+                    else:
+                        await sample_score_logger.alog_score(
+                            scorer=k,
+                            score=format_score_types(v.value)
+                        )
+
 
         # Total time
         if (
