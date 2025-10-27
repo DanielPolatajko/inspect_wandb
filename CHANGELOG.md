@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Added
+- Convert built-in Inspect `choice` and `match` scorer values to booleans when logging scores to Weave
 - Add eval-set log dir to Weave Evaluation metadata
 
 ### Fixed
