@@ -49,11 +49,11 @@
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
                 "eval",
-                "test.py",
+                "inspect_evals/gsm8k",
                 "--limit",
-                "5",
-                "--metadata",
-                "inspect_wandb_models_tags=['test']"
+                "10",
+                "--model",
+                "openai/gpt-4.1-nano-2025-04-14,anthropic/claude-3-haiku-2024030"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false

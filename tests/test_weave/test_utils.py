@@ -1,5 +1,6 @@
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
 from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
+from inspect_ai.scorer import CORRECT, INCORRECT
 import pytest
 import re
 
@@ -83,6 +84,16 @@ class TestFormatScoreTypes:
         }
         result = format_score_types(input_dict)
         assert result == input_dict
+
+    def test_choice_scorer_with_correct_returns_true(self):
+        """Test that choice scorer with CORRECT value returns True."""
+        result = format_score_types(CORRECT, scorer_name="choice")
+        assert result is True
+
+    def test_match_scorer_with_incorrect_returns_false(self):
+        """Test that match scorer with INCORRECT value returns False."""
+        result = format_score_types(INCORRECT, scorer_name="match")
+        assert result is False
 
 
 class TestFormatSampleDisplayName:

@@ -1,11 +1,18 @@
 from weave.evaluation.eval_imperative import ScoreType
-from inspect_ai.scorer import Value
+from inspect_ai.scorer import Value, CORRECT, INCORRECT
 from typing import Sequence, Mapping
 from logging import getLogger
 
 utils_logger = getLogger(__name__)
 
-def format_score_types(score_value: Value) -> ScoreType:
+def format_score_types(score_value: Value, scorer_name: str | None = None) -> ScoreType:
+    if scorer_name in ["choice", "match"]:
+        if score_value == CORRECT:
+            return True
+        elif score_value == INCORRECT:
+            return False
+        else:
+            utils_logger.warning(f"{scorer_name} is expected only to return values {CORRECT}, {INCORRECT}. Logging raw value to Weave.")
     if isinstance(score_value, str):
         return {"score": score_value}
     elif isinstance(score_value, int):

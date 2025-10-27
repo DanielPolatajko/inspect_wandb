@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Added
+- Convert built-in Inspect `choice` and `match` scorer values to booleans when logging scores to Weave
 - Add eval-set log dir to Weave Evaluation metadata
 
 ### Fixed
@@ -8,6 +9,7 @@
 - Autopatch based on installed libs, rather than blanket patching
 - Load settings every time enabled is called
 - Remove custom EvaluationLogger to enable dataset comparison
+- Bug with out-of-date syntax for importlib utils
 
 ### New Contributors
 - [@alex-remedios-aisi](https://github.com/alex-remedios-aisi)
