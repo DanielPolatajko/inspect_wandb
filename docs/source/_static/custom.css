@@ -1,0 +1,48 @@
+/* Custom styles for Inspect WandB documentation */
+
+/* Increase max-width of content area for better table display */
+.wy-nav-content {
+    max-width: 1200px !important;
+}
+
+/* Make table cells wrap content instead of forcing horizontal scroll */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+}
+
+/* Allow tables to use full width */
+.wy-table-responsive {
+    overflow: visible !important;
+}
+
+/* Ensure table layout adjusts to content */
+.wy-table-responsive table {
+    table-layout: auto !important;
+}
+
+/* Optimize column widths for configuration tables */
+table.docutils td,
+table.docutils th {
+    padding: 8px 12px;
+    vertical-align: top;
+}
+
+/* Make code blocks in tables more readable */
+table.docutils td code,
+table.docutils th code {
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Responsive adjustments for smaller screens */
+@media screen and (max-width: 768px) {
+    .wy-nav-content {
+        max-width: 100% !important;
+    }
+
+    table.docutils {
+        font-size: 0.9em;
+    }
+}

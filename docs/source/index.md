@@ -70,7 +70,7 @@ Some common use cases for Inspect WandB include:
 * **Shareability & Persistence:** While evals are often developed and assessed collaboratively, by default, Inspect stores all logs locally, making it difficult for teams to share and collaborate and easy for data to be lost. WandB Models and WandB Weave natively store all the data in the cloud in a way that is easy for the entire team to access.
 - **Repeatability:** WandB Models API allows you to capture the exact configuration that was used to run an eval, making it easy for teams to repeat experiments without sending complex environmental setups. Direct links between WandB Runs and Inspect log locations make it simple to keep track of evals across platforms.
 
-Check out our [tutorial video](link) for a more in-depth walkthrough of Inspect WandB and some of the ways it can be used to augment Inspect workflows.
+Check out our [tutorial video](https://youtu.be/djHsuT5XnX0) for a more in-depth walkthrough of Inspect WandB and some of the ways it can be used to augment Inspect workflows.
 
 ## Troubleshooting
 

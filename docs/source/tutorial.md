@@ -10,23 +10,25 @@ This tutorial is divided as follows:
 5. [**Comparing evaluations**](comparing-evals) - How to compare results across different models
 6. [**Accessing reproducibility information**](inspect-wandb-weave-obtaining-reproducibility-info-from-an-eval-of-interest) - Retrieving data for reproducing results
 
+If you want to check out the results of this tutorial without running yourself, you can view our example project [here](https://wandb.ai/danielpolatajko-mars/inspect-wandb-demo/weave/evaluations?view=evaluations_default)
+
 (example_setup)=
 ## Example setup
-Inspect WandB is compatible with any Inspect eval and you can follow along with this tutorial with an eval of your choice.
-If you don't have such an eval, feel free to clone [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals), a collection of evals for Inspect AI.
+Inspect WandB is compatible with any Inspect eval and you can follow along with this tutorial using an eval of your choice.
+If you don't have an eval to hand, feel free to clone [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals), a collection of evals for Inspect AI.
 We recommend using `uv` for this tutorial which can be installed from [here](https://docs.astral.sh/uv/#installation).
 For standalone installation instructions, please see {doc}`installation`.
 
+In a clean Python project, run the following:
+
 
 ```bash
-git clone https://github.com/UKGovernmentBEIS/inspect_evals.git
-# uv sync installs inspect_ai and other dependencies required for inspect_evals
-uv sync
+uv pip install "inspect_evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals.git"
 # set your API key for whatever model you want to run
 export ANTHROPIC_API_KEY=...
 ```
 
-Next, to install the latest version of the extension with support for WandB Models (by default) and WandB Weave (`[weave]` option), run:
+Next, to install the latest version of the extension with support for WandB Models (by default) and WandB Weave (`[weave]` extra), run:
 
 ```bash
 uv pip install inspect-wandb[weave]
@@ -40,11 +42,13 @@ wandb init
 ```
 
 or if running an interactive shell session is not feasible, configure env variables as specified in {doc}`configuration`.
+
 We're ready to run! Let's try running an eval:
 ```bash
-uv run inspect eval inspect_evals/gpqa_diamond --model anthropic/claude-3-5-haiku-latest --limit 10
+uv run inspect eval inspect_evals/agentharm --model anthropic/claude-4-0-opus --limit 10
 ```
-which will run `claude-3-5-haiku-latest` on the first 10 questions of `GPQA_DIAMOND` (for 4 epochs, which is the default for this eval).
+which will run `claude-4-0-opus` on the first 10 sample of [AgentHarm](https://arxiv.org/abs/2410.09024).
+
 Once the eval completes, you should see the following line in the console logs:
 ```bash
 wandb:  View project at: https://wandb.ai/YOUR-TEAM-NAME/YOUR-PROJECT-NAME
@@ -54,19 +58,20 @@ Going to that link, your view should look something like:
 
 (understanding-wandb-ui-tabs)=
 ## Understanding WandB UI tabs
-I ran a couple more evals using `uv run inspect eval inspect_evals/...` so we'll have a bit more to look at; now we can review the important tabs of the UI.
+In the demo project, I've run the above AgentHarm eval, as well as `uv run inspect eval inspect_evals/hellaswag --limit 10 --model openai/gpt-4.1-nano-2025-04-14,anthropic/claude-3-haiku-20240307`, so the tutorial will follow 
 
 (wandb-models-workspace)=
 ### WandB Models: Workspace
-The primary function of the WandB Models integration is to auto-log information about a run so it can be reproduced and further investigated if needed.
-The rule of thumb is that one `inspect eval ...` or `inspect eval-set ...` produces one Run in WandB Models. So even if you execute multiple models or tasks, with one `inspect eval ...` command, all the data will belong to a single WandB Models Run. 
+The primary function of the WandB Models integration is to auto-log information about a run so it can be faithfully reproduced in future.
+The rule of thumb is that one `inspect eval ...` or `inspect eval-set ...` produces one Run in WandB Models, so even if you execute multiple models or tasks, with one `inspect eval ...` command, all the data will belong to a single WandB Models Run. 
 
 Your workspace tab might look something like:
-![](_static/workspace.png)
+![](_static/initial.png)
 
-On the left we can see all the runs that we have executed and on the right we see:
-1. **Charts**: at present only logs the number of samples so far (usually `y=x` line) and the current `accuracy` metric if the eval has a scorer called `accuracy`. We plan to make this more useful in the future.
-2. **System**: auto-logged wandb metrics -- probably not very interesting if you're running API models but perhaps useful if you are self-serving. 
+On the left we can see all the runs that we have executed (named by their `run_id` or `log_dir`) and on the right we see:
+1. **Charts**: at present only logs the number of samples so far (usually `y=x` line) and the current `accuracy` metric if the eval has a scorer metric called `accuracy`. We plan to make this more useful in the future
+2. **Evaluation**: the basic Weave view for the run, which allows you to click through to Weave
+2. **System**: auto-logged wandb metrics -- probably not very interesting if you're running API models but may be useful if you are self-serving
 
 ### WandB Models: specific run
 
@@ -74,10 +79,16 @@ Clicking on a run on the left, we can see the Overview:
 ![](_static/run-models-overview.png)
 which contains information about the system, git state, and the `inspect eval ...` command used to trigger the evaluation.  
 
+This view also contains a link to the relevant Weave dashboard, as well as the paths of the log files associated with the Run. This can be useful for keeping track of which log files correspond to a given WandB Run. 
+
+To keep track in the opposite direction, the extension also write the Models and Weave URLs to the Inspect metadata in the log file, shown in the screenshot below:
+
+![](_static/inspect-view-urls.png)
+
 Clicking on Files tab, we see:
 ![](_static/run-models-files.png)
 which contains files auto-logged by WandB Models such as `requirements.txt` which contains versioning info.
-You can choose to have additional files auto-uploaded by setting:
+You can choose to have additional files logged alongside the Run by setting:
 
 ```bash
 INSPECT_WANDB_MODELS_FILES='["README.md", "Makefile"]'
@@ -86,18 +97,25 @@ The files and state information can be useful for reproducing and further invest
 
 (wandb-weave-evals)=
 ### WandB Weave: Evals
-The Evals tab under WandB Weave might look something like:
+
+Weave is WandB's interface for tracking LLM evaluations. Inspect WandB uses Weave to record scores and performance metrics relating to Inspect runs, and allows you to analyseand share eval results using the Weave UI.
+
+The Evals tab under WandB Weave is the Weave homepage, and should look like:
 ![](_static/weave-evals.png)
-This tab contains evals which previously ran, alongs with attributes which primarily consist of an aggregation across samples of any Inspect Scorer in the eval, and some additional metadata.
+
+This tab contains evals which previously ran, alongs with attributes which primarily consist of an aggregation across samples of any Inspect Scorer in the eval, and some additional metadata like tokens used and cost.
+
 The rule of thumb is that one model on one Inspect task corresponds to one eval in the Evals dashboard.
 
 The first field is status which shows if the eval is in progress, succeeded, or failed. This can be useful for long-running evals, allowing you to connect to WandB on mobile to check status.  
 
-This view can get overwhelming as the number of metrics grows large, and not every metric is applicable to every eval.
-Clicking on "Filter" at the top left, it's possible to filter by certain attributes, and once done, by clicking on "Save View" at the top right, save the view.
+If you are recording multiple evals in a single W&B project, you may find that some columns are redundant for some evals. You can choose which columns to hide or show in the top-right.
+
+Clicking on "Filter" at the top left, it's possible to filter by certain attributes, and once done, by clicking on "Save View" at the top right, save the view. There are also convenience filters for filtering on the eval and the dataset (both of which correspond to an Inspect task).
+
 Saved views can be edited and returned to at a later time. 
 
-The current view shows only `agentharm` runs:
+The current view shows only `hellaswag` runs:
 ![](_static/filtered-view.png)
 
 ### WandB Weave: exploring a particular eval
@@ -106,7 +124,7 @@ Clicking on an eval and then clicking on trace tree (the stack of cards at the t
 The Trace tree will contain traces of every solver step, model call, and scoring operation that contributed to each sample's final result.
 ![](_static/sample-traces.png)
 
-The model call traces also allow you to view transcripts for that model interaction.
+The model call traces also allow you to view transcripts for that model interaction. This view can be useful for finding interesting transcripts in agentic evaluations.
 ![](_static/trace.png)
 Clicking on "Playground" at the top right opens an interactive chat view where the chat history is editable and it's possible to query various models and perform quick experiments.
 
@@ -116,13 +134,13 @@ Individual traces can also be explored under the "Traces" tab.
 ### Comparing evals
 To run multiple evals on the same dataset you can:
 ```bash
-uv run inspect eval inspect_evals/agentharm --model openai/gpt-4o,anthropic/claude-3.7-sonnet-latest
+uv run inspect eval inspect_evals/hellaswag --limit 10 --model openai/gpt-4.1-nano-2025-04-14,anthropic/claude-3-haiku-20240307
 ```
 Marking two evals on the left and clicking compare:
 ![](_static/compare-enter.png)
 we see:
 ![](_static/compare.png)
-which shows various comparison metrics between gpt-4o and claude-3.7-sonnet on `agentharm`.
+which shows various comparison metrics between `gpt-4.1-nano` and `claude-3-haiku` on `agentharm`.
 It is also possible to compare more than two models on the same and different evals.
 
 (inspect-wandb-weave-obtaining-reproducibility-info-from-an-eval-of-interest)=
