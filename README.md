@@ -11,15 +11,17 @@ Integration between [Inspect](https://inspect.aisi.org.uk/) and [Weights & Biase
 Check out this brief demo video for an overview of Inspect WandB
 
 <div>
-    <a href="https://www.loom.com/share/1578ad78581146d08348cfe2a13270b0">
-      <p>WIP: Integrating Inspect WandB with Inspect AI for LLM Evaluations 🚀 - Watch Video</p>
+    <a href="https://youtu.be/djHsuT5XnX0">
+      <p>Inspect Wandb Tutorial</p>
     </a>
-    <a href="https://www.loom.com/share/1578ad78581146d08348cfe2a13270b0">
-      <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/1578ad78581146d08348cfe2a13270b0-d6183465b48a6d2b-full-play.gif">
+    <a href="https://youtu.be/djHsuT5XnX0">
+      <img style="max-width:300px;" src="https://img.youtube.com/vi/djHsuT5XnX0/0.jpg">
     </a>
   </div>
 
-If you prefer to read, you can check out a tutorial on [the Inspect WandB docs site](https://inspect-wandb.readthedocs.io/en/latest/)
+If you prefer to read, you can check out a written tutorial on [the Inspect WandB docs site](https://inspect-wandb.readthedocs.io/en/latest/)
+
+You can also check out the WandB UI and navigate through some example results in our demo project, found [here](https://wandb.ai/danielpolatajko-mars/inspect-wandb-demo/weave/evaluations?view=evaluations_default)
 
 ## Usage
 
