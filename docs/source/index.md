@@ -45,7 +45,7 @@ You will also have to configure the WandB project and entity to which you want t
 wandb init
 ```
 
-You ca then run any Inspect eval with:
+You can then run any Inspect eval with:
 ```bash
 inspect eval YOUR_EVAL     
 ```
@@ -76,7 +76,7 @@ Check out our [tutorial video](link) for a more in-depth walkthrough of Inspect 
 
 If you have any issues using the extension, the first place to look for guidance is the {doc}`faq` page. 
 
-If you don't find an answer there, you can reach out to the maintainers in the [#inspect-wandb channel in the Inspect Community Slack](https://inspectcommunity.slack.com/archives/C09B5B00459)
+If you don't find an answer there, you can reach out to the maintainers in the [#inspect-wandb channel in the Inspect Community Slack](https://inspectcommunity.slack.com/archives/C09B5B00459).
 
 
 ## Credits
