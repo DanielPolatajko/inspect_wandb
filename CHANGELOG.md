@@ -1,5 +1,7 @@
 ## Unreleased
 
+## [v0.2.0](https://pypi.org/project/inspect-wandb/0.2.0/) (29 October 2025)
+
 ### Added
 - Convert built-in Inspect `choice` and `match` scorer values to booleans when logging scores to Weave
 - Add eval-set log dir to Weave Evaluation metadata
