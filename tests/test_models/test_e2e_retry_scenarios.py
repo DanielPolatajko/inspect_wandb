@@ -171,6 +171,7 @@ class TestWandBModelHooksE2ERetryScenarios:
                 log_dir=str(tmp_path),
                 model="mockllm/model",
                 retry_attempts=0,
+                log_dir_allow_dirty=True,
             )
             
             # Then
