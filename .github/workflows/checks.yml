@@ -44,7 +44,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install the project
-        run: uv sync --locked --all-extras --dev -v
+        run: uv sync --locked --all-extras --dev
 
       - name: Ruff linting checks
         run: |
