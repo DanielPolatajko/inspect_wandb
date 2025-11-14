@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Added
+- Unit test for metadata accumulation across multiple task starts in WandB Models hooks
+
 ## [v0.2.0](https://pypi.org/project/inspect-wandb/0.2.0/) (29 October 2025)
 
 ### Added
