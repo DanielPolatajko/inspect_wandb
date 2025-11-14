@@ -139,10 +139,10 @@ class WandBModelHooks(Hooks):
                 self._correct_samples = int(self.run.summary.get("samples_correct", 0))
 
             if self.settings.add_metadata_to_config and data.spec.metadata is not None:
-                self.run.config.update(
-                    {k: v for k,v in data.spec.metadata.items() if k != "inspect_wandb_models_config"},
-                    allow_val_change=True
-                )
+                metadata_for_wandb = [{task_id: {k: v for k,v in data.spec.metadata.items() if k != "inspect_wandb_models_config"} for task_id, metadata in data.spec.metadata.items()}]
+                current_wandb_task_metadata: list[dict[str, Any]] = self.run.config.get("inspect task metadata", [])
+                wandb_task_metadata = current_wandb_task_metadata+ metadata_for_wandb
+                self.run.config.update({"inspect task metadata": wandb_task_metadata}, allow_val_change=True)
             if self.settings.config:
                 self.run.config.update(self.settings.config, allow_val_change=True)
 
