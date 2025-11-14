@@ -4,5 +4,27 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "ruff.nativeServer": "on"
+    "ruff.nativeServer": "on",
+    "githubPullRequests.queries": [
+        {
+            "label": "Waiting For My Review",
+            "query": "is:open review-requested:${user}"
+        },
+        {
+            "label": "Assigned To Me",
+            "query": "is:open assignee:${user}"
+        },
+        {
+            "label": "Created By Me",
+            "query": "is:open author:${user}"
+        },
+        {
+            "label": "Mentioned Me",
+            "query": "is:open mentions:${user}"
+        },
+        {
+            "label": "Closed",
+            "query": "is:closed repo:DanielPolatajko/inspect_wandb"
+        }
+    ]
 }

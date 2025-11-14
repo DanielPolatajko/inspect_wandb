@@ -1,5 +1,12 @@
 ## Unreleased
 
+### Added
+- Unit test for metadata accumulation across multiple task starts in WandB Models hooks
+
+### Fixed
+- Upgrade pyarrow to v22.0.0 for Python 3.14 compatibility
+- Upgrade pydantic to v2.12.4 for Python 3.14 compatibility
+
 ## [v0.2.0](https://pypi.org/project/inspect-wandb/0.2.0/) (29 October 2025)
 
 ### Added
