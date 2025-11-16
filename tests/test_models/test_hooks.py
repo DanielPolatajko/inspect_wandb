@@ -121,21 +121,31 @@ class TestWandBModelHooks:
         """
         Test that the on_task_start method initializes the WandB run with config.
         """
+        # Given
         hooks = WandBModelHooks()
+        mock_wandb_run.config.get = MagicMock(return_value={})
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
         task_start.spec.metadata = {"test": "test"}
         hooks.settings = ModelsSettings(
-            enabled=True, 
-            entity="test-entity", 
+            enabled=True,
+            entity="test-entity",
             project="test-project"
         )
+
+        # When
         with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
             await hooks.on_task_start(task_start)
-            mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
-            assert hooks._wandb_initialized is True
-            assert hooks.run is mock_wandb_run
-            hooks.run.config.update.assert_called_once_with({"test": "test"}, allow_val_change=True)
+
+        # Then
+        mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
+        assert hooks._wandb_initialized is True
+        assert hooks.run is mock_wandb_run
+        hooks.run.config.update.assert_called_once()
+        call_args = hooks.run.config.update.call_args[0][0]
+        assert "inspect task metadata" in call_args
+        assert "test_task_id" in call_args["inspect task metadata"]
+        assert call_args["inspect task metadata"]["test_task_id"]["test"] == "test"
 
     @pytest.mark.asyncio
     async def test_wandb_config_not_updated_with_eval_metadata_if_add_metadata_to_config_is_false(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
@@ -577,11 +587,67 @@ class TestWandBModelHooks:
         metadata = create_task_start({
             metadata_key: True,
         })
-        
-        
+
+
         # When
         settings = hooks._extract_settings_overrides_from_eval_metadata(metadata)
 
         # Then
         assert settings is not None
         assert settings["enabled"] is True
+
+    @pytest.mark.asyncio
+    async def test_metadata_accumulates_across_multiple_task_starts(self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.settings = ModelsSettings(
+            enabled=True,
+            entity="test-entity",
+            project="test-project",
+            add_metadata_to_config=True
+        )
+        hooks._hooks_enabled = True
+
+        first_call_metadata = {}
+        second_call_metadata = {}
+
+        def mock_config_get(key: str, default: dict) -> dict:
+            if key == "inspect task metadata":
+                return first_call_metadata if not second_call_metadata else second_call_metadata
+            return default
+
+        def mock_config_update(update_dict: dict, allow_val_change: bool = True) -> None:
+            if "inspect task metadata" in update_dict:
+                if not first_call_metadata:
+                    first_call_metadata.update(update_dict["inspect task metadata"])
+                else:
+                    second_call_metadata.clear()
+                    second_call_metadata.update(update_dict["inspect task metadata"])
+
+        mock_wandb_run.config.get = MagicMock(side_effect=mock_config_get)
+        mock_wandb_run.config.update = MagicMock(side_effect=mock_config_update)
+        mock_init = MagicMock(return_value=mock_wandb_run)
+
+        task_start_1 = create_task_start({"task1_key": "task1_value", "shared_key": "from_task1"})
+        task_start_2 = create_task_start({"task2_key": "task2_value", "shared_key": "from_task2"})
+
+        # When
+        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+            await hooks.on_task_start(task_start_1)
+            hooks._wandb_initialized = False
+            await hooks.on_task_start(task_start_2)
+
+        # Then
+        assert mock_wandb_run.config.update.call_count == 2
+
+        assert len(first_call_metadata) == 1
+        assert "test_task_id" in first_call_metadata
+        first_task_metadata = first_call_metadata["test_task_id"]
+        assert first_task_metadata["task1_key"] == "task1_value"
+        assert first_task_metadata["shared_key"] == "from_task1"
+
+        assert len(second_call_metadata) == 1
+        assert "test_task_id" in second_call_metadata
+        second_task_metadata = second_call_metadata["test_task_id"]
+        assert second_task_metadata["task2_key"] == "task2_value"
+        assert second_task_metadata["shared_key"] == "from_task2"

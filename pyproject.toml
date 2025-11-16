@@ -14,14 +14,14 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "inspect_ai >= 0.3.133",
-  "pydantic >= 2.11, <3",
+  "inspect_ai >= 0.3.145",
+  "pydantic >= 2.12, <3",
   "pydantic-settings",
   "wandb"
 ]
 
 [project.optional-dependencies]
-weave = ["weave >= 0.52.11"]
+weave = ["weave >= 0.52.17"]
 viz = [
   "inspect-viz",
   "playwright"

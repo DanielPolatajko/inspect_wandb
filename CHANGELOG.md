@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Added
+- Add task metadata to WandB Run config
+
 ## [v0.2.0](https://pypi.org/project/inspect-wandb/0.2.0/) (29 October 2025)
 
 ### Added
