@@ -48,12 +48,12 @@
             "program": "${workspaceFolder}/.venv/Scripts/inspect.exe",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
-                "eval",
-                "inspect_evals/gsm8k",
+                "eval-set",
+                "test.py",
+                "--log-dir",
+                "test-openrouter-3",
                 "--limit",
-                "10",
-                "--model",
-                "openai/gpt-4.1-nano-2025-04-14,anthropic/claude-3-haiku-2024030"
+                "5"
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
