@@ -31,7 +31,7 @@ pip install inspect-wandb
 
 The Weave features are not installed by default and are available as an optional extra; to install:
 ```bash
-pip install inspect-wandb[weave]
+pip install "inspect-wandb[weave]"
 ```
 
 Next, ensure WandB is authenticated by setting the `WANDB_API_KEY` environment variable, or by running:
