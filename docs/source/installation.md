@@ -20,8 +20,11 @@ pip install inspect-wandb
 To install WandB Models and WandB Weave:
 
 ```bash
-pip install inspect-wandb[weave]
+pip install "inspect-wandb[weave]"
 ```
+> Note: On shells like `zsh` (default on macOS), quoting the extra
+> (`"inspect-wandb[weave]"`) avoids globbing errors such as
+> `zsh: no matches found: inspect-wandb[weave]`.
 
 ## Setup
 
