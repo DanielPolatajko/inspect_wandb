@@ -35,9 +35,6 @@ To install the optional Weave extra:
 ```bash
 pip install "inspect-wandb[weave]"
 ```
-> Note: On shells like `zsh` (default on macOS), quoting the extra
-> (`"inspect-wandb[weave]"`) avoids globbing errors such as
-> `zsh: no matches found: inspect-wandb[weave]`.
 
 Once Inspect WandB is installed in an environment authenticated with Weights & Biases (either by running `wandb login` or setting `WANDB_API_KEY`), the integration will be enabled for future Inspect runs by default. The Inspect logger output will link to the Models dashboard where you can track runs, and also, if you have enabled the `weave` extra, to the Weave dashboard where you can visualise eval results.
 

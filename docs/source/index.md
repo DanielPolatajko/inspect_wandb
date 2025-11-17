@@ -33,9 +33,6 @@ The Weave features are not installed by default and are available as an optional
 ```bash
 pip install "inspect-wandb[weave]"
 ```
-> Note: On shells like `zsh` (default on macOS), quoting the extra
-> (`"inspect-wandb[weave]"`) avoids globbing errors such as
-> `zsh: no matches found: inspect-wandb[weave]`.
 
 Next, ensure WandB is authenticated by setting the `WANDB_API_KEY` environment variable, or by running:
 ```bash

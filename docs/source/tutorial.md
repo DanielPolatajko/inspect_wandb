@@ -33,9 +33,6 @@ Next, to install the latest version of the extension with support for WandB Mode
 ```bash
 pip install "inspect-wandb[weave]"
 ```
-> Note: On shells like `zsh` (default on macOS), quoting the extra
-> (`"inspect-wandb[weave]"`) avoids globbing errors such as
-> `zsh: no matches found: inspect-wandb[weave]`.
 
 and to tell WandB which account and project to log to, run:
 
