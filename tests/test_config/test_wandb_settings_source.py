@@ -25,8 +25,8 @@ class TestWandBSettingsSource:
             
         # Then
         assert result == {
-            'WANDB_ENTITY': 'source-test-entity',
-            'WANDB_PROJECT': 'source-test-project'
+            'entity': 'source-test-entity',
+            'project': 'source-test-project'
         }
     
     def test_wandb_settings_source_with_missing_file(self, tmp_path: Path) -> None:
@@ -79,4 +79,4 @@ class TestWandBSettingsSource:
             
         # Then
         assert result1 == result2
-        assert result1['WANDB_ENTITY'] == 'cached-entity'
+        assert result1['entity'] == 'cached-entity'
