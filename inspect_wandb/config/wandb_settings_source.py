@@ -104,8 +104,8 @@ class WandBSettingsSource(PydanticBaseSettingsSource):
         
         # Return values using the alias names that pydantic expects
         if wandb_settings.get('project'):
-            d['WANDB_PROJECT'] = wandb_settings['project']
+            d['project'] = wandb_settings['project']
         if wandb_settings.get('entity'):
-            d['WANDB_ENTITY'] = wandb_settings['entity']
+            d['entity'] = wandb_settings['entity']
                 
         return d

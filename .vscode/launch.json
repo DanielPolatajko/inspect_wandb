@@ -48,12 +48,12 @@
             "program": "${workspaceFolder}/.venv/Scripts/inspect.exe",
             "console": "integratedTerminal",
             "args": [ // add whatever args you want to pass to inspect
-                "eval-set",
+                "eval",
                 "test.py",
-                "--log-dir",
-                "test-openrouter-3",
                 "--limit",
-                "5"
+                "5",
+                "--metadata",
+                "inspect_wandb_models_entity=test-failure-modes",
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
