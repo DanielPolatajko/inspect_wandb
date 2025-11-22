@@ -4,6 +4,7 @@ from typing import Any
 from typing_extensions import override
 
 import wandb
+from wandb.errors import CommError
 from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, EvalSetStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
@@ -126,13 +127,24 @@ class WandBModelHooks(Hooks):
 
         # Lazy initialization: only init WandB when first task starts
         if not self._wandb_initialized:
-            self.run = wandb.init(
-                id=wandb_run_id, 
-                name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
-                entity=self.settings.entity, 
-                project=self.settings.project,
-                resume="allow"
-            ) 
+            try:
+                self.run = wandb.init(
+                    id=wandb_run_id, 
+                    name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
+                    entity=self.settings.entity, 
+                    project=self.settings.project,
+                    resume="allow"
+                ) 
+            except CommError as e:
+                if f"entity {self.settings.entity} not found" in str(e):
+                    logger.warning(f"WandB integration disabled: invalid entity: {self.settings.entity}. {e}")
+                elif f"project {self.settings.project} not found" in str(e):
+                    logger.warning(f"WandB integration disabled: invalid project: {self.settings.project}. {e}")
+                else:
+                    logger.warning(f"WandB integration disabled: {e}")
+                self.settings.enabled = False
+                self._hooks_enabled = False
+                return
 
             if self.run.summary:
                 self._total_samples = int(self.run.summary.get("samples_total", 0))

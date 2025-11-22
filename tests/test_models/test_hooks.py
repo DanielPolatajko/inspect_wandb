@@ -5,10 +5,11 @@ import pytest
 from wandb.sdk.wandb_run import Run
 from wandb.sdk.wandb_config import Config
 from wandb.sdk.wandb_summary import Summary
+from wandb.errors import CommError
 from typing import Callable
 from inspect_ai.hooks import TaskStart, SampleEnd, RunEnd
 from inspect_ai.log import EvalSample
-from inspect_ai.scorer import Score 
+from inspect_ai.scorer import Score
 from inspect_wandb.models.hooks import Metric
 
 @pytest.fixture(scope="function")
@@ -651,3 +652,60 @@ class TestWandBModelHooks:
         second_task_metadata = second_call_metadata["test_task_id"]
         assert second_task_metadata["task2_key"] == "task2_value"
         assert second_task_metadata["shared_key"] == "from_task2"
+
+    @pytest.mark.asyncio
+    async def test_wandb_disabled_on_invalid_entity_error(self, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.enabled()
+        mock_init = MagicMock(side_effect=CommError("entity test-entity not found"))
+        task_start = create_task_start()
+
+        # When
+        with patch('inspect_wandb.models.hooks.wandb.init', mock_init), \
+             patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_task_start(task_start)
+
+        # Then
+        mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
+        assert hooks.settings.enabled is False
+        assert hooks._hooks_enabled is False
+        mock_logger.warning.assert_called_once_with("WandB integration disabled: invalid entity: test-entity. entity test-entity not found")
+
+    @pytest.mark.asyncio
+    async def test_wandb_disabled_on_invalid_project_error(self, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.enabled()
+        mock_init = MagicMock(side_effect=CommError("project test-project not found"))
+        task_start = create_task_start()
+
+        # When
+        with patch('inspect_wandb.models.hooks.wandb.init', mock_init), \
+             patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_task_start(task_start)
+
+        # Then
+        mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
+        assert hooks.settings.enabled is False
+        assert hooks._hooks_enabled is False
+        mock_logger.warning.assert_called_once_with("WandB integration disabled: invalid project: test-project. project test-project not found")
+
+    @pytest.mark.asyncio
+    async def test_wandb_disabled_on_generic_comm_error(self, create_task_start: Callable[dict | None, TaskStart], initialise_wandb: None) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.enabled()
+        mock_init = MagicMock(side_effect=CommError("network timeout"))
+        task_start = create_task_start()
+
+        # When
+        with patch('inspect_wandb.models.hooks.wandb.init', mock_init), \
+             patch('inspect_wandb.models.hooks.logger') as mock_logger:
+            await hooks.on_task_start(task_start)
+
+        # Then
+        mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
+        assert hooks.settings.enabled is False
+        assert hooks._hooks_enabled is False
+        mock_logger.warning.assert_called_once_with("WandB integration disabled: network timeout")

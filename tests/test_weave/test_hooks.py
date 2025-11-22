@@ -10,6 +10,7 @@ import pytest
 from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
 from inspect_wandb.config.settings import WeaveSettings
 from weave.trace.weave_client import WeaveClient, Call
+from gql.transport.exceptions import TransportQueryError
 from typing import Callable
 from .conftest import WeaveTestClient
 
@@ -465,3 +466,69 @@ class TestConcurrencyOnSampleEnd:
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
         with pytest.raises(Exception, match="Weave error"):
             hooks._handle_weave_task_result(MagicMock(exception=lambda: Exception("Weave error")))
+
+
+class TestWeaveTransportQueryErrors:
+    """
+    Tests for TransportQueryError handling during weave initialization
+    """
+
+    @pytest.mark.asyncio
+    async def test_weave_disabled_on_invalid_entity_error(self, test_settings: WeaveSettings, create_task_start: Callable[dict | None, TaskStart]) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+        mock_init = MagicMock(side_effect=TransportQueryError("Entity test-entity not found"))
+        task_start = create_task_start()
+
+        # When
+        with patch('inspect_wandb.weave.hooks.weave.init', mock_init), \
+             patch('inspect_wandb.weave.hooks.logger') as mock_logger:
+            await hooks.on_task_start(task_start)
+
+        # Then
+        mock_init.assert_called_once()
+        assert hooks.settings.enabled is False
+        assert hooks._hooks_enabled is False
+        mock_logger.warning.assert_called_once_with("Weave integration disabled: invalid entity: test-entity. Entity test-entity not found")
+
+    @pytest.mark.asyncio
+    async def test_weave_disabled_on_invalid_project_error(self, test_settings: WeaveSettings, create_task_start: Callable[dict | None, TaskStart]) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+        mock_init = MagicMock(side_effect=TransportQueryError("Project test-project not found"))
+        task_start = create_task_start()
+
+        # When
+        with patch('inspect_wandb.weave.hooks.weave.init', mock_init), \
+             patch('inspect_wandb.weave.hooks.logger') as mock_logger:
+            await hooks.on_task_start(task_start)
+
+        # Then
+        mock_init.assert_called_once()
+        assert hooks.settings.enabled is False
+        assert hooks._hooks_enabled is False
+        mock_logger.warning.assert_called_once_with("Weave integration disabled: invalid project: test-project. Project test-project not found")
+
+    @pytest.mark.asyncio
+    async def test_weave_disabled_on_generic_transport_query_error(self, test_settings: WeaveSettings, create_task_start: Callable[dict | None, TaskStart]) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+        mock_init = MagicMock(side_effect=TransportQueryError("connection timeout"))
+        task_start = create_task_start()
+
+        # When
+        with patch('inspect_wandb.weave.hooks.weave.init', mock_init), \
+             patch('inspect_wandb.weave.hooks.logger') as mock_logger:
+            await hooks.on_task_start(task_start)
+
+        # Then
+        mock_init.assert_called_once()
+        assert hooks.settings.enabled is False
+        assert hooks._hooks_enabled is False
+        mock_logger.warning.assert_called_once_with("Weave integration disabled: connection timeout")

@@ -15,6 +15,7 @@ import asyncio
 from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
 import importlib.util
+from gql.transport.exceptions import TransportQueryError
 
 logger = getLogger(__name__)
 
@@ -98,16 +99,27 @@ class WeaveEvaluationHooks(Hooks):
 
         assert self.settings is not None
         
-        # Lazy initialization: only init Weave when first task starts
         if not self._weave_initialized:
-            self.weave_client = weave.init(
-                project_name=f"{self.settings.entity}/{self.settings.project}",
-                settings=UserSettings(
-                    print_call_link=False,
-                    display_viewer="print",
-                    implicitly_patch_integrations=False
-                ),
-            )
+            try:
+                self.weave_client = weave.init(
+                    project_name=f"{self.settings.entity}/{self.settings.project}",
+                    settings=UserSettings(
+                        print_call_link=False,
+                        display_viewer="print",
+                        implicitly_patch_integrations=False
+                    ),
+                )
+            except TransportQueryError as e:
+                if f"Entity {self.settings.entity} not found" in str(e):
+                    logger.warning(f"Weave integration disabled: invalid entity: {self.settings.entity}. {e}")
+                elif f"Project {self.settings.project} not found" in str(e):
+                    logger.warning(f"Weave integration disabled: invalid project: {self.settings.project}. {e}")
+                else:
+                    logger.warning(f"Weave integration disabled: {e}")
+                self.settings.enabled = False
+                self._hooks_enabled = False
+                return
+
             self._autopatch(model=data.spec.model)
             self._weave_initialized = True
             logger.info(f"Weave initialized for task {data.spec.task}")
