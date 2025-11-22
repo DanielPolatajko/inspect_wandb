@@ -3,6 +3,9 @@
 ### Added
 - Add task metadata to WandB Run config
 
+### Fixed
+- Handle incorrect wandb entity and project exceptions
+
 ### New contributors
 - [@kohankhaki](https://github.com/kohankhaki)
 
