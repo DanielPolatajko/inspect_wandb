@@ -7,7 +7,7 @@ from inspect_ai._util.registry import registry_info, is_registry_object, set_reg
 from weave.trace.context import call_context
 from inspect_ai.solver import TaskState
 
-class PatchedScorer:
+class PatchedScorer(Scorer):
     """A scorer wrapper that creates individual Weave traces for each scoring operation."""
     
     def __init__(self, original_scorer: Scorer):
