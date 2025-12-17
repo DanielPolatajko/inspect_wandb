@@ -5,6 +5,7 @@
 
 ### Fixed
 - Handle incorrect wandb entity and project exceptions
+- Handle changing args in autopatched functions
 
 ### New contributors
 - [@kohankhaki](https://github.com/kohankhaki)
