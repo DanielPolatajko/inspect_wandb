@@ -43,6 +43,28 @@ cd docs
 start build/html/index.html
 ```
 
+## Using Your Local Version with Other Projects
+
+If you want to test your local development version of inspect_wandb with another project (e.g., inspect_evals), you can install it in editable mode:
+
+```bash
+# From any directory, install inspect_wandb in editable mode
+uv pip install -e "/path/to/inspect_wandb"
+
+# Or with extras
+uv pip install -e "/path/to/inspect_wandb[weave,viz]"
+```
+
+The `-e` flag creates an "editable" install - changes you make to the source files take effect immediately without reinstalling.
+
+To verify you're using your local version:
+
+```bash
+python -c "import inspect_wandb; print(inspect_wandb.__file__)"
+```
+
+This should print the path to your local development directory.
+
 ## Testing
 
 We write unit tests with `pytest`. If you want to run the tests, you can simply run `pytest`. Please consider writing at least one test if adding a new feature, or covering edge cases with a test if submitting bug fixes.
