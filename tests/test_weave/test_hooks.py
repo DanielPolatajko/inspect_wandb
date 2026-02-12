@@ -1,6 +1,6 @@
 from inspect_ai.log import EvalLog
 from unittest.mock import MagicMock, PropertyMock, patch
-from inspect_ai.hooks import SampleEnd, TaskEnd, RunEnd, TaskStart
+from inspect_ai.hooks import SampleEnd, SampleStart, TaskEnd, RunEnd, TaskStart
 from inspect_ai.model import ChatCompletionChoice, ModelOutput, ChatMessageAssistant
 from inspect_ai.log import EvalSample
 from inspect_ai._eval.eval import EvalLogs
@@ -466,6 +466,74 @@ class TestConcurrencyOnSampleEnd:
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
         with pytest.raises(Exception, match="Weave error"):
             hooks._handle_weave_task_result(MagicMock(exception=lambda: Exception("Weave error")))
+
+
+class TestTraceSamplesDisabled:
+
+    @pytest.mark.asyncio
+    async def test_on_sample_start_is_noop_when_eval_traces_only(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = WeaveSettings(
+            enabled=True,
+            entity="test-entity",
+            project="test-project",
+            eval_traces_only=True,
+        )
+        hooks._hooks_enabled = True
+
+        mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
+        hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+
+        sample_start = MagicMock(spec=SampleStart)
+        sample_start.eval_id = "test_eval_id"
+
+        # When
+        await hooks.on_sample_start(sample_start)
+
+        # Then
+        mock_weave_eval_logger.log_prediction.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_on_sample_end_is_noop_when_eval_traces_only(self) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = WeaveSettings(
+            enabled=True,
+            entity="test-entity",
+            project="test-project",
+            eval_traces_only=True,
+        )
+        hooks._hooks_enabled = True
+
+        sample_end = MagicMock(spec=SampleEnd)
+        sample_end.eval_id = "test_eval_id"
+
+        # When
+        with patch('asyncio.create_task') as mock_create_task:
+            await hooks.on_sample_end(sample_end)
+
+        # Then
+        mock_create_task.assert_not_called()
+
+    def test_autopatch_skipped_when_eval_traces_only(self) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = WeaveSettings(
+            enabled=True,
+            entity="test-entity",
+            project="test-project",
+            eval_traces_only=True,
+        )
+
+        # When
+        with patch('inspect_wandb.weave.hooks.get_inspect_patcher') as mock_get_patcher, \
+             patch('inspect_wandb.weave.hooks.integrations') as mock_integrations:
+            hooks._autopatch(model="openai/gpt-4")
+
+        # Then
+        mock_get_patcher.assert_not_called()
+        mock_integrations.patch_openai.assert_not_called()
 
 
 class TestWeaveTransportQueryErrors:
