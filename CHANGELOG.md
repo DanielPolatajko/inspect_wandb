@@ -1,7 +1,10 @@
 ## Unreleased
 
+### Added
+- Validate user is authed with wandb and disable hooks if not
+
 ### Fixed
-- Auto-disable plugin when user is not authenticated with WandB
+- Disable auto-init for Weave client on import when active wandb run is present
 
 ## [v0.2.1](https://pypi.org/project/inspect-wandb/0.2.1/) (17 December 2025)
 
