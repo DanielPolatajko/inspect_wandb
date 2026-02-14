@@ -171,10 +171,9 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_sample_start(self, data: SampleStart) -> None:
-        if not self._hooks_enabled:
-            return
-
-        if self.settings is not None and self.settings.eval_traces_only:
+        if (not self._hooks_enabled) or (
+            self.settings is not None and self.settings.eval_traces_only
+        ):
             return
 
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
@@ -207,10 +206,9 @@ class WeaveEvaluationHooks(Hooks):
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
-        if not self._hooks_enabled:
-            return
-
-        if self.settings is not None and self.settings.eval_traces_only:
+        if (not self._hooks_enabled) or (
+            self.settings is not None and self.settings.eval_traces_only
+        ):
             return
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
