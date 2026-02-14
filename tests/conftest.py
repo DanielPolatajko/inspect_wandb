@@ -18,6 +18,17 @@ from inspect_ai.hooks import TaskStart
 from inspect_ai.log import EvalSpec, EvalConfig, EvalDataset, EvalLog, EvalResults, EvalScore, EvalMetric
 from datetime import datetime
 
+## Mock API key for all tests by default
+
+@pytest.fixture(autouse=True)
+def mock_wandb_api_key(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    if "no_mock_api_key" in request.keywords:
+        yield
+    else:
+        with patch("inspect_wandb.config.settings.base.api_key", return_value="test-api-key"):
+            yield
+
+
 ## Setup wandb directory and settings
 
 @pytest.fixture(scope="session")
