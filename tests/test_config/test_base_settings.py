@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch
 
 from inspect_wandb.config.settings import ModelsSettings
@@ -6,6 +7,7 @@ from inspect_wandb.config.settings import ModelsSettings
 API_KEY_PATH = "inspect_wandb.config.settings.base.api_key"
 
 
+@pytest.mark.no_mock_api_key
 class TestBaseSettingsApiKeyValidation:
 
     def test_disables_when_no_api_key(self) -> None:
