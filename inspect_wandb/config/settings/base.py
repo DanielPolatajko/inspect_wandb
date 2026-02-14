@@ -25,16 +25,15 @@ class InspectWandBBaseSettings(BaseSettings):
     entity: str | None = Field(default=None, alias="WANDB_ENTITY", description="Entity to write to for the wandb integrations")
 
     @model_validator(mode="after")
-    def validate_enabled(self) -> Self:
-        if not self.enabled:
-            return self
-
-        if api_key() is None:
+    def validate_api_key(self) -> Self:
+        if self.enabled and api_key() is None:
             logger.debug("WandB integration disabled: no API key found. Log in with `wandb login` or set the WANDB_API_KEY environment variable.")
             self.enabled = False
-            return self
+        return self
 
-        if not self.project or not self.entity:
+    @model_validator(mode="after")
+    def validate_project_and_entity(self) -> Self:
+        if self.enabled and (not self.project or not self.entity):
             missing = []
             if not self.project:
                 missing.append("project")
@@ -42,7 +41,6 @@ class InspectWandBBaseSettings(BaseSettings):
                 missing.append("entity")
             logger.debug(f"WandB integration disabled: missing required field(s): {', '.join(missing)}. Set via environment variables (WANDB_PROJECT, WANDB_ENTITY), wandb settings file, or pyproject.toml.")
             self.enabled = False
-
         return self
 
     @classmethod
