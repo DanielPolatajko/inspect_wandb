@@ -1,5 +1,7 @@
 from typing import Any
 from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd, EvalSetStart, EvalSetEnd
+import os
+os.environ["WANDB_DISABLE_WEAVE"] = "1"
 import weave
 from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
 from weave.trace.settings import UserSettings
