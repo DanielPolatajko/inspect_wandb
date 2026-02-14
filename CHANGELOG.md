@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Fixed
+- Auto-disable plugin when user is not authenticated with WandB
+
 ## [v0.2.1](https://pypi.org/project/inspect-wandb/0.2.1/) (17 December 2025)
 
 ### Added
