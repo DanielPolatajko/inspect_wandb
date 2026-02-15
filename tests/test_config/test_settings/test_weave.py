@@ -2,6 +2,7 @@ from inspect_wandb.config.settings import WeaveSettings
 from unittest.mock import patch
 from pathlib import Path
 import os
+import pytest
 
 class TestWeaveSettings:
     
@@ -15,6 +16,7 @@ class TestWeaveSettings:
             
         # Then
         assert settings.enabled is True
+        assert settings.eval_traces_only is False
         assert settings.sample_name_template == "{task_name}-sample-{sample_id}-epoch-{epoch}"
         assert settings.entity == "test-entity"
         assert settings.project == "test-project"
@@ -149,3 +151,26 @@ class TestWeaveSettings:
             assert settings_field.enabled == settings_alias.enabled
         finally:
             os.chdir(original_cwd)
+
+    def test_eval_traces_only_via_env_var(self, initialise_wandb: None, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Given
+        cwd = Path.cwd()
+        monkeypatch.setenv("INSPECT_WANDB_WEAVE_EVAL_TRACES_ONLY", "true")
+
+        # When
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(cwd / "wandb")):
+            settings = WeaveSettings.model_validate({})
+
+        # Then
+        assert settings.eval_traces_only is True
+
+    def test_eval_traces_only_via_metadata(self, initialise_wandb: None) -> None:
+        # Given
+        cwd = Path.cwd()
+
+        # When
+        with patch('inspect_wandb.config.wandb_settings_source.wandb_dir', return_value=str(cwd / "wandb")):
+            settings = WeaveSettings.model_validate({"eval_traces_only": True})
+
+        # Then
+        assert settings.eval_traces_only is True
