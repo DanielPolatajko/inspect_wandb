@@ -46,3 +46,7 @@ start build/html/index.html
 ## Testing
 
 We write unit tests with `pytest`. If you want to run the tests, you can simply run `pytest`. Please consider writing at least one test if adding a new feature, or covering edge cases with a test if submitting bug fixes.
+
+## Claude Code
+
+If you use [Claude Code](https://claude.ai/claude-code), this repo includes a `/review` command. Run it before opening a PR — it will check your changes against the project norms, fix what it can automatically, and flag anything that needs manual attention.
