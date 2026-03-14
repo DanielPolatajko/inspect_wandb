@@ -61,3 +61,6 @@ exclude = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "no_mock_api_key: skip the autouse mock_wandb_api_key fixture",
+]
