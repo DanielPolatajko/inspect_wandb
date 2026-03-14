@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Inspect logs
+logs/
+
+# Claude
+**/settings.local.json
+**/CLAUDE.local.md
+
+# WandB
+wandb/
