@@ -7,6 +7,10 @@
     "ruff.nativeServer": "on",
     "githubPullRequests.queries": [
         {
+            "label": "Local Pull Request Branches",
+            "query": "default"
+        },
+        {
             "label": "Waiting For My Review",
             "query": "is:open review-requested:${user}"
         },
@@ -25,6 +29,10 @@
         {
             "label": "Closed",
             "query": "is:closed repo:DanielPolatajko/inspect_wandb"
+        },
+        {
+            "label": "All Open",
+            "query": "default"
         }
     ]
 }

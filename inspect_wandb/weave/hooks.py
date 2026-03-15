@@ -43,7 +43,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     @override
     async def on_eval_set_end(self, data: EvalSetEnd) -> None:
         self.weave_client.finish(use_progress_bar=False)
-        if self.settings is not None:
+        if self.settings is not None and not self.settings.eval_traces_only:
             get_inspect_patcher().undo_patch()
 
 
@@ -71,7 +71,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         if not self._eval_set:
             self.weave_client.finish(use_progress_bar=False)
-            if self.settings is not None:
+            if self.settings is not None and not self.settings.eval_traces_only:
                 get_inspect_patcher().undo_patch()
 
 
@@ -155,7 +155,9 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     @override
     async def on_sample_start(self, data: SampleStart) -> None:
-        if not self._hooks_enabled:
+        if (not self._hooks_enabled) or (
+            self.settings is not None and self.settings.eval_traces_only
+        ):
             return
 
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
@@ -188,7 +190,9 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
-        if not self._hooks_enabled:
+        if (not self._hooks_enabled) or (
+            self.settings is not None and self.settings.eval_traces_only
+        ):
             return
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
@@ -279,6 +283,8 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     def _autopatch(self, model: str) -> None:
         assert self.settings is not None
+        if self.settings.eval_traces_only:
+            return
         if model.startswith("openrouter"):
             openai_settings=IntegrationSettings(
                 op_settings=OpSettings(
