@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Added
+- Add `eval_traces_only` setting to disable sample-level Weave traces and only log eval-level summaries
 - Validate user is authed with wandb and disable hooks if not
 
 ### Fixed

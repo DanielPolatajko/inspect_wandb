@@ -14,4 +14,5 @@ class WeaveSettings(InspectWandBBaseSettings):
         pyproject_toml_table_header=("tool", "inspect-wandb", "weave"),
     )
 
+    eval_traces_only: bool = Field(default=False, description="When True, only eval-level summary logging is performed and sample-level Weave traces are disabled.")
     sample_name_template: str = Field(default="{task_name}-sample-{sample_id}-epoch-{epoch}", description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}")
