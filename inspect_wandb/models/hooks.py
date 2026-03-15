@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 from typing_extensions import override
 
-from wandb import init
+from wandb import init, Run
 from wandb.errors import CommError
 from inspect_ai.hooks import RunEnd, SampleEnd, TaskStart, EvalSetStart
 from inspect_ai.log import EvalSample
@@ -25,6 +25,7 @@ class WandBModelHooks(InspectWandBHooks):
     _settings_prefix = "inspect_wandb_models_"
     _settings_cls = ModelsSettings
 
+    run: Run
     settings: ModelsSettings | None = None
 
     _correct_samples: int = 0

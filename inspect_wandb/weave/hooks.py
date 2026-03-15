@@ -4,6 +4,7 @@ from os import environ
 environ["WANDB_DISABLE_WEAVE"] = "1"
 from weave import init as weave_init, attributes as weave_attributes
 from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
+from weave.trace.weave_client import WeaveClient
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
 from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
@@ -27,6 +28,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _settings_prefix = "inspect_wandb_weave_"
     _settings_cls = WeaveSettings
 
+    weave_client: WeaveClient
     weave_eval_loggers: dict[str, EvaluationLogger] = {}
     settings: WeaveSettings | None = None
     sample_calls: dict[str, ScoreLogger] = {}
