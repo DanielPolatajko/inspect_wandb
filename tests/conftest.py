@@ -80,13 +80,7 @@ def patch_wandb_client() -> Generator[tuple[MagicMock, MagicMock, MagicMock, Mag
     
     mock_wandb_init = MagicMock(return_value=mock_run)
     
-    with (
-        patch("inspect_wandb.models.hooks.wandb.init", mock_wandb_init),
-        patch("inspect_wandb.models.hooks.wandb.save", mock_save),
-        patch("inspect_wandb.models.hooks.wandb.config", mock_config),
-        patch("inspect_wandb.models.hooks.wandb.summary", mock_summary),
-        patch("inspect_wandb.models.hooks.wandb.log", mock_log)
-    ):
+    with patch("inspect_wandb.models.hooks.init", mock_wandb_init):
         yield mock_wandb_init, mock_save, mock_config, mock_summary, mock_log
 
 @pytest.fixture(scope="function")

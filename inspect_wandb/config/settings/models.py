@@ -6,16 +6,10 @@ import os
 
 
 class EnvironmentValidations(BaseModel):
-    """
-    A set of environment variables which should be validated before enabling the integration.
-    """
     wandb_base_url: str | None = Field(default=None, description="The base URL of the wandb instance")
     wandb_api_key: str | None = Field(default=None, description="The API key for the wandb instance")
 
 class ModelsSettings(InspectWandBBaseSettings):
-    """
-    Settings model for the Models integration.
-    """
 
     model_config = SettingsConfigDict(
         env_prefix="INSPECT_WANDB_MODELS_", 

@@ -1,6 +1,6 @@
 [project]
 name = "inspect_wandb"
-version = "0.2.1"
+dynamic = ["version"]
 authors = [
   { name="Daniel Polatajko", email="danielpolatajko@gmail.com" },
   { name="Qi Guo", email="special0831qi@gmail.com"},
@@ -46,6 +46,9 @@ Documentation = "https://inspect-wandb.readthedocs.io/en/latest/"
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "inspect_wandb.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]

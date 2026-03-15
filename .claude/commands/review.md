@@ -29,6 +29,7 @@ The base branch is `$ARGUMENTS` if provided, otherwise `main`.
 - Replace any `print()` calls with appropriate `logging` calls
 - Remove dead code — unused functions, variables, imports, and unreachable branches
 - Flag any duplication that could be extracted into a shared helper
+- Prefer `from lib import Class` over `import lib` followed by `lib.Class` usage — fix any violations
 
 **Error handling**
 - Ensure exceptions are not silently swallowed without good reason

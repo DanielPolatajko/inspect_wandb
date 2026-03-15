@@ -30,6 +30,7 @@ This project is an open-source extension for the Inspect AI LLM evals framework.
 - Never write module-level docstrings.
 - Keep the codebase lean and DRY. Remove dead code rather than leaving it around. Avoid duplication — if the same logic appears more than once, extract it.
 - We use ruff for linting — check with `uv run ruff check inspect_wandb tests`.
+- Prefer `from lib import Class` over `import lib` followed by `lib.Class` usage.
 
 ### Typing
 
