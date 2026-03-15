@@ -1,8 +1,8 @@
 from typing import Any
 from inspect_ai.hooks import RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd, EvalSetStart, EvalSetEnd
-import os
-os.environ["WANDB_DISABLE_WEAVE"] = "1"
-import weave
+from os import environ
+environ["WANDB_DISABLE_WEAVE"] = "1"
+from weave import init as weave_init, attributes as weave_attributes
 from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
 from weave.trace.settings import UserSettings
 from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
@@ -80,7 +80,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         if self._hooks_enabled is None:
             self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self.settings = WeaveSettings.model_validate(self._metadata_overrides or {})
+            self.settings = self._settings_cls.model_validate(self._metadata_overrides or {})
             assert self.settings is not None
             self._hooks_enabled = self.settings.enabled
 
@@ -92,7 +92,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         if not self._weave_initialized:
             try:
-                self.weave_client = weave.init(
+                self.weave_client = weave_init(
                     project_name=f"{self.settings.entity}/{self.settings.project}",
                     settings=UserSettings(
                         print_call_link=False,
@@ -166,7 +166,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         task_name = self.task_mapping.get(data.eval_id, "unknown_task")
 
         if self.settings is not None:
-            with weave.attributes(
+            with weave_attributes(
                 {
                     "sample_id": data.summary.id,
                     "sample_uuid": data.sample_id,
@@ -215,7 +215,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         if data.sample.scores is not None:
             for k,v in data.sample.scores.items():
                 score_metadata = (v.metadata or {}) | ({"explanation": v.explanation} if v.explanation is not None else {}) | ({"answer": v.answer} if v.answer is not None else {})
-                with weave.attributes(score_metadata):
+                with weave_attributes(score_metadata):
                     await sample_score_logger.alog_score(
                         scorer=k,
                         score=format_score_types(v.value, scorer_name=k)

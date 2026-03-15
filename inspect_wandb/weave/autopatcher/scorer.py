@@ -1,4 +1,4 @@
-import weave
+from weave import op as weave_op
 
 from inspect_ai.scorer import Scorer, Target
 from inspect_ai.scorer._metric import Score
@@ -32,9 +32,9 @@ class PatchedScorer(Scorer):
                 sample_call = sample_calls[0]
                 call_context.push_call(sample_call)
                 try:
-                    result = await weave.op(name=f"scorer_{self.scorer_name}")(self.original_scorer)(state, target)
+                    result = await weave_op(name=f"scorer_{self.scorer_name}")(self.original_scorer)(state, target)
                     return result
                 finally:
                     call_context.pop_call(sample_call.id)
 
-        return await weave.op(name=f"scorer_{self.scorer_name}")(self.original_scorer)(state, target)
+        return await weave_op(name=f"scorer_{self.scorer_name}")(self.original_scorer)(state, target)

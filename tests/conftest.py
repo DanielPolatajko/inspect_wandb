@@ -58,15 +58,12 @@ def initialise_wandb(wandb_path: Path) -> None:
 ## Mock wandb/weave client calls
 
 @pytest.fixture(scope="function", autouse=True)
-def patch_wandb_client() -> Generator[tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock], None, None]:
+def patch_wandb_client() -> Generator[MagicMock, None, None]:
     mock_config = MagicMock()
     mock_config.update = MagicMock()
     mock_summary = MagicMock()
     mock_summary.update = MagicMock()
-    mock_log = MagicMock()
-    mock_save = MagicMock()
-    
-    # Create a mock run that wandb.init() will return
+
     mock_run = MagicMock()
     mock_run.config = mock_config
     mock_run.summary = mock_summary
@@ -74,14 +71,12 @@ def patch_wandb_client() -> Generator[tuple[MagicMock, MagicMock, MagicMock, Mag
     mock_run.tags = []
     mock_run.save = MagicMock()
     mock_run.finish = MagicMock()
-    
-    # Mock the url property using PropertyMock
     type(mock_run).url = PropertyMock(return_value="mock_wandb_url")
-    
+
     mock_wandb_init = MagicMock(return_value=mock_run)
-    
+
     with patch("inspect_wandb.models.hooks.init", mock_wandb_init):
-        yield mock_wandb_init, mock_save, mock_config, mock_summary, mock_log
+        yield mock_wandb_init
 
 @pytest.fixture(scope="function")
 def reset_inspect_ai_hooks() -> Generator[None, None, None]:
@@ -111,8 +106,7 @@ def patched_weave_evaluation_hooks(reset_inspect_ai_hooks: None):
     patched_evaluation_logger_class._evaluate_call = MagicMock()
 
     with (
-        patch("inspect_wandb.weave.hooks.weave.init", MagicMock()) as weave_init,
-        patch("inspect_wandb.weave.hooks.weave.finish", MagicMock()) as weave_finish,
+        patch("inspect_wandb.weave.hooks.weave_init", MagicMock()) as weave_init,
         patch("inspect_wandb.weave.hooks.EvaluationLogger", patched_evaluation_logger_class)
     ):
         weave_evaluation_hooks_instance = weave_evaluation_hooks() # type: ignore
@@ -120,7 +114,6 @@ def patched_weave_evaluation_hooks(reset_inspect_ai_hooks: None):
             yield {
                 "weave_evaluation_hooks": weave_evaluation_hooks_instance,
                 "weave_init": weave_init,
-                "weave_finish": weave_finish,
                 "weave_evaluation_logger": patched_evaluation_logger_class
             }
 

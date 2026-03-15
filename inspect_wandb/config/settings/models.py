@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Any
 from pydantic_settings import SettingsConfigDict
 from inspect_wandb.config.settings.base import InspectWandBBaseSettings
-import os
+from os import getenv
 
 
 class EnvironmentValidations(BaseModel):
@@ -28,10 +28,10 @@ class ModelsSettings(InspectWandBBaseSettings):
     @classmethod
     def validate_environment_variables(cls, v: EnvironmentValidations | None) -> EnvironmentValidations | None:
         if v is not None:
-            if v.wandb_base_url is not None and (env_wandb_base_url := os.getenv("WANDB_BASE_URL")) != v.wandb_base_url:
+            if v.wandb_base_url is not None and (env_wandb_base_url := getenv("WANDB_BASE_URL")) != v.wandb_base_url:
                 cls.enabled = False
                 raise ValueError(f"WANDB_BASE_URL does not match the value in the environment. Validation URL: {v.wandb_base_url}, Environment URL: {env_wandb_base_url}")
-            if v.wandb_api_key is not None and (env_wandb_api_key := os.getenv("WANDB_API_KEY")) != v.wandb_api_key:
+            if v.wandb_api_key is not None and (env_wandb_api_key := getenv("WANDB_API_KEY")) != v.wandb_api_key:
                 cls.enabled = False
                 raise ValueError(f"WANDB_API_KEY does not match the value in the environment. Validation Key: {v.wandb_api_key}, Environment Key: {env_wandb_api_key}")
         return v

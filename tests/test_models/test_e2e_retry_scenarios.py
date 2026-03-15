@@ -51,7 +51,7 @@ class TestWandBModelHooksE2ERetryScenarios:
     def test_wandb_uses_same_run_id_across_retries_with_eval_set(
         self,
         failing_retry_eval: Callable[[], Task],
-        patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+        patch_wandb_client: MagicMock,
         tmp_path: Path,
         reset_inspect_ai_hooks: None,
     ) -> None:
@@ -61,7 +61,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         """
 
         # Given
-        mock_wandb_init, _, _, _, _ = patch_wandb_client
+        mock_wandb_init = patch_wandb_client
         mock_run = MagicMock()
         mock_run.config = MagicMock()
         mock_run.config.update = MagicMock()
@@ -109,7 +109,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         self,
         error_eval: Callable[[], Task],
         hello_world_eval: Callable[[], Task],
-        patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+        patch_wandb_client: MagicMock,
         tmp_path: Path,
         reset_inspect_ai_hooks: None,
     ) -> None:
@@ -119,7 +119,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         """
 
         # Given
-        mock_wandb_init, _, _, _, _ = patch_wandb_client
+        mock_wandb_init = patch_wandb_client
         mock_run = MagicMock()
         mock_run.config = MagicMock()
         mock_run.config.update = MagicMock()
@@ -184,7 +184,7 @@ class TestWandBModelHooksE2ERetryScenarios:
     def test_wandb_uses_different_run_id_for_different_log_dirs(
         self,
         hello_world_eval: Callable[[], Task],
-        patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+        patch_wandb_client: MagicMock,
         tmp_path: Path,
         reset_inspect_ai_hooks: None,
     ) -> None:
@@ -194,7 +194,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         """
 
         # Given
-        mock_wandb_init, _, _, _, _ = patch_wandb_client
+        mock_wandb_init = patch_wandb_client
         mock_run = MagicMock()
         mock_run.config = MagicMock()
         mock_run.config.update = MagicMock()
@@ -257,7 +257,7 @@ class TestWandBModelHooksE2ERetryScenarios:
     def test_hooks_disabled_no_wandb_init_during_retries(
         self,
         failing_retry_eval: Callable[[], Task],
-        patch_wandb_client: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+        patch_wandb_client: MagicMock,
         tmp_path: Path,
         reset_inspect_ai_hooks: None,
     ) -> None:
@@ -267,7 +267,7 @@ class TestWandBModelHooksE2ERetryScenarios:
         """
 
         # Given
-        mock_wandb_init, _, _, _, _ = patch_wandb_client
+        mock_wandb_init = patch_wandb_client
         
         with patch('inspect_wandb.models.hooks.ModelsSettings.model_validate') as mock_models_settings, patch('inspect_wandb.weave.hooks.WeaveSettings.model_validate') as mock_weave_settings:
             disabled_settings = ModelsSettings(

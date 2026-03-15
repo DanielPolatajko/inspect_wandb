@@ -1,4 +1,4 @@
-import weave
+from weave import op as weave_op
 from inspect_ai.solver import Generate, Plan, TaskState
 from inspect_ai.solver._transcript import solver_transcript
 from inspect_ai.solver._plan import logger
@@ -11,7 +11,7 @@ class PatchedPlan(Plan):
 
                 async with solver_transcript(solver, state) as st:
                     solver_name = registry_info(solver).name
-                    state = await weave.op(name=solver_name)(solver)(state, generate)
+                    state = await weave_op(name=solver_name)(solver)(state, generate)
                     st.complete(state)
 
                 if state.completed:
@@ -20,13 +20,13 @@ class PatchedPlan(Plan):
             if self.finish:
                 async with solver_transcript(self.finish, state) as st:
                     finish_name = registry_info(self.finish).name
-                    state = await weave.op(name=finish_name)(self.finish)(state, generate)
+                    state = await weave_op(name=finish_name)(self.finish)(state, generate)
                     st.complete(state)
 
         finally:
             if self.cleanup:
                 try:
-                    await weave.op(name="inspect_sample_cleanup")(self.cleanup)(state)
+                    await weave_op(name="inspect_sample_cleanup")(self.cleanup)(state)
                 except Exception as ex:
                     logger.warning(
                         f"Exception occurred during plan cleanup: {ex}", exc_info=ex

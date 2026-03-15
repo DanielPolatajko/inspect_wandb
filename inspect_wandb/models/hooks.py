@@ -93,7 +93,7 @@ class WandBModelHooks(InspectWandBHooks):
 
         if self._hooks_enabled is None:
             self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self.settings = ModelsSettings.model_validate(self._metadata_overrides or {})
+            self.settings = self._settings_cls.model_validate(self._metadata_overrides or {})
             self._hooks_enabled = self.settings.enabled
 
         if not self._hooks_enabled:
