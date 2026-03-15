@@ -10,7 +10,7 @@ from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings import ModelsSettings
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
-from inspect_wandb.shared._hooks_base import InspectWandBHooks
+from inspect_wandb.shared.base_hooks import InspectWandBHooks
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
 

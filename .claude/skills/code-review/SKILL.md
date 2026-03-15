@@ -36,7 +36,7 @@ The base branch is `$ARGUMENTS` if provided, otherwise `main`.
 - Settings-loading code must catch and handle errors gracefully — never let exceptions propagate from there as they will break the entire Inspect run
 
 **Public/internal API**
-- Add `_` prefix to any functions, classes, or modules that are internal but not currently marked as such
+- Add `_` prefix to internal functions and non-public methods/attributes within classes. Do not prefix module files with `_`.
 
 ## What to flag but not fix automatically
 

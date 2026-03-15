@@ -41,7 +41,7 @@ This project is an open-source extension for the Inspect AI LLM evals framework.
 
 ### Public vs internal API
 
-- Maintain strict separation between public and internal interfaces. Use `_` prefix for internal functions, classes, and modules.
+- Maintain strict separation between public and internal interfaces. Use `_` prefix for internal functions and non-public attributes/methods within classes. Do not prefix module files with `_`.
 - This package is pre-1.0 (currently v0.2.x), so breaking changes in minor versions are acceptable, but should still be flagged in the changelog.
 
 ### Error handling

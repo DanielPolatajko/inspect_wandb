@@ -18,7 +18,7 @@ from weave.trace.autopatch import IntegrationSettings, OpSettings
 from weave import integrations
 from importlib.util import find_spec
 from gql.transport.exceptions import TransportQueryError
-from inspect_wandb.shared._hooks_base import InspectWandBHooks
+from inspect_wandb.shared.base_hooks import InspectWandBHooks
 
 logger = getLogger(__name__)
 
