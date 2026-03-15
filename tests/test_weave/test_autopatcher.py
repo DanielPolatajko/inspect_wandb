@@ -14,7 +14,7 @@ from inspect_ai.scorer._metric import Score
 
 @pytest.fixture(scope="function")
 def patch_weave_client_in_hooks(weave_test_client: WeaveTestClient) -> Generator[WeaveTestClient, None, None]:
-    with patch("inspect_wandb.weave.hooks.weave.init", MagicMock(return_value=weave_test_client)):
+    with patch("inspect_wandb.weave.hooks.weave_init", MagicMock(return_value=weave_test_client)):
         yield weave_test_client
 
 

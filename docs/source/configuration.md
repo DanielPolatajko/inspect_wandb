@@ -34,6 +34,7 @@ The following is a list of all of the configurable settings you can tweak in Ins
 | **PROJECT** | Specifies the WandB project for the WandB Weave integration. Can also be set using the `WANDB_PROJECT` environment variable. | __Required__ |
 | **ENTITY** | Defines the WandB entity (team or username) for the WandB Weave integration. Can also be set using the `WANDB_ENTITY` environment variable. | __Required__ |
 | **SAMPLE_NAME_TEMPLATE** | Sets a template which is used to name sample traces in the Weave UI. The three variables `task_name, sample_id, epoch` will be filled from the Inspect context, allowing you to change the static text that appears around them. | `{task_name}-sample-{sample_id}-epoch-{epoch}` |
+| **EVAL_TRACES_ONLY** | When `true`, disables sample-level Weave traces and only logs eval-level summaries. Useful for large evals where per-sample trace volume is prohibitive. | `False` |
 
 ## Configuration Priority
 

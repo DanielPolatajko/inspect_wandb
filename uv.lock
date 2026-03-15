@@ -1084,7 +1084,6 @@ wheels = [
 
 [[package]]
 name = "inspect-wandb"
-version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "inspect-ai" },

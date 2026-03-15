@@ -3,13 +3,14 @@ from pathlib import Path
 from typing import Any
 from typing_extensions import override
 
-import wandb
+from wandb import init, Run
 from wandb.errors import CommError
-from inspect_ai.hooks import Hooks, RunEnd, SampleEnd, TaskStart, EvalSetStart
+from inspect_ai.hooks import RunEnd, SampleEnd, TaskStart, EvalSetStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings import ModelsSettings
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
+from inspect_wandb.shared.base_hooks import InspectWandBHooks
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
 
@@ -19,17 +20,19 @@ class Metric:
     ACCURACY: str = "accuracy"
     SAMPLES: str = "samples"
 
-class WandBModelHooks(Hooks):
+class WandBModelHooks(InspectWandBHooks):
 
+    _settings_prefix = "inspect_wandb_models_"
+    _settings_cls = ModelsSettings
+
+    run: Run
     settings: ModelsSettings | None = None
 
     _correct_samples: int = 0
     _total_samples: int = 0
     _wandb_initialized: bool = False
     _is_eval_set: bool = False
-    _hooks_enabled: bool | None = None
     _active_runs: dict[str, dict[str, bool | BaseException | None]] = {}
-    _metadata_overrides: dict[str, Any] | None = None
 
     def __init__(self):
         if INSTALLED_EXTRAS["viz"]:
@@ -38,23 +41,12 @@ class WandBModelHooks(Hooks):
             self.viz_writer = None
 
     @override
-    def enabled(self) -> bool:
-        # Always reload settings from scratch to pick up any runtime changes
-        self.settings = ModelsSettings.model_validate(self._metadata_overrides or {})
-        return self.settings.enabled
-
-    @override
     async def on_eval_set_start(self, data: EvalSetStart) -> None:
-        """
-        Hook to run at the start of an eval set.
-        Sets a flag to indicate that this is an eval set run, and adds log_dir to state
-        """
         self._is_eval_set = True
         self.eval_set_log_dir = data.log_dir
-    
+
     @override
     async def on_run_end(self, data: RunEnd) -> None:
-        # Only proceed with cleanup if WandB was actually initialized
         if not self._wandb_initialized:
             return
 
@@ -98,23 +90,17 @@ class WandBModelHooks(Hooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
-        """
-        Hook to run at the start of each inspect task.
-        Initializes WandB run if not already initialized.
-        Updates tags, config, and other metadata based on user-provided settings.
-        """
         assert self.settings is not None
-        
-        # Override settings from eval metadata on first task only
+
         if self._hooks_enabled is None:
             self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self.settings = ModelsSettings.model_validate(self._metadata_overrides or {})
+            self.settings = self._settings_cls.model_validate(self._metadata_overrides or {})
             self._hooks_enabled = self.settings.enabled
-        
+
         if not self._hooks_enabled:
             logger.info(f"WandB model hooks disabled for run (task: {data.spec.task})")
             return
-        
+
         if self._is_eval_set:
             wandb_run_id = data.eval_set_id
         else:
@@ -125,16 +111,15 @@ class WandBModelHooks(Hooks):
             "exception": None,
         }
 
-        # Lazy initialization: only init WandB when first task starts
         if not self._wandb_initialized:
             try:
-                self.run = wandb.init(
-                    id=wandb_run_id, 
+                self.run = init(
+                    id=wandb_run_id,
                     name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
-                    entity=self.settings.entity, 
+                    entity=self.settings.entity,
                     project=self.settings.project,
                     resume="allow"
-                ) 
+                )
             except CommError as e:
                 if f"entity {self.settings.entity} not found" in str(e):
                     logger.warning(f"WandB integration disabled: invalid entity: {self.settings.entity}. {e}")
@@ -162,7 +147,7 @@ class WandBModelHooks(Hooks):
             _ = self.run.define_metric(step_metric=Metric.SAMPLES, name=Metric.ACCURACY)
             self._wandb_initialized = True
             logger.info(f"WandB initialized for task {data.spec.task}")
-        
+
             inspect_tags = (
                 f"inspect_task:{data.spec.task}",
                 f"inspect_model:{data.spec.model}",
@@ -180,10 +165,9 @@ class WandBModelHooks(Hooks):
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
-        # Skip if hooks are disabled for this run
         if not self._hooks_enabled:
             return
-            
+
         self._total_samples += 1
         if data.sample.scores:
             self._correct_samples += int(self._is_correct(data.sample))
@@ -214,11 +198,3 @@ class WandBModelHooks(Hooks):
 
         return self._correct_samples * 1.0 / self._total_samples
 
-    def _extract_settings_overrides_from_eval_metadata(self, data: TaskStart) -> dict[str, Any] | None:
-        """
-        Check TaskStart metadata to determine if hooks should be enabled
-        """
-        if data.spec.metadata is None:
-            return None
-        overrides = {k[len("inspect_wandb_models_"):]: v for k,v in data.spec.metadata.items() if k.lower().startswith("inspect_wandb_models_")}
-        return overrides

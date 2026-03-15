@@ -551,7 +551,7 @@ class TestWeaveTransportQueryErrors:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.weave.hooks.weave.init', mock_init), \
+        with patch('inspect_wandb.weave.hooks.weave_init', mock_init), \
              patch('inspect_wandb.weave.hooks.logger') as mock_logger:
             await hooks.on_task_start(task_start)
 
@@ -571,7 +571,7 @@ class TestWeaveTransportQueryErrors:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.weave.hooks.weave.init', mock_init), \
+        with patch('inspect_wandb.weave.hooks.weave_init', mock_init), \
              patch('inspect_wandb.weave.hooks.logger') as mock_logger:
             await hooks.on_task_start(task_start)
 
@@ -591,7 +591,7 @@ class TestWeaveTransportQueryErrors:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.weave.hooks.weave.init', mock_init), \
+        with patch('inspect_wandb.weave.hooks.weave_init', mock_init), \
              patch('inspect_wandb.weave.hooks.logger') as mock_logger:
             await hooks.on_task_start(task_start)
 
