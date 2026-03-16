@@ -34,6 +34,7 @@ The following is a list of all of the configurable settings you can tweak in Ins
 | **PROJECT** | Specifies the WandB project for the WandB Weave integration. Can also be set using the `WANDB_PROJECT` environment variable. | __Required__ |
 | **ENTITY** | Defines the WandB entity (team or username) for the WandB Weave integration. Can also be set using the `WANDB_ENTITY` environment variable. | __Required__ |
 | **SAMPLE_NAME_TEMPLATE** | Sets a template which is used to name sample traces in the Weave UI. The three variables `task_name, sample_id, epoch` will be filled from the Inspect context, allowing you to change the static text that appears around them. | `{task_name}-sample-{sample_id}-epoch-{epoch}` |
+| **EVAL_TRACES_ONLY** | When `true`, disables sample-level Weave traces and only logs eval-level summaries. Useful for large evals where per-sample trace volume is prohibitive. | `False` |
 
 ## Configuration Priority
 
@@ -119,5 +120,6 @@ The following table shows all available settings and how to configure them using
 | **Weave: Project** | Specifies the WandB project for Weave integration | `[tool.inspect-wandb.weave]`<br>`wandb_project = "my-project"` | `INSPECT_WANDB_WEAVE_PROJECT="my-project"`<br>or `WANDB_PROJECT="my-project"` | Run in directory from which you'll run Inspect | `--metadata inspect_wandb_weave_project="my-project"` |
 | **Weave: Entity** | Defines the WandB entity (team or username) for Weave integration | `[tool.inspect-wandb.weave]`<br>`wandb_entity = "my-entity"` | `INSPECT_WANDB_WEAVE_ENTITY="my-entity"`<br>or `WANDB_ENTITY="my-entity"` | Run in directory from which you'll run Inspect | `--metadata inspect_wandb_weave_entity="my-entity"` |
 | **Weave: Sample Name Template** | Template for naming sample traces in the Weave UI | `[tool.inspect-wandb.weave]`<br>`sample_name_template = "{task_name}_s{sample_id}"` | `INSPECT_WANDB_WEAVE_SAMPLE_NAME_TEMPLATE="{task_name}_s{sample_id}"` | N/A | `--metadata inspect_wandb_weave_sample_name_template="{task_name}_s{sample_id}"` |
+| **Weave: Eval Traces Only** | When `true`, disables sample-level Weave traces and only logs eval-level summaries | `[tool.inspect-wandb.weave]`<br>`eval_traces_only = true` | `INSPECT_WANDB_WEAVE_EVAL_TRACES_ONLY=True` | N/A | `--metadata inspect_wandb_weave_eval_traces_only=True` |
 
 

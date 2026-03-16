@@ -65,7 +65,7 @@ class TestWandBModelHooks:
         hooks.enabled()
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start)
 
             mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
@@ -85,7 +85,7 @@ class TestWandBModelHooks:
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
         task_start.spec.metadata = {"inspect_wandb_models_config": {"test": "test"}, "inspect_wandb_models_add_metadata_to_config": False}
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start)
 
             mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
@@ -111,7 +111,7 @@ class TestWandBModelHooks:
         )
         hooks._is_eval_set = True
         hooks.eval_set_log_dir = "test_eval_set_log_dir"
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start)
 
             mock_init.assert_called_once_with(id="test_eval_set_id", name="Inspect eval-set: test_eval_set_log_dir", entity="test-entity", project="test-project", resume="allow")
@@ -135,7 +135,7 @@ class TestWandBModelHooks:
         )
 
         # When
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start)
 
         # Then
@@ -165,7 +165,7 @@ class TestWandBModelHooks:
             config=None
         )
         hooks._hooks_enabled = True
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start)
             mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
             assert hooks._wandb_initialized is True
@@ -182,7 +182,7 @@ class TestWandBModelHooks:
         mock_init = MagicMock(return_value=mock_wandb_run)
         task_start = create_task_start()
         task_start.spec.metadata = {"inspect_wandb_models_tags": ["custom-tag1", "custom-tag2"], "inspect_wandb_models_add_metadata_to_config": False}
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start)
 
             mock_init.assert_called_once_with(id="test_run_id", name=None, entity="test-entity", project="test-project", resume="allow")
@@ -633,7 +633,7 @@ class TestWandBModelHooks:
         task_start_2 = create_task_start({"task2_key": "task2_value", "shared_key": "from_task2"})
 
         # When
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init):
+        with patch('inspect_wandb.models.hooks.init', mock_init):
             await hooks.on_task_start(task_start_1)
             hooks._wandb_initialized = False
             await hooks.on_task_start(task_start_2)
@@ -662,7 +662,7 @@ class TestWandBModelHooks:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init), \
+        with patch('inspect_wandb.models.hooks.init', mock_init), \
              patch('inspect_wandb.models.hooks.logger') as mock_logger:
             await hooks.on_task_start(task_start)
 
@@ -681,7 +681,7 @@ class TestWandBModelHooks:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init), \
+        with patch('inspect_wandb.models.hooks.init', mock_init), \
              patch('inspect_wandb.models.hooks.logger') as mock_logger:
             await hooks.on_task_start(task_start)
 
@@ -700,7 +700,7 @@ class TestWandBModelHooks:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.models.hooks.wandb.init', mock_init), \
+        with patch('inspect_wandb.models.hooks.init', mock_init), \
              patch('inspect_wandb.models.hooks.logger') as mock_logger:
             await hooks.on_task_start(task_start)
 

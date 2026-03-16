@@ -1,10 +1,14 @@
 ## Unreleased
 
+## [v0.2.2](https://pypi.org/project/inspect-wandb/0.2.2/) (15 March 2026)
+
 ### Added
+- Add `eval_traces_only` setting to disable sample-level Weave traces and only log eval-level summaries
 - Validate user is authed with wandb and disable hooks if not
 
 ### Fixed
 - Disable auto-init for Weave client on import when active wandb run is present
+- Properly close Anthropic streaming calls
 
 ## [v0.2.1](https://pypi.org/project/inspect-wandb/0.2.1/) (17 December 2025)
 
