@@ -42,7 +42,7 @@ def test_inspect_quickstart(
 
     calls = list(patch_weave_client_in_hooks.get_test_calls())
 
-    assert len([call.name for call in calls]) == 8
+    assert len([call.name for call in calls]) == 9
 
     # check for inspect AI patched calls
     assert "inspect_ai/generate" in calls[3].name

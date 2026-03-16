@@ -69,6 +69,7 @@ class TestEndToEndInspectRuns:
         log_samples = eval_logs[0].eval.config.log_samples
         log_realtime = eval_logs[0].eval.config.log_realtime
         log_images = eval_logs[0].eval.config.log_images
+        log_model_api = eval_logs[0].eval.config.log_model_api
         score_display = eval_logs[0].eval.config.score_display
 
         weave_evaluation_logger.assert_called_once_with(
@@ -88,7 +89,8 @@ class TestEndToEndInspectRuns:
                     'sandbox_cleanup': sandbox_cleanup, 
                     'log_samples': log_samples, 
                     'log_realtime': log_realtime, 
-                    'log_images': log_images, 
+                    'log_images': log_images,
+                    'log_model_api': log_model_api,
                     'score_display': score_display
                 }
             },
