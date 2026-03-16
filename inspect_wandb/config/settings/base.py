@@ -5,7 +5,7 @@ from typing import Self
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource, PyprojectTomlConfigSettingsSource
-from wandb.env import API_KEY as WANDB_API_KEY_ENV
+from wandb.env import API_KEY as WANDB_API_KEY_ENV, BASE_URL as WANDB_BASE_URL_ENV
 from wandb.sdk.lib.wbauth import read_netrc_auth
 
 from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
@@ -27,7 +27,8 @@ class InspectWandBBaseSettings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_api_key(self) -> Self:
-        base_url = os.getenv("WANDB_BASE_URL", "https://api.wandb.ai")
+        DEFAULT_WANDB_BASE_URL = "https://api.wandb.ai"
+        base_url = os.getenv(WANDB_BASE_URL_ENV, DEFAULT_WANDB_BASE_URL)
         if self.enabled and not (os.getenv(WANDB_API_KEY_ENV) or read_netrc_auth(host=base_url)):
             logger.warning("WandB integration disabled: no API key found. Log in with `wandb login` or set the WANDB_API_KEY environment variable.")
             self.enabled = False
