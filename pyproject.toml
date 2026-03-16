@@ -23,7 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 weave = ["weave >= 0.52.33"]
 viz = [
-  "inspect-viz",
+  "inspect-viz >= 0.3.5",
   "playwright"
 ]
 
