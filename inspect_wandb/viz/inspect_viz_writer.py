@@ -1,7 +1,7 @@
 from inspect_viz import Component
 from inspect_viz.plot import write_png_async
 import logging
-from inspect_viz.view.beta import scores_heatmap
+from inspect_viz.view import scores_heatmap
 from inspect_viz import Data
 from pathlib import Path
 import pandas as pd
