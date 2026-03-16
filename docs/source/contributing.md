@@ -52,7 +52,7 @@ If you want to test your local development version of inspect_wandb with another
 uv pip install -e "/path/to/inspect_wandb"
 
 # Or with extras
-uv pip install -e "/path/to/inspect_wandb[weave,viz]"
+uv pip install -e "/path/to/inspect_wandb[weave]"
 ```
 
 The `-e` flag creates an "editable" install - changes you make to the source files take effect immediately without reinstalling.
