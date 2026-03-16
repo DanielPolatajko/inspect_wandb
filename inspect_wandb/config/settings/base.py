@@ -1,18 +1,19 @@
-from pydantic import Field, model_validator
+import os
+from logging import getLogger
 from typing import Self
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource, PyprojectTomlConfigSettingsSource
+from wandb.env import API_KEY as WANDB_API_KEY_ENV
+from wandb.sdk.lib.wbauth import read_netrc_auth
+
 from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
-from wandb.sdk.lib.apikey import api_key
-from logging import getLogger
 
 logger = getLogger(__name__)
 
-class InspectWandBBaseSettings(BaseSettings):
-    """
-    Shared settings across Models and Weave integrations for the InspectWandB integration.
-    """
 
+class InspectWandBBaseSettings(BaseSettings):
     model_config = SettingsConfigDict(
         populate_by_name=True,
         validate_by_name=True,
@@ -26,7 +27,8 @@ class InspectWandBBaseSettings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_api_key(self) -> Self:
-        if self.enabled and api_key() is None:
+        base_url = os.getenv("WANDB_BASE_URL", "https://api.wandb.ai")
+        if self.enabled and not (os.getenv(WANDB_API_KEY_ENV) or read_netrc_auth(host=base_url)):
             logger.warning("WandB integration disabled: no API key found. Log in with `wandb login` or set the WANDB_API_KEY environment variable.")
             self.enabled = False
         return self

@@ -17,7 +17,7 @@ dependencies = [
   "inspect_ai >= 0.3.154",
   "pydantic >= 2.12, <3",
   "pydantic-settings",
-  "wandb"
+  "wandb>=0.25.1",
 ]
 
 [project.optional-dependencies]

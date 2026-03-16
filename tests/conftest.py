@@ -25,7 +25,7 @@ def mock_wandb_api_key(request: pytest.FixtureRequest) -> Generator[None, None, 
     if "no_mock_api_key" in request.keywords:
         yield
     else:
-        with patch("inspect_wandb.config.settings.base.api_key", return_value="test-api-key"):
+        with patch.dict(os.environ, {"WANDB_API_KEY": "test-api-key"}):
             yield
 
 
