@@ -1,5 +1,14 @@
 ## Unreleased
 
+## [v0.2.3](https://pypi.org/project/inspect-wandb/0.2.3/) (16 March 2026)
+
+### Fixed
+- Pin `wandb` dependency to ensure stable version
+
+## New Contributors
+
+- [@ItsTania](https://github.com/ItsTania)
+
 ## [v0.2.2](https://pypi.org/project/inspect-wandb/0.2.2/) (15 March 2026)
 
 ### Added
