@@ -4,7 +4,7 @@ from inspect_ai.scorer import exact, match, Target
 from inspect_ai.dataset import Sample
 from inspect_ai.solver import TaskState
 from inspect_ai.model import ModelOutput, ChatMessageUser, ChatMessageAssistant
-from typing import Any, Generator
+from typing import Generator
 import pytest
 from unittest.mock import MagicMock, patch
 from .conftest import WeaveTestClient
@@ -251,7 +251,7 @@ class TestPatchedScorerCall:
             mock_call_context.pop_call.assert_not_called()
 
 
-def _make_task_state(**overrides: Any) -> TaskState:
+def _make_task_state() -> TaskState:
     defaults = dict(
         model="test_model",
         sample_id=1,
@@ -264,7 +264,7 @@ def _make_task_state(**overrides: Any) -> TaskState:
         output=ModelOutput.from_content(model="test_model", content="test output"),
         completed=False,
     )
-    return TaskState(**(defaults | overrides))
+    return TaskState(**defaults)
 
 
 class TestPostprocessSolverInputs:
