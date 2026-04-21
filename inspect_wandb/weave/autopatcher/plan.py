@@ -22,9 +22,9 @@ def _postprocess_solver_output(output: Any) -> Any:
     try:
         if isinstance(output, TaskState):
             return state_jsonable(output)
+        return output
     except Exception:
-        pass
-    return output
+        return output
 
 
 class PatchedPlan(Plan):
