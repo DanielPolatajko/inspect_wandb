@@ -3,12 +3,13 @@ from inspect_ai.solver import generate
 from inspect_ai.scorer import exact, match, Target
 from inspect_ai.dataset import Sample
 from inspect_ai.solver import TaskState
-from inspect_ai.model import ModelOutput
-from typing import Generator
+from inspect_ai.model import ModelOutput, ChatMessageUser, ChatMessageAssistant
+from typing import Any, Generator
 import pytest
 from unittest.mock import MagicMock, patch
 from .conftest import WeaveTestClient
-from inspect_wandb.weave.autopatcher.scorer import PatchedScorer
+from inspect_wandb.weave.autopatcher.scorer import PatchedScorer, _postprocess_scorer_inputs
+from inspect_wandb.weave.autopatcher.plan import _postprocess_solver_inputs, _postprocess_solver_output
 from inspect_ai._util.registry import registry_info, is_registry_object, set_registry_info
 from inspect_ai.scorer._metric import Score
 
@@ -248,4 +249,160 @@ class TestPatchedScorerCall:
             assert result is not None
             mock_call_context.push_call.assert_not_called()
             mock_call_context.pop_call.assert_not_called()
+
+
+def _make_task_state(**overrides: Any) -> TaskState:
+    defaults = dict(
+        model="test_model",
+        sample_id=1,
+        epoch=1,
+        input="test input",
+        messages=[
+            ChatMessageUser(content="hello"),
+            ChatMessageAssistant(content="world"),
+        ],
+        output=ModelOutput.from_content(model="test_model", content="test output"),
+        completed=False,
+    )
+    return TaskState(**(defaults | overrides))
+
+
+class TestPostprocessSolverInputs:
+
+    def test_serializes_task_state(self):
+        # Given
+        state = _make_task_state()
+
+        # When
+        result = _postprocess_solver_inputs({"state": state, "generate": lambda: None})
+
+        # Then
+        assert "state" in result
+        assert "generate" not in result
+        assert isinstance(result["state"], dict)
+        assert "messages" in result["state"]
+        assert "completed" in result["state"]
+
+    def test_result_contains_no_repr_strings(self):
+        # Given
+        state = _make_task_state()
+
+        # When
+        result = _postprocess_solver_inputs({"state": state, "generate": lambda: None})
+
+        # Then
+        assert "<inspect_ai" not in str(result)
+        assert "object at 0x" not in str(result)
+
+    def test_returns_original_inputs_on_serialization_error(self):
+        # Given
+        state = _make_task_state()
+        inputs = {"state": state, "generate": lambda: None}
+
+        with patch("inspect_wandb.weave.autopatcher.plan.state_jsonable", side_effect=Exception("serialization failed")):
+            # When
+            result = _postprocess_solver_inputs(inputs)
+
+        # Then
+        assert result is inputs
+
+
+class TestPostprocessSolverOutput:
+
+    def test_serializes_task_state(self):
+        # Given
+        state = _make_task_state()
+
+        # When
+        result = _postprocess_solver_output(state)
+
+        # Then
+        assert isinstance(result, dict)
+        assert "messages" in result
+        assert "completed" in result
+
+    def test_result_contains_no_repr_strings(self):
+        # Given
+        state = _make_task_state()
+
+        # When
+        result = _postprocess_solver_output(state)
+
+        # Then
+        assert "<inspect_ai" not in str(result)
+        assert "object at 0x" not in str(result)
+
+    def test_passes_through_non_task_state(self):
+        # Given
+        output = {"some": "dict"}
+
+        # When
+        result = _postprocess_solver_output(output)
+
+        # Then
+        assert result == {"some": "dict"}
+
+    def test_returns_original_output_on_serialization_error(self):
+        # Given
+        state = _make_task_state()
+
+        with patch("inspect_wandb.weave.autopatcher.plan.state_jsonable", side_effect=Exception("serialization failed")):
+            # When
+            result = _postprocess_solver_output(state)
+
+        # Then
+        assert result is state
+
+
+class TestPostprocessScorerInputs:
+
+    def test_serializes_state_and_target(self):
+        # Given
+        state = _make_task_state()
+        target = Target("expected answer")
+
+        # When
+        result = _postprocess_scorer_inputs({"state": state, "target": target})
+
+        # Then
+        assert "state" in result
+        assert isinstance(result["state"], dict)
+        assert "messages" in result["state"]
+        assert result["target"] == ["expected answer"]
+
+    def test_result_contains_no_repr_strings(self):
+        # Given
+        state = _make_task_state()
+        target = Target("expected answer")
+
+        # When
+        result = _postprocess_scorer_inputs({"state": state, "target": target})
+
+        # Then
+        assert "<inspect_ai" not in str(result)
+        assert "object at 0x" not in str(result)
+
+    def test_serializes_multi_value_target(self):
+        # Given
+        state = _make_task_state()
+        target = Target(["answer1", "answer2"])
+
+        # When
+        result = _postprocess_scorer_inputs({"state": state, "target": target})
+
+        # Then
+        assert result["target"] == ["answer1", "answer2"]
+
+    def test_returns_original_inputs_on_serialization_error(self):
+        # Given
+        state = _make_task_state()
+        target = Target("expected answer")
+        inputs = {"state": state, "target": target}
+
+        with patch("inspect_wandb.weave.autopatcher.scorer.state_jsonable", side_effect=Exception("serialization failed")):
+            # When
+            result = _postprocess_scorer_inputs(inputs)
+
+        # Then
+        assert result is inputs
 
