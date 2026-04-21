@@ -50,6 +50,9 @@ jobs:
         run: |
           uv run ruff check inspect_wandb tests --fix
 
+      - name: Ruff formatting checks
+        run: uv run ruff format inspect_wandb tests
+
       - name: MyPy typing checks
         run: uv run mypy inspect_wandb
 
