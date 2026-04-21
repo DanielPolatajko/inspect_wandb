@@ -13,12 +13,12 @@ from inspect_ai.solver._task_state import state_jsonable
 
 def _postprocess_scorer_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     try:
-        result = {}
-        if isinstance(inputs.get("state"), TaskState):
-            result["state"] = state_jsonable(inputs["state"])
-        if isinstance(inputs.get("target"), Target):
-            result["target"] = inputs["target"].target
-        return result
+        state: TaskState = inputs["state"]
+        target: Target = inputs["target"]
+        return {
+            "state": state_jsonable(state),
+            "target": target.target,
+        }
     except Exception:
         return inputs
 

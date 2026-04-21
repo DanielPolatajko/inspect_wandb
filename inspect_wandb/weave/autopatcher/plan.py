@@ -10,19 +10,15 @@ from inspect_ai._util.registry import registry_info
 
 def _postprocess_solver_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     try:
-        result = {}
-        if isinstance(inputs.get("state"), TaskState):
-            result["state"] = state_jsonable(inputs["state"])
-        return result
+        state: TaskState = inputs["state"]
+        return {"state": state_jsonable(state)}
     except Exception:
         return inputs
 
 
-def _postprocess_solver_output(output: Any) -> Any:
+def _postprocess_solver_output(output: TaskState) -> Any:
     try:
-        if isinstance(output, TaskState):
-            return state_jsonable(output)
-        return output
+        return state_jsonable(output)
     except Exception:
         return output
 
