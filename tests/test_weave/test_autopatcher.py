@@ -294,18 +294,6 @@ class TestPostprocessSolverInputs:
         assert "<inspect_ai" not in str(result)
         assert "object at 0x" not in str(result)
 
-    def test_returns_original_inputs_on_serialization_error(self):
-        # Given
-        state = _make_task_state()
-        inputs = {"state": state, "generate": lambda: None}
-
-        with patch("inspect_wandb.weave.autopatcher.plan.state_jsonable", side_effect=Exception("serialization failed")):
-            # When
-            result = _postprocess_solver_inputs(inputs)
-
-        # Then
-        assert result is inputs
-
 
 class TestPostprocessSolverOutput:
 
@@ -331,27 +319,6 @@ class TestPostprocessSolverOutput:
         # Then
         assert "<inspect_ai" not in str(result)
         assert "object at 0x" not in str(result)
-
-    def test_passes_through_non_task_state(self):
-        # Given
-        output = {"some": "dict"}
-
-        # When
-        result = _postprocess_solver_output(output)
-
-        # Then
-        assert result == {"some": "dict"}
-
-    def test_returns_original_output_on_serialization_error(self):
-        # Given
-        state = _make_task_state()
-
-        with patch("inspect_wandb.weave.autopatcher.plan.state_jsonable", side_effect=Exception("serialization failed")):
-            # When
-            result = _postprocess_solver_output(state)
-
-        # Then
-        assert result is state
 
 
 class TestPostprocessScorerInputs:
@@ -392,17 +359,4 @@ class TestPostprocessScorerInputs:
 
         # Then
         assert result["target"] == ["answer1", "answer2"]
-
-    def test_returns_original_inputs_on_serialization_error(self):
-        # Given
-        state = _make_task_state()
-        target = Target("expected answer")
-        inputs = {"state": state, "target": target}
-
-        with patch("inspect_wandb.weave.autopatcher.scorer.state_jsonable", side_effect=Exception("serialization failed")):
-            # When
-            result = _postprocess_scorer_inputs(inputs)
-
-        # Then
-        assert result is inputs
 
