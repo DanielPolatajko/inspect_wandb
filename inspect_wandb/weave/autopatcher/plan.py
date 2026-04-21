@@ -9,18 +9,12 @@ from inspect_ai._util.registry import registry_info
 
 
 def _postprocess_solver_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
-    try:
-        state: TaskState = inputs["state"]
-        return {"state": state_jsonable(state)}
-    except Exception:
-        return inputs
+    state: TaskState = inputs["state"]
+    return {"state": state_jsonable(state)}
 
 
 def _postprocess_solver_output(output: TaskState) -> Any:
-    try:
-        return state_jsonable(output)
-    except Exception:
-        return output
+    return state_jsonable(output)
 
 
 class PatchedPlan(Plan):
