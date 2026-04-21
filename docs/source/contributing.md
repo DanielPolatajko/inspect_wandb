@@ -65,6 +65,12 @@ python -c "import inspect_wandb; print(inspect_wandb.__file__)"
 
 This should print the path to your local development directory.
 
+## Changelog
+
+We maintain a [CHANGELOG.md](https://github.com/DanielPolatworkers/inspect-wandb/blob/main/CHANGELOG.md). 
+
+When submitting a PR that adds a feature or fixes a significant bug, please add an entry under `## Unreleased`. See [Keep a Changelog](https://keepachangelog.com/) for guidance on subheadings, conventions and formatting.
+
 ## Testing
 
 We write unit tests with `pytest`. If you want to run the tests, you can simply run `pytest`. Please consider writing at least one test if adding a new feature, or covering edge cases with a test if submitting bug fixes.
