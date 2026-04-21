@@ -8,6 +8,12 @@ repos:
         language: python
         types: [python]
         pass_filenames: false
+      - id: ruff-format
+        name: Ruff formatter
+        entry: ruff format inspect_wandb tests
+        language: python
+        types: [python]
+        pass_filenames: false
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
