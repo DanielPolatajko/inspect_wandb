@@ -81,10 +81,12 @@ class WandBModelHooks(InspectWandBHooks):
             logger.error("Inspect exited due to exception")
             self.run.finish(exit_code=2)
         elif "cancelled" in [log.status for log in data.logs] and last_run:
-            logger.warning("One or more tasks cancelled by user.")
+            cancelled_tasks = [log.eval.task for log in data.logs if log.status == "cancelled"]
+            logger.warning(f"One or more tasks cancelled by user: {', '.join(cancelled_tasks)}")
             self.run.finish(exit_code=1)
         elif not(all(log.status == "success" for log in data.logs)) and last_run:
-            logger.warning("One or more tasks failed.")
+            failed_tasks = [log.eval.task for log in data.logs if log.status == "error"]
+            logger.warning(f"One or more tasks failed: {', '.join(failed_tasks)}")
             self.run.finish(exit_code=4)
         elif last_run:
             self.run.finish(exit_code=0)
