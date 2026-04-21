@@ -19,8 +19,8 @@ repos:
     hooks:
       - id: mypy
         name: Mypy type checker
-        language: python
-        entry: mypy
+        language: system
+        entry: uv run mypy
         types: [python]
         pass_filenames: false
         args: [inspect_wandb]
