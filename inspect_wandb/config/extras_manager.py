@@ -1,5 +1,6 @@
 from importlib.util import find_spec
 
+
 class ExtrasManager:
     def __init__(self):
         self.extras = {}
@@ -20,5 +21,6 @@ class ExtrasManager:
             self.extras["viz"] = False
         else:
             self.extras["viz"] = False
+
 
 INSTALLED_EXTRAS = ExtrasManager().detect_extras()

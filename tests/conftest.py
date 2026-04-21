@@ -15,10 +15,19 @@ from pytest import TempPathFactory
 from inspect_ai._util.registry import registry_find
 from weave.evaluation.eval_imperative import EvaluationLogger
 from inspect_ai.hooks import TaskStart
-from inspect_ai.log import EvalSpec, EvalConfig, EvalDataset, EvalLog, EvalResults, EvalScore, EvalMetric
+from inspect_ai.log import (
+    EvalSpec,
+    EvalConfig,
+    EvalDataset,
+    EvalLog,
+    EvalResults,
+    EvalScore,
+    EvalMetric,
+)
 from datetime import datetime
 
 ## Mock API key for all tests by default
+
 
 @pytest.fixture(autouse=True)
 def mock_wandb_api_key(request: pytest.FixtureRequest) -> Generator[None, None, None]:
@@ -31,6 +40,7 @@ def mock_wandb_api_key(request: pytest.FixtureRequest) -> Generator[None, None, 
 
 ## Setup wandb directory and settings
 
+
 @pytest.fixture(scope="session")
 def wandb_path(tmp_path_factory: TempPathFactory) -> Path:
     """
@@ -41,21 +51,20 @@ def wandb_path(tmp_path_factory: TempPathFactory) -> Path:
     os.chdir(path)
     return path / "wandb"
 
+
 @pytest.fixture(scope="session")
 def initialise_wandb(wandb_path: Path) -> None:
     """
     Writes a wandb settings file to the tmp_path directory, and changes the current working directory to the tmp_path.
     """
     config = configparser.ConfigParser()
-    config["default"] = {
-        "entity": "test-entity",
-        "project": "test-project"
-    }
+    config["default"] = {"entity": "test-entity", "project": "test-project"}
     with open(wandb_path / "settings", "w") as f:
         config.write(f)
 
 
 ## Mock wandb/weave client calls
+
 
 @pytest.fixture(scope="function", autouse=True)
 def patch_wandb_client() -> Generator[MagicMock, None, None]:
@@ -78,6 +87,7 @@ def patch_wandb_client() -> Generator[MagicMock, None, None]:
     with patch("inspect_wandb.models.hooks.init", mock_wandb_init):
         yield mock_wandb_init
 
+
 @pytest.fixture(scope="function")
 def reset_inspect_ai_hooks() -> Generator[None, None, None]:
     hooks_startup_module._registry_hooks_loaded = False
@@ -86,42 +96,55 @@ def reset_inspect_ai_hooks() -> Generator[None, None, None]:
     hooks = registry_find(lambda x: x.type == "hooks")
     if hooks:
         for hook in hooks:
-            hook.settings = None # type: ignore
+            hook.settings = None  # type: ignore
             # Reset our new state variables to ensure clean test isolation
-            if hasattr(hook, '_hooks_enabled'):
+            if hasattr(hook, "_hooks_enabled"):
                 hook._hooks_enabled = None
-            if hasattr(hook, '_weave_initialized'):
+            if hasattr(hook, "_weave_initialized"):
                 hook._weave_initialized = False
-            if hasattr(hook, '_wandb_initialized'):
+            if hasattr(hook, "_wandb_initialized"):
                 hook._wandb_initialized = False
+
 
 @pytest.fixture(scope="function")
 def patched_weave_evaluation_hooks(reset_inspect_ai_hooks: None):
     patched_evaluation_logger_class = MagicMock(spec=EvaluationLogger)
     patched_evaluation_logger_class.return_value = patched_evaluation_logger_class
     patched_evaluation_logger_class._is_finalized = False
-    patched_evaluation_logger_class.finish = MagicMock(side_effect=lambda *args, **kwargs: setattr(patched_evaluation_logger_class, "_is_finalized", True))
+    patched_evaluation_logger_class.finish = MagicMock(
+        side_effect=lambda *args, **kwargs: setattr(
+            patched_evaluation_logger_class, "_is_finalized", True
+        )
+    )
     patched_evaluation_logger_class.log_summary = MagicMock()
     patched_evaluation_logger_class.log_prediction = MagicMock()
     patched_evaluation_logger_class._evaluate_call = MagicMock()
 
     with (
         patch("inspect_wandb.weave.hooks.weave_init", MagicMock()) as weave_init,
-        patch("inspect_wandb.weave.hooks.EvaluationLogger", patched_evaluation_logger_class)
+        patch(
+            "inspect_wandb.weave.hooks.EvaluationLogger",
+            patched_evaluation_logger_class,
+        ),
     ):
-        weave_evaluation_hooks_instance = weave_evaluation_hooks() # type: ignore
-        with patch("inspect_wandb._registry.weave_evaluation_hooks", lambda: weave_evaluation_hooks_instance):
+        weave_evaluation_hooks_instance = weave_evaluation_hooks()  # type: ignore
+        with patch(
+            "inspect_wandb._registry.weave_evaluation_hooks",
+            lambda: weave_evaluation_hooks_instance,
+        ):
             yield {
                 "weave_evaluation_hooks": weave_evaluation_hooks_instance,
                 "weave_init": weave_init,
-                "weave_evaluation_logger": patched_evaluation_logger_class
+                "weave_evaluation_logger": patched_evaluation_logger_class,
             }
+
 
 @pytest.fixture(scope="function")
 def hello_world_eval() -> Callable[[], Task]:
     """
     Returns a mock Inspect eval plus a set of mocks that can be used to check that Weave was called correctly.
     """
+
     @task
     def hello_world():
         return Task(
@@ -134,7 +157,7 @@ def hello_world_eval() -> Callable[[], Task]:
             solver=[generate()],
             scorer=exact(),
             metadata={"test": "test"},
-            name="hello_world_eval"
+            name="hello_world_eval",
         )
 
     return hello_world
@@ -143,16 +166,19 @@ def hello_world_eval() -> Callable[[], Task]:
 @solver
 def raise_error() -> Solver:
     """Raises an error."""
+
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         raise RuntimeError("Simulated failure")
 
     return solve
+
 
 @pytest.fixture(scope="function")
 def error_eval() -> Callable[[], Task]:
     """
     Returns a mock Inspect eval plus a set of mocks that can be used to check that Weave was called correctly.
     """
+
     @task
     def hello_world():
         return Task(
@@ -165,7 +191,7 @@ def error_eval() -> Callable[[], Task]:
             solver=[raise_error()],
             scorer=exact(),
             metadata={"test": "test"},
-            name="hello_world_eval"
+            name="hello_world_eval",
         )
 
     return hello_world
@@ -173,9 +199,11 @@ def error_eval() -> Callable[[], Task]:
 
 ### Inspect Hooks DTOs
 
+
 @pytest.fixture(scope="function")
 def create_task_start() -> Callable[[dict | None], TaskStart]:
     """Helper to create TaskStart with optional metadata"""
+
     def _create_task_start(metadata: dict | None = None) -> TaskStart:
         return TaskStart(
             eval_set_id="test_eval_set_id",
@@ -183,16 +211,18 @@ def create_task_start() -> Callable[[dict | None], TaskStart]:
             eval_id="test_eval_id",
             spec=EvalSpec(
                 run_id="test_run_id",
-                task_id="test_task_id", 
+                task_id="test_task_id",
                 created=datetime.now().isoformat(),
                 task="test_task",
                 dataset=EvalDataset(name="test-dataset"),
                 model="mockllm/model",
                 config=EvalConfig(),
-                metadata=metadata
-            )
+                metadata=metadata,
+            ),
         )
+
     return _create_task_start
+
 
 @pytest.fixture(scope="function")
 def task_end_eval_log() -> EvalLog:
@@ -205,7 +235,7 @@ def task_end_eval_log() -> EvalLog:
             task="test_task",
             dataset=EvalDataset(),
             model="mockllm/model",
-            config=EvalConfig()
+            config=EvalConfig(),
         ),
         results=EvalResults(
             total_samples=1,
@@ -213,10 +243,8 @@ def task_end_eval_log() -> EvalLog:
                 EvalScore(
                     name="test_score",
                     scorer="test_scorer",
-                    metrics={"test_metric": EvalMetric(name="test_metric", value=1.0)}
+                    metrics={"test_metric": EvalMetric(name="test_metric", value=1.0)},
                 )
-            ]
-        )
+            ],
+        ),
     )
-
-

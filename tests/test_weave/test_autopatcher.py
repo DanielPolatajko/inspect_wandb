@@ -9,18 +9,27 @@ import pytest
 from unittest.mock import MagicMock, patch
 from .conftest import WeaveTestClient
 from inspect_wandb.weave.autopatcher.scorer import PatchedScorer
-from inspect_ai._util.registry import registry_info, is_registry_object, set_registry_info
+from inspect_ai._util.registry import (
+    registry_info,
+    is_registry_object,
+    set_registry_info,
+)
 from inspect_ai.scorer._metric import Score
 
+
 @pytest.fixture(scope="function")
-def patch_weave_client_in_hooks(weave_test_client: WeaveTestClient) -> Generator[WeaveTestClient, None, None]:
-    with patch("inspect_wandb.weave.hooks.weave_init", MagicMock(return_value=weave_test_client)):
+def patch_weave_client_in_hooks(
+    weave_test_client: WeaveTestClient,
+) -> Generator[WeaveTestClient, None, None]:
+    with patch(
+        "inspect_wandb.weave.hooks.weave_init",
+        MagicMock(return_value=weave_test_client),
+    ):
         yield weave_test_client
 
 
 def test_inspect_quickstart(
-    patch_weave_client_in_hooks: WeaveTestClient,
-    reset_inspect_ai_hooks: None
+    patch_weave_client_in_hooks: WeaveTestClient, reset_inspect_ai_hooks: None
 ) -> None:
     @task
     def hello_world():
@@ -33,9 +42,13 @@ def test_inspect_quickstart(
             ],
             solver=[generate()],
             scorer=exact(),
-            metadata={"test": "test", "inspect_wandb_weave_enabled": "true", "inspect_wandb_models_enabled": "false"},
+            metadata={
+                "test": "test",
+                "inspect_wandb_weave_enabled": "true",
+                "inspect_wandb_models_enabled": "false",
+            },
             display_name="test task",
-            name="hello_world_autopatcher"
+            name="hello_world_autopatcher",
         )
 
     eval(hello_world, model="mockllm/model")
@@ -57,38 +70,42 @@ class TestPatchedScorerRegistryManagement:
         # Test with exact scorer
         exact_scorer = exact()
         assert is_registry_object(exact_scorer)
-        
+
         patched_exact = PatchedScorer(exact_scorer)
         assert is_registry_object(patched_exact)
         assert registry_info(patched_exact).name == "inspect_ai/exact"
         assert patched_exact.scorer_name == "inspect_ai/exact"
-        
+
         # Test with match scorer to verify separation
         match_scorer = match()
         patched_match = PatchedScorer(match_scorer)
         assert registry_info(patched_match).name == "inspect_ai/match"
         assert patched_match.scorer_name == "inspect_ai/match"
-        
+
         # Verify scorers maintain separate registry info
         assert registry_info(patched_exact).name != registry_info(patched_match).name
 
     def test_patched_scorer_handles_non_registered_scorer(self):
         """Test that PatchedScorer handles non-registered scorers gracefully."""
+
         # Create a mock scorer that's not in the registry
         class MockScorer:
             async def __call__(self, state: TaskState, target: Target) -> Score:
                 return Score(value=1.0, explanation="Mock score")
-        
+
         mock_scorer = MockScorer()
-        
+
         # Manually set registry info to simulate a scorer with registry info
         from inspect_ai._util.registry import RegistryInfo
-        mock_info = RegistryInfo(name="test/mock_scorer", type="scorer", doc="Test scorer")
+
+        mock_info = RegistryInfo(
+            name="test/mock_scorer", type="scorer", doc="Test scorer"
+        )
         set_registry_info(mock_scorer, mock_info)
-        
+
         # Create patched scorer
         patched = PatchedScorer(mock_scorer)
-        
+
         # Verify registry info was copied
         assert is_registry_object(patched)
         patched_info = registry_info(patched)
@@ -119,7 +136,7 @@ class TestPatchedScorerCall:
             input="test input",
             messages=[],
             output=ModelOutput.from_content(model="test_model", content="Hello World"),
-            completed=False
+            completed=False,
         )
         target = Target("Hello World")
 
@@ -130,7 +147,9 @@ class TestPatchedScorerCall:
         mock_parent_call = MagicMock()
         mock_parent_call._children = [mock_sample_call]
 
-        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
+        with patch(
+            "inspect_wandb.weave.autopatcher.scorer.call_context"
+        ) as mock_call_context:
             mock_call_context.get_current_call.return_value = mock_parent_call
 
             # When
@@ -154,11 +173,13 @@ class TestPatchedScorerCall:
             input="test input",
             messages=[],
             output=ModelOutput.from_content(model="test_model", content="Hello World"),
-            completed=False
+            completed=False,
         )
         target = Target("Hello World")
 
-        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
+        with patch(
+            "inspect_wandb.weave.autopatcher.scorer.call_context"
+        ) as mock_call_context:
             mock_call_context.get_current_call.return_value = None
 
             # When
@@ -181,7 +202,10 @@ class TestPatchedScorerCall:
         failing_scorer = FailingScorer()
 
         from inspect_ai._util.registry import RegistryInfo
-        mock_info = RegistryInfo(name="test/failing_scorer", type="scorer", doc="Test scorer")
+
+        mock_info = RegistryInfo(
+            name="test/failing_scorer", type="scorer", doc="Test scorer"
+        )
         set_registry_info(failing_scorer, mock_info)
 
         patched_scorer = PatchedScorer(failing_scorer)
@@ -193,7 +217,7 @@ class TestPatchedScorerCall:
             input="test input",
             messages=[],
             output=ModelOutput.from_content(model="test_model", content="test"),
-            completed=False
+            completed=False,
         )
         target = Target("test")
 
@@ -204,7 +228,9 @@ class TestPatchedScorerCall:
         mock_parent_call = MagicMock()
         mock_parent_call._children = [mock_sample_call]
 
-        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
+        with patch(
+            "inspect_wandb.weave.autopatcher.scorer.call_context"
+        ) as mock_call_context:
             mock_call_context.get_current_call.return_value = mock_parent_call
 
             # When/Then
@@ -227,7 +253,7 @@ class TestPatchedScorerCall:
             input="test input",
             messages=[],
             output=ModelOutput.from_content(model="test_model", content="Hello World"),
-            completed=False
+            completed=False,
         )
         target = Target("Hello World")
 
@@ -238,7 +264,9 @@ class TestPatchedScorerCall:
         mock_parent_call = MagicMock()
         mock_parent_call._children = [mock_sample_call]
 
-        with patch("inspect_wandb.weave.autopatcher.scorer.call_context") as mock_call_context:
+        with patch(
+            "inspect_wandb.weave.autopatcher.scorer.call_context"
+        ) as mock_call_context:
             mock_call_context.get_current_call.return_value = mock_parent_call
 
             # When
@@ -248,4 +276,3 @@ class TestPatchedScorerCall:
             assert result is not None
             mock_call_context.push_call.assert_not_called()
             mock_call_context.pop_call.assert_not_called()
-

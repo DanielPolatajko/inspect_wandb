@@ -11,17 +11,19 @@ from inspect_ai.scorer import CORRECT
 from inspect_wandb.config.settings import ModelsSettings
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
+
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
 
 logger = logging.getLogger(__name__)
 
+
 class Metric:
     ACCURACY: str = "accuracy"
     SAMPLES: str = "samples"
 
-class WandBModelHooks(InspectWandBHooks):
 
+class WandBModelHooks(InspectWandBHooks):
     _settings_prefix = "inspect_wandb_models_"
     _settings_cls = ModelsSettings
 
@@ -56,7 +58,11 @@ class WandBModelHooks(InspectWandBHooks):
 
         self._log_summary(data)
 
-        if self.settings is not None and self.settings.viz and self.viz_writer is not None:
+        if (
+            self.settings is not None
+            and self.settings.viz
+            and self.viz_writer is not None
+        ):
             await self.viz_writer.log_scores_heatmap(data, self.run)
 
         if self.settings is not None and self.settings.files:
@@ -64,12 +70,16 @@ class WandBModelHooks(InspectWandBHooks):
                 file_path = Path(file)
                 if file_path.exists():
                     try:
-                        self.run.save(str(file), policy="now")  # TODO: fix wandb Symlinked warning for folder upload
+                        self.run.save(
+                            str(file), policy="now"
+                        )  # TODO: fix wandb Symlinked warning for folder upload
                         logger.info(f"Successfully saved {file} to wandb")
                     except Exception as e:
                         logger.warning(f"Failed to save {file} to wandb: {e}")
                 else:
-                    logger.warning(f"File or folder '{file}' does not exist. Skipping wandb upload.")
+                    logger.warning(
+                        f"File or folder '{file}' does not exist. Skipping wandb upload."
+                    )
 
         if data.exception is not None and isinstance(data.exception, KeyboardInterrupt):
             logger.error("Inspect exited due to KeyboardInterrupt")
@@ -77,10 +87,12 @@ class WandBModelHooks(InspectWandBHooks):
         elif data.exception is not None and isinstance(data.exception, SystemExit):
             logger.error(f"SystemExit running eval set: {data.exception}")
             self.run.finish(exit_code=3)
-        elif (last_run:= all([not run["running"] for run in self._active_runs.values()])) and data.exception is not None:
+        elif (
+            last_run := all([not run["running"] for run in self._active_runs.values()])
+        ) and data.exception is not None:
             logger.error("Inspect exited due to exception")
             self.run.finish(exit_code=2)
-        elif not(all(log.status == "success" for log in data.logs)) and last_run:
+        elif not (all(log.status == "success" for log in data.logs)) and last_run:
             logger.warning("One or more tasks failed, may retry if eval-set")
             self.run.finish(exit_code=4)
         elif last_run:
@@ -93,8 +105,12 @@ class WandBModelHooks(InspectWandBHooks):
         assert self.settings is not None
 
         if self._hooks_enabled is None:
-            self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self.settings = self._settings_cls.model_validate(self._metadata_overrides or {})
+            self._metadata_overrides = (
+                self._extract_settings_overrides_from_eval_metadata(data)
+            )
+            self.settings = self._settings_cls.model_validate(
+                self._metadata_overrides or {}
+            )
             self._hooks_enabled = self.settings.enabled
 
         if not self._hooks_enabled:
@@ -115,16 +131,22 @@ class WandBModelHooks(InspectWandBHooks):
             try:
                 self.run = init(
                     id=wandb_run_id,
-                    name=f"Inspect eval-set: {self.eval_set_log_dir}" if self._is_eval_set else None,
+                    name=f"Inspect eval-set: {self.eval_set_log_dir}"
+                    if self._is_eval_set
+                    else None,
                     entity=self.settings.entity,
                     project=self.settings.project,
-                    resume="allow"
+                    resume="allow",
                 )
             except CommError as e:
                 if f"entity {self.settings.entity} not found" in str(e):
-                    logger.warning(f"WandB integration disabled: invalid entity: {self.settings.entity}. {e}")
+                    logger.warning(
+                        f"WandB integration disabled: invalid entity: {self.settings.entity}. {e}"
+                    )
                 elif f"project {self.settings.project} not found" in str(e):
-                    logger.warning(f"WandB integration disabled: invalid project: {self.settings.project}. {e}")
+                    logger.warning(
+                        f"WandB integration disabled: invalid project: {self.settings.project}. {e}"
+                    )
                 else:
                     logger.warning(f"WandB integration disabled: {e}")
                 self.settings.enabled = False
@@ -137,10 +159,21 @@ class WandBModelHooks(InspectWandBHooks):
 
             if self.settings.add_metadata_to_config and data.spec.metadata is not None:
                 task_id = data.spec.task_id
-                metadata_for_wandb = {task_id: {k: v for k,v in data.spec.metadata.items() if k != "inspect_wandb_models_config"}}
-                current_wandb_task_metadata: dict[str, Any] = self.run.config.get("inspect task metadata", {})
+                metadata_for_wandb = {
+                    task_id: {
+                        k: v
+                        for k, v in data.spec.metadata.items()
+                        if k != "inspect_wandb_models_config"
+                    }
+                }
+                current_wandb_task_metadata: dict[str, Any] = self.run.config.get(
+                    "inspect task metadata", {}
+                )
                 wandb_task_metadata = current_wandb_task_metadata | metadata_for_wandb
-                self.run.config.update({"inspect task metadata": wandb_task_metadata}, allow_val_change=True)
+                self.run.config.update(
+                    {"inspect task metadata": wandb_task_metadata},
+                    allow_val_change=True,
+                )
             if self.settings.config:
                 self.run.config.update(self.settings.config, allow_val_change=True)
 
@@ -161,7 +194,9 @@ class WandBModelHooks(InspectWandBHooks):
             if self.settings.tags is not None and self.run.tags is not None:
                 self.run.tags = self.run.tags + tuple(self.settings.tags)
 
-            data.spec.metadata = (data.spec.metadata or {}) | {"wandb_run_url": self.run.url}
+            data.spec.metadata = (data.spec.metadata or {}) | {
+                "wandb_run_url": self.run.url
+            }
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
@@ -197,4 +232,3 @@ class WandBModelHooks(InspectWandBHooks):
             return 0.0
 
         return self._correct_samples * 1.0 / self._total_samples
-
