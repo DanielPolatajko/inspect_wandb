@@ -85,8 +85,8 @@ class WandBModelHooks(InspectWandBHooks):
             logger.warning(f"One or more tasks cancelled by user: {', '.join(cancelled_tasks)}")
             self.run.finish(exit_code=1)
         elif not(all(log.status == "success" for log in data.logs)) and last_run:
-            failed_tasks = [log.eval.task for log in data.logs if log.status == "error"]
-            logger.warning(f"One or more tasks failed: {', '.join(failed_tasks)}")
+            unsuccessful_tasks = [log.eval.task for log in data.logs if log.status != "success"]
+            logger.warning(f"One or more tasks were unsuccessful: {', '.join(unsuccessful_tasks)}")
             self.run.finish(exit_code=4)
         elif last_run:
             self.run.finish(exit_code=0)
