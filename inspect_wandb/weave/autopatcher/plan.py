@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from weave import op as weave_op
 from inspect_ai.solver import Generate, Plan, TaskState
@@ -8,12 +8,12 @@ from inspect_ai.solver._plan import logger
 from inspect_ai._util.registry import registry_info
 
 
-def _postprocess_solver_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
-    state: TaskState = inputs["state"]
+def _postprocess_solver_inputs(inputs: dict[str, TaskState | Generate]) -> dict[str, dict[str, Any]]:
+    state = cast(TaskState, inputs["state"])
     return {"state": state_jsonable(state)}
 
 
-def _postprocess_solver_output(output: TaskState) -> Any:
+def _postprocess_solver_output(output: TaskState) -> dict[str, Any]:
     return state_jsonable(output)
 
 

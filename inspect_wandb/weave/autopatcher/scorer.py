@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from weave import op as weave_op
 
@@ -11,9 +11,9 @@ from inspect_ai.solver import TaskState
 from inspect_ai.solver._task_state import state_jsonable
 
 
-def _postprocess_scorer_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
-    state: TaskState = inputs["state"]
-    target: Target = inputs["target"]
+def _postprocess_scorer_inputs(inputs: dict[str, TaskState | Target]) -> dict[str, dict[str, Any] | list[str]]:
+    state = cast(TaskState, inputs["state"])
+    target = cast(Target, inputs["target"])
     return {
             "state": state_jsonable(state),
             "target": target.target,
