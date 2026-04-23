@@ -1,5 +1,8 @@
 ## Unreleased
 
+### Fixed
+- Postprocess Task States using Inspect AI's state_jsonable method to show readable dicts instead of showing Python object reprs in Weave.
+
 ## [v0.2.3](https://pypi.org/project/inspect-wandb/0.2.3/) (16 March 2026)
 
 ### Fixed

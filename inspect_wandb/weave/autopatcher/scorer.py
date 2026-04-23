@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from weave import op as weave_op
 
 from inspect_ai.scorer import Scorer, Target
@@ -6,6 +8,18 @@ from inspect_ai.solver._plan import logger
 from inspect_ai._util.registry import registry_info, is_registry_object, set_registry_info
 from weave.trace.context import call_context
 from inspect_ai.solver import TaskState
+from inspect_ai.solver._task_state import state_jsonable
+
+
+def _postprocess_scorer_inputs(inputs: dict[str, TaskState | Target]) -> dict[str, dict[str, Any] | list[str]]:
+    state = cast(TaskState, inputs["state"])
+    target = cast(Target, inputs["target"])
+    return {
+            "state": state_jsonable(state),
+            "target": target.target,
+        }
+
+
 
 class PatchedScorer(Scorer):
 
@@ -32,9 +46,15 @@ class PatchedScorer(Scorer):
                 sample_call = sample_calls[0]
                 call_context.push_call(sample_call)
                 try:
-                    result = await weave_op(name=f"scorer_{self.scorer_name}")(self.original_scorer)(state, target)
+                    result = await weave_op(
+                        name=f"scorer_{self.scorer_name}",
+                        postprocess_inputs=_postprocess_scorer_inputs,
+                    )(self.original_scorer)(state, target)
                     return result
                 finally:
                     call_context.pop_call(sample_call.id)
 
-        return await weave_op(name=f"scorer_{self.scorer_name}")(self.original_scorer)(state, target)
+        return await weave_op(
+            name=f"scorer_{self.scorer_name}",
+            postprocess_inputs=_postprocess_scorer_inputs,
+        )(self.original_scorer)(state, target)
