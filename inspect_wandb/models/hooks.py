@@ -81,10 +81,7 @@ class WandBModelHooks(InspectWandBHooks):
                         f"File or folder '{file}' does not exist. Skipping wandb upload."
                     )
 
-        if data.exception is not None and isinstance(data.exception, KeyboardInterrupt):
-            logger.error("Inspect exited due to KeyboardInterrupt")
-            self.run.finish(exit_code=1)
-        elif data.exception is not None and isinstance(data.exception, SystemExit):
+        if data.exception is not None and isinstance(data.exception, SystemExit):
             logger.error(f"SystemExit running eval set: {data.exception}")
             self.run.finish(exit_code=3)
         elif (
@@ -92,8 +89,13 @@ class WandBModelHooks(InspectWandBHooks):
         ) and data.exception is not None:
             logger.error("Inspect exited due to exception")
             self.run.finish(exit_code=2)
-        elif not (all(log.status == "success" for log in data.logs)) and last_run:
-            logger.warning("One or more tasks failed, may retry if eval-set")
+        elif "cancelled" in [log.status for log in data.logs] and last_run:
+            cancelled_tasks = [log.eval.task for log in data.logs if log.status == "cancelled"]
+            logger.warning(f"One or more tasks cancelled by user: {', '.join(cancelled_tasks)}")
+            self.run.finish(exit_code=1)
+        elif not(all(log.status == "success" for log in data.logs)) and last_run:
+            unsuccessful_tasks = [log.eval.task for log in data.logs if log.status != "success"]
+            logger.warning(f"One or more tasks were unsuccessful: {', '.join(unsuccessful_tasks)}")
             self.run.finish(exit_code=4)
         elif last_run:
             self.run.finish(exit_code=0)
