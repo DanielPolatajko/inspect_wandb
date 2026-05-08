@@ -4,11 +4,11 @@ from inspect_ai.solver._transcript import solver_transcript
 from inspect_ai.solver._plan import logger
 from inspect_ai._util.registry import registry_info
 
+
 class PatchedPlan(Plan):
     async def __call__(self, state: TaskState, generate: Generate) -> TaskState:
         try:
             for _, solver in enumerate(self.steps):
-
                 async with solver_transcript(solver, state) as st:
                     solver_name = registry_info(solver).name
                     state = await weave_op(name=solver_name)(solver)(state, generate)
@@ -20,7 +20,9 @@ class PatchedPlan(Plan):
             if self.finish:
                 async with solver_transcript(self.finish, state) as st:
                     finish_name = registry_info(self.finish).name
-                    state = await weave_op(name=finish_name)(self.finish)(state, generate)
+                    state = await weave_op(name=finish_name)(self.finish)(
+                        state, generate
+                    )
                     st.complete(state)
 
         finally:
