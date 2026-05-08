@@ -11,8 +11,8 @@ from inspect_ai.analysis import evals_df
 
 logger = logging.getLogger(__name__)
 
-class InspectVizWriter:
 
+class InspectVizWriter:
     async def log_scores_heatmap(self, data: RunEnd, run: Run) -> None:
         try:
             logs = [log.location for log in data.logs]
@@ -24,7 +24,12 @@ class InspectVizWriter:
 
     async def _log_scores_heatmap(self, data: RunEnd, df: pd.DataFrame) -> None:
         viz_data = Data.from_dataframe(df)
-        plot = scores_heatmap(viz_data, task_name="task_display_name", model_name="model", score_value="score_headline_value")
+        plot = scores_heatmap(
+            viz_data,
+            task_name="task_display_name",
+            model_name="model",
+            score_value="score_headline_value",
+        )
 
         await self._log_image(data.run_id, plot, "scores_heatmap")
 
