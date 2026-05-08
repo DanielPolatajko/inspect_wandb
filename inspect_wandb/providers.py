@@ -9,6 +9,7 @@ if INSTALLED_EXTRAS["weave"]:
     def weave_evaluation_hooks():
         return WeaveEvaluationHooks
 
+
 @hooks(name="wandb_models_hooks", description="Weights & Biases model integration")
 def wandb_models_hooks():
     return WandBModelHooks

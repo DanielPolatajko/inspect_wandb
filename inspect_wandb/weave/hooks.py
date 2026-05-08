@@ -1,6 +1,15 @@
 from typing import Any
-from inspect_ai.hooks import RunEnd, SampleEnd, SampleStart, TaskStart, TaskEnd, EvalSetStart, EvalSetEnd
+from inspect_ai.hooks import (
+    RunEnd,
+    SampleEnd,
+    SampleStart,
+    TaskStart,
+    TaskEnd,
+    EvalSetStart,
+    EvalSetEnd,
+)
 from os import environ
+
 environ["WANDB_DISABLE_WEAVE"] = "1"
 from weave import init as weave_init, attributes as weave_attributes
 from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
@@ -23,8 +32,8 @@ from inspect_wandb.shared.base_hooks import InspectWandBHooks
 
 logger = getLogger(__name__)
 
-class WeaveEvaluationHooks(InspectWandBHooks):
 
+class WeaveEvaluationHooks(InspectWandBHooks):
     _settings_prefix = "inspect_wandb_weave_"
     _settings_cls = WeaveSettings
 
@@ -48,7 +57,6 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         if self.settings is not None and not self.settings.eval_traces_only:
             get_inspect_patcher().undo_patch()
 
-
     @override
     async def on_run_end(self, data: RunEnd) -> None:
         if not self._weave_initialized:
@@ -62,7 +70,9 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     weave_eval_logger.finish(
                         exception=WeaveEvaluationException(
                             message="Inspect run failed",
-                            error="\n".join([error.message for error in errors if error is not None])
+                            error="\n".join(
+                                [error.message for error in errors if error is not None]
+                            ),
                         )
                     )
                 else:
@@ -76,13 +86,16 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             if self.settings is not None and not self.settings.eval_traces_only:
                 get_inspect_patcher().undo_patch()
 
-
     @override
     async def on_task_start(self, data: TaskStart) -> None:
 
         if self._hooks_enabled is None:
-            self._metadata_overrides = self._extract_settings_overrides_from_eval_metadata(data)
-            self.settings = self._settings_cls.model_validate(self._metadata_overrides or {})
+            self._metadata_overrides = (
+                self._extract_settings_overrides_from_eval_metadata(data)
+            )
+            self.settings = self._settings_cls.model_validate(
+                self._metadata_overrides or {}
+            )
             assert self.settings is not None
             self._hooks_enabled = self.settings.enabled
 
@@ -99,14 +112,18 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     settings=UserSettings(
                         print_call_link=False,
                         display_viewer="print",
-                        implicitly_patch_integrations=False
+                        implicitly_patch_integrations=False,
                     ),
                 )
             except TransportQueryError as e:
                 if f"Entity {self.settings.entity} not found" in str(e):
-                    logger.warning(f"Weave integration disabled: invalid entity: {self.settings.entity}. {e}")
+                    logger.warning(
+                        f"Weave integration disabled: invalid entity: {self.settings.entity}. {e}"
+                    )
                 elif f"Project {self.settings.project} not found" in str(e):
-                    logger.warning(f"Weave integration disabled: invalid project: {self.settings.project}. {e}")
+                    logger.warning(
+                        f"Weave integration disabled: invalid project: {self.settings.project}. {e}"
+                    )
                 else:
                     logger.warning(f"Weave integration disabled: {e}")
                 self.settings.enabled = False
@@ -123,7 +140,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             dataset=data.spec.dataset.name or "test_dataset",
             model=model_name,
             eval_attributes=self._get_eval_metadata(data, self._eval_set_log_dir),
-            scorers=None
+            scorers=None,
         )
 
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
@@ -183,7 +200,10 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                 )
 
             sample_logger.predict_call.display_name = format_sample_display_name(
-                self.settings.sample_name_template, task_name=task_name, sample_id=data.summary.id, epoch=data.summary.epoch
+                self.settings.sample_name_template,
+                task_name=task_name,
+                sample_id=data.summary.id,
+                epoch=data.summary.epoch,
             )
 
             call_context.push_call(sample_logger.predict_call)
@@ -201,7 +221,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         task.add_done_callback(self._handle_weave_task_result)
 
     def _handle_weave_task_result(self, task: asyncio.Task) -> None:
-        if (e:= task.exception()):
+        if e := task.exception():
             raise e
 
     async def _log_sample_to_weave_async(self, data: SampleEnd) -> None:
@@ -215,18 +235,22 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         sample_score_logger.output = data.sample.output.completion
 
         if data.sample.scores is not None:
-            for k,v in data.sample.scores.items():
-                score_metadata = (v.metadata or {}) | ({"explanation": v.explanation} if v.explanation is not None else {}) | ({"answer": v.answer} if v.answer is not None else {})
+            for k, v in data.sample.scores.items():
+                score_metadata = (
+                    (v.metadata or {})
+                    | (
+                        {"explanation": v.explanation}
+                        if v.explanation is not None
+                        else {}
+                    )
+                    | ({"answer": v.answer} if v.answer is not None else {})
+                )
                 with weave_attributes(score_metadata):
                     await sample_score_logger.alog_score(
-                        scorer=k,
-                        score=format_score_types(v.value, scorer_name=k)
+                        scorer=k, score=format_score_types(v.value, scorer_name=k)
                     )
 
-        if (
-            hasattr(data.sample, "total_time")
-            and data.sample.total_time is not None
-        ):
+        if hasattr(data.sample, "total_time") and data.sample.total_time is not None:
             await sample_score_logger.alog_score(
                 scorer="total_time", score=data.sample.total_time
             )
@@ -252,11 +276,13 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                 ),
             )
 
-        if not getattr(sample_score_logger, '_has_finished', False):
+        if not getattr(sample_score_logger, "_has_finished", False):
             sample_score_logger.finish()
         self.sample_calls.pop(data.sample_id)
 
-    def _get_eval_metadata(self, data: TaskStart, log_dir: str | None = None) -> dict[str, str | dict[str, Any]]:
+    def _get_eval_metadata(
+        self, data: TaskStart, log_dir: str | None = None
+    ) -> dict[str, str | dict[str, Any]]:
 
         eval_metadata = data.spec.metadata or {}
 
@@ -288,16 +314,12 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         if self.settings.eval_traces_only:
             return
         if model.startswith("openrouter"):
-            openai_settings=IntegrationSettings(
-                op_settings=OpSettings(
-                    name="openrouter.api.call"
-                )
+            openai_settings = IntegrationSettings(
+                op_settings=OpSettings(name="openrouter.api.call")
             )
         else:
             openai_settings = None
-        autopatch_settings = CustomAutopatchSettings(
-            openai=openai_settings
-        )
+        autopatch_settings = CustomAutopatchSettings(openai=openai_settings)
         if find_spec("openai"):
             integrations.patch_openai(autopatch_settings.openai)
         if find_spec("anthropic"):

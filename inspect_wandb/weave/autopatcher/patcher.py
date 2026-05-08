@@ -14,14 +14,18 @@ inspect_patcher = MultiPatcher(
     ]
 )
 
+
 def get_inspect_patcher(settings: IntegrationSettings | None = None) -> MultiPatcher:
     return inspect_patcher
+
 
 class CustomAutopatchSettings(AutopatchSettings):
     inspect: IntegrationSettings = Field(default_factory=IntegrationSettings)
 
+
 def autopatch_inspect(settings: CustomAutopatchSettings) -> None:
     get_inspect_patcher(settings.inspect).attempt_patch()
+
 
 def reset_autopatch_inspect() -> None:
     get_inspect_patcher().undo_patch()
