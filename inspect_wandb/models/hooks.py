@@ -71,10 +71,7 @@ class WandBModelHooks(InspectWandBHooks):
                 else:
                     logger.warning(f"File or folder '{file}' does not exist. Skipping wandb upload.")
 
-        if data.exception is not None and isinstance(data.exception, KeyboardInterrupt):
-            logger.error("Inspect exited due to KeyboardInterrupt")
-            self.run.finish(exit_code=1)
-        elif data.exception is not None and isinstance(data.exception, SystemExit):
+        if data.exception is not None and isinstance(data.exception, SystemExit):
             logger.error(f"SystemExit running eval set: {data.exception}")
             self.run.finish(exit_code=3)
         elif (last_run:= all([not run["running"] for run in self._active_runs.values()])) and data.exception is not None:
