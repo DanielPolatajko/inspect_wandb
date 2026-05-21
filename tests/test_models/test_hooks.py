@@ -598,14 +598,14 @@ class TestWandBModelHooks:
         mock_logger.error.assert_called_with("Inspect exited due to exception")
 
     @pytest.mark.asyncio
-    async def test_cancelled_tasks_when_last_run_finishes_with_exit_code_1(self, mock_wandb_run: Run) -> None:
+    async def test_cancelled_tasks_when_last_run_finishes_with_exit_code_1(
+        self, mock_wandb_run: Run
+    ) -> None:
         # Given
         hooks = WandBModelHooks()
         hooks.run = mock_wandb_run
         hooks.settings = ModelsSettings(
-            enabled=True,
-            entity="test-entity",
-            project="test-project"
+            enabled=True, entity="test-entity", project="test-project"
         )
         hooks._hooks_enabled = True
         hooks._wandb_initialized = True
@@ -620,22 +620,26 @@ class TestWandBModelHooks:
         mock_cancelled_log.eval.task = "CancelledTask"
 
         # When
-        with patch('inspect_wandb.models.hooks.logger') as mock_logger:
+        with patch("inspect_wandb.models.hooks.logger") as mock_logger:
             await hooks.on_run_end(
                 RunEnd(
                     eval_set_id=None,
                     run_id="test-run",
                     exception=None,
-                    logs=[mock_success_log, mock_cancelled_log]
+                    logs=[mock_success_log, mock_cancelled_log],
                 )
             )
 
         # Then
         hooks.run.finish.assert_called_once_with(exit_code=1)
-        mock_logger.warning.assert_called_with("One or more tasks cancelled by user: CancelledTask")
+        mock_logger.warning.assert_called_with(
+            "One or more tasks cancelled by user: CancelledTask"
+        )
 
     @pytest.mark.asyncio
-    async def test_failed_tasks_when_last_run_finishes_with_exit_code_4(self, mock_wandb_run: Run) -> None:
+    async def test_failed_tasks_when_last_run_finishes_with_exit_code_4(
+        self, mock_wandb_run: Run
+    ) -> None:
         # Given
         hooks = WandBModelHooks()
         hooks.run = mock_wandb_run
@@ -661,13 +665,15 @@ class TestWandBModelHooks:
                     eval_set_id=None,
                     run_id="test-run",
                     exception=None,
-                    logs=[mock_success_log, mock_failed_log]
+                    logs=[mock_success_log, mock_failed_log],
                 )
             )
 
         # Then
         hooks.run.finish.assert_called_once_with(exit_code=4)
-        mock_logger.warning.assert_called_with("One or more tasks were unsuccessful: FailedTask")
+        mock_logger.warning.assert_called_with(
+            "One or more tasks were unsuccessful: FailedTask"
+        )
 
     @pytest.mark.asyncio
     async def test_successful_completion_when_last_run_finishes_with_exit_code_0(
