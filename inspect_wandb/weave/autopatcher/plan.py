@@ -21,7 +21,6 @@ class PatchedPlan(Plan):
     async def __call__(self, state: TaskState, generate: Generate) -> TaskState:
         try:
             for _, solver in enumerate(self.steps):
-
                 async with solver_transcript(solver, state) as st:
                     solver_name = registry_info(solver).name
                     state = await weave_op(

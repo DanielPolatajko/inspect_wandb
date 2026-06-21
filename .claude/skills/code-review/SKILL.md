@@ -41,7 +41,7 @@ The base branch is `$ARGUMENTS` if provided, otherwise `main`.
 ## What to flag but not fix automatically
 
 - Missing tests for new functionality — flag which code paths lack coverage
-- Missing or incomplete `CHANGELOG.md` entry under `## Unreleased` (required for new features and significant bugfixes, not for chores or trivial fixes)
+- Missing or incomplete `CHANGELOG.md` entry under `## Unreleased` (required for new features and significant bugfixes, not for chores or trivial fixes). If an entry exists, check it follows the existing format: correct subheading (`### Added`, `### Fixed`, `### Changed`, `### Removed`), single bullet point per entry starting with a verb, and first-time contributors listed under `### New Contributors`.
 - Missing docs updates for user-facing changes (new config, interfaces, or behaviour)
 - New third-party imports not in `pyproject.toml`
 - Anything requiring a design decision or structural change

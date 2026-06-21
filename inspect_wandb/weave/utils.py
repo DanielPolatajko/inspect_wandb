@@ -5,6 +5,7 @@ from logging import getLogger
 
 utils_logger = getLogger(__name__)
 
+
 def format_score_types(score_value: Value, scorer_name: str | None = None) -> ScoreType:
     if scorer_name in ["choice", "match"]:
         if score_value == CORRECT:
@@ -12,7 +13,9 @@ def format_score_types(score_value: Value, scorer_name: str | None = None) -> Sc
         elif score_value == INCORRECT:
             return False
         else:
-            utils_logger.warning(f"{scorer_name} is expected only to return values {CORRECT}, {INCORRECT}. Logging raw value to Weave.")
+            utils_logger.warning(
+                f"{scorer_name} is expected only to return values {CORRECT}, {INCORRECT}. Logging raw value to Weave."
+            )
     if isinstance(score_value, str):
         return {"score": score_value}
     elif isinstance(score_value, int):
@@ -25,17 +28,20 @@ def format_score_types(score_value: Value, scorer_name: str | None = None) -> Sc
         return dict(score_value)
     else:
         return score_value
-    
-def format_sample_display_name(template: str, task_name: str, sample_id: int | str, epoch: int) -> str:
+
+
+def format_sample_display_name(
+    template: str, task_name: str, sample_id: int | str, epoch: int
+) -> str:
     """
     Format sample display name using template string with safe variable substitution.
-    
+
     Args:
         template: Template string with placeholders like {task_name}, {sample_id}, etc.
         task_name: Name of the task being evaluated
         sample_id: ID of the sample (numeric or string)
         epoch: Epoch number
-        
+
     Returns:
         Formatted display name string
     """

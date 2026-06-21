@@ -14,11 +14,18 @@ class InspectWandBHooks(Hooks):
 
     @override
     def enabled(self) -> bool:
-        self.settings = self._settings_cls.model_validate(self._metadata_overrides or {})
+        self.settings = self._settings_cls.model_validate(
+            self._metadata_overrides or {}
+        )
         return self.settings.enabled
 
-    def _extract_settings_overrides_from_eval_metadata(self, data: TaskStart) -> dict[str, Any] | None:
+    def _extract_settings_overrides_from_eval_metadata(
+        self, data: TaskStart
+    ) -> dict[str, Any] | None:
         if data.spec.metadata is None:
             return None
-        return {k[len(self._settings_prefix):]: v for k, v in data.spec.metadata.items()
-                if k.lower().startswith(self._settings_prefix)} or None
+        return {
+            k[len(self._settings_prefix) :]: v
+            for k, v in data.spec.metadata.items()
+            if k.lower().startswith(self._settings_prefix)
+        } or None

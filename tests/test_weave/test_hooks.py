@@ -14,14 +14,11 @@ from gql.transport.exceptions import TransportQueryError
 from typing import Callable
 from .conftest import WeaveTestClient
 
+
 @pytest.fixture(scope="function")
 def test_settings() -> WeaveSettings:
-    return WeaveSettings(
-        enabled=True,
-        entity="test-entity",
-        project="test-project"
-    )
-    
+    return WeaveSettings(enabled=True, entity="test-entity", project="test-project")
+
 
 class TestWeaveEvaluationHooks:
     """
@@ -29,7 +26,9 @@ class TestWeaveEvaluationHooks:
     """
 
     @pytest.mark.asyncio
-    async def test_writes_eval_score_to_weave_on_sample_end(self, test_settings: WeaveSettings) -> None:
+    async def test_writes_eval_score_to_weave_on_sample_end(
+        self, test_settings: WeaveSettings
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -45,8 +44,15 @@ class TestWeaveEvaluationHooks:
                 input="test_input",
                 target="test_output",
                 scores={"test_score": Score(value=1.0)},
-                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
-            )
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -67,7 +73,9 @@ class TestWeaveEvaluationHooks:
         mock_score_logger.finish.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_writes_eval_score_to_weave_on_sample_end_with_metadata(self, test_settings: WeaveSettings) -> None:
+    async def test_writes_eval_score_to_weave_on_sample_end_with_metadata(
+        self, test_settings: WeaveSettings
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -83,8 +91,15 @@ class TestWeaveEvaluationHooks:
                 input="test_input",
                 target="test_output",
                 scores={"test_score": Score(value=1.0, metadata={"test": "test"})},
-                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
-            )
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -99,13 +114,14 @@ class TestWeaveEvaluationHooks:
 
         # Then
         mock_score_logger.alog_score.assert_called_once_with(
-            scorer="test_score",
-            score=1.0
+            scorer="test_score", score=1.0
         )
         mock_score_logger.finish.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_writes_inspect_eval_summary_metrics_to_weave_on_task_end(self, task_end_eval_log: EvalLog, test_settings: WeaveSettings) -> None:
+    async def test_writes_inspect_eval_summary_metrics_to_weave_on_task_end(
+        self, task_end_eval_log: EvalLog, test_settings: WeaveSettings
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -114,7 +130,7 @@ class TestWeaveEvaluationHooks:
             eval_set_id=None,
             run_id="test_run_id",
             eval_id="test_eval_id",
-            log=task_end_eval_log
+            log=task_end_eval_log,
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -125,19 +141,15 @@ class TestWeaveEvaluationHooks:
         await hooks.on_task_end(task_end)
 
         # Then
-        expected_summary = {
-            "test_score": {
-                "test_metric": 1.0
-            },
-            "sample_count": 1
-        }
+        expected_summary = {"test_score": {"test_metric": 1.0}, "sample_count": 1}
         mock_weave_eval_logger.log_summary.assert_called_once_with(
-            {"summary": expected_summary},
-            auto_summarize=False
+            {"summary": expected_summary}, auto_summarize=False
         )
 
     @pytest.mark.asyncio
-    async def test_passes_exception_to_weave_on_error_run_end(self, test_settings: WeaveSettings) -> None:
+    async def test_passes_exception_to_weave_on_error_run_end(
+        self, test_settings: WeaveSettings
+    ) -> None:
         # Given
         e = Exception("test_exception")
         hooks = WeaveEvaluationHooks()
@@ -146,10 +158,7 @@ class TestWeaveEvaluationHooks:
         hooks._weave_initialized = True  # Mark as initialized for cleanup
         hooks.weave_client = MagicMock(spec=WeaveClient)
         task_end = RunEnd(
-            eval_set_id=None,
-            run_id="test_run_id",
-            logs=EvalLogs([]),       
-            exception=e
+            eval_set_id=None, run_id="test_run_id", logs=EvalLogs([]), exception=e
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -161,25 +170,28 @@ class TestWeaveEvaluationHooks:
         await hooks.on_run_end(task_end)
 
         # Then
-        mock_weave_eval_logger.finish.assert_called_once_with(
-            exception=e
-        )
+        mock_weave_eval_logger.finish.assert_called_once_with(exception=e)
 
-
-    @pytest.mark.parametrize("metadata_key", [
-        "INSPECT_WANDB_WEAVE_ENABLED",
-        "inspect_wandb_weave_enabled",
-        "iNsPecT_wAnDb_WeAvE_EnAbLeD",
-    ])
-    def parse_settings_from_metadata_is_case_insensitive(self, create_task_start: Callable[dict | None, TaskStart], metadata_key: str) -> None:
+    @pytest.mark.parametrize(
+        "metadata_key",
+        [
+            "INSPECT_WANDB_WEAVE_ENABLED",
+            "inspect_wandb_weave_enabled",
+            "iNsPecT_wAnDb_WeAvE_EnAbLeD",
+        ],
+    )
+    def parse_settings_from_metadata_is_case_insensitive(
+        self, create_task_start: Callable[dict | None, TaskStart], metadata_key: str
+    ) -> None:
         """Test that parse_settings_from_metadata is case insensitive"""
         # Given
         hooks = WeaveEvaluationHooks()
-        metadata = create_task_start({
-            metadata_key: True,
-        })
-        
-        
+        metadata = create_task_start(
+            {
+                metadata_key: True,
+            }
+        )
+
         # When
         settings = hooks._extract_settings_overrides_from_eval_metadata(metadata)
 
@@ -193,123 +205,158 @@ class TestWeaveEnablementPriority:
     Tests for the new enablement priority logic: script metadata > project config
     """
 
-    def test_check_enable_override_with_true_metadata(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    def test_check_enable_override_with_true_metadata(
+        self, create_task_start: Callable[[dict | None], TaskStart]
+    ) -> None:
         """Test _check_enable_override returns True when metadata has weave_enabled: true"""
         # Given
         hooks = WeaveEvaluationHooks()
         task_start = create_task_start({"inspect_wandb_weave_enabled": True})
-        
+
         # When
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        
+
         # Then
         assert result == {"enabled": True}
 
-    def test_check_enable_override_with_false_metadata(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    def test_check_enable_override_with_false_metadata(
+        self, create_task_start: Callable[[dict | None], TaskStart]
+    ) -> None:
         """Test _check_enable_override returns False when metadata has weave_enabled: false"""
         # Given
         hooks = WeaveEvaluationHooks()
         task_start = create_task_start({"inspect_wandb_weave_enabled": False})
-        
+
         # When
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        
+
         # Then
         assert result == {"enabled": False}
 
-    def test_check_enable_override_with_no_weave_enabled_key(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    def test_check_enable_override_with_no_weave_enabled_key(
+        self, create_task_start: Callable[[dict | None], TaskStart]
+    ) -> None:
         """Test _check_enable_override returns None when metadata exists but no weave_enabled key"""
-        # Given 
+        # Given
         hooks = WeaveEvaluationHooks()
         task_start = create_task_start({"other_key": "value"})
-        
+
         # When
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        
+
         # Then
         assert result is None
 
-    def test_check_enable_override_with_none_metadata(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    def test_check_enable_override_with_none_metadata(
+        self, create_task_start: Callable[[dict | None], TaskStart]
+    ) -> None:
         """Test _check_enable_override returns None when metadata is None"""
         # Given
         hooks = WeaveEvaluationHooks()
         task_start = create_task_start(None)
-        
+
         # When
         result = hooks._extract_settings_overrides_from_eval_metadata(task_start)
-        
+
         # Then
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_script_metadata_overrides_settings_enabled_true(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    async def test_script_metadata_overrides_settings_enabled_true(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[[dict | None], TaskStart],
+    ) -> None:
         """Test script metadata weave_enabled: true overrides settings.enabled: false"""
         # Given
         test_settings.enabled = False
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
         task_start = create_task_start({"inspect_wandb_weave_enabled": True})
-        
+
         # When
-        metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
+        metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(
+            task_start
+        )
         hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
-        
+
         # Then
         assert hooks.settings.enabled is True
 
     @pytest.mark.asyncio
-    async def test_fallback_to_settings_when_no_metadata_override(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    async def test_fallback_to_settings_when_no_metadata_override(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[[dict | None], TaskStart],
+    ) -> None:
         """Test falls back to settings.enabled when no script metadata override"""
         # Given
         test_settings.enabled = True
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
         task_start = create_task_start(None)
-        
+
         # When
-        metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
+        metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(
+            task_start
+        )
         hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
-        
+
         # Then
         assert hooks.settings.enabled
 
     @pytest.mark.asyncio
-    async def test_fallback_to_settings_when_metadata_has_no_weave_enabled_key(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart], monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_fallback_to_settings_when_metadata_has_no_weave_enabled_key(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[[dict | None], TaskStart],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Test falls back to settings.enabled when metadata exists but has no weave_enabled key"""
         # Given
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
         hooks = WeaveEvaluationHooks()
-        task_start = create_task_start(metadata={"other_key": "value"})  # No weave_enabled key
-        
+        task_start = create_task_start(
+            metadata={"other_key": "value"}
+        )  # No weave_enabled key
+
         # When
-        metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(task_start)
+        metadata_overrides = hooks._extract_settings_overrides_from_eval_metadata(
+            task_start
+        )
         hooks.settings = WeaveSettings.model_validate(metadata_overrides or {})
-        
+
         # Then
         assert not hooks.settings.enabled
 
     @pytest.mark.asyncio
-    async def test_weave_run_url_added_to_eval_metadata(self, test_settings: WeaveSettings, create_task_start: Callable[[dict | None], TaskStart], weave_test_client: WeaveTestClient) -> None:
+    async def test_weave_run_url_added_to_eval_metadata(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[[dict | None], TaskStart],
+        weave_test_client: WeaveTestClient,
+    ) -> None:
         """Test weave_run_url is added to eval metadata"""
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
         hooks._hooks_enabled = True  # Enable hooks for this test
         hooks._weave_initialized = True  # Mark as initialized for cleanup
-        
+
         # Mock EvaluationLogger to return our mock with proper ui_url
         mock_evaluation_logger = MagicMock(spec=EvaluationLogger)
         mock_call = MagicMock()
         type(mock_call).ui_url = PropertyMock(return_value="test_url")
         mock_evaluation_logger._evaluate_call = mock_call
-        
-        with patch('inspect_wandb.weave.hooks.EvaluationLogger', return_value=mock_evaluation_logger):
+
+        with patch(
+            "inspect_wandb.weave.hooks.EvaluationLogger",
+            return_value=mock_evaluation_logger,
+        ):
             task_start = create_task_start()
-            
+
             # When
-            await hooks.on_task_start(
-                task_start      
-                )
+            await hooks.on_task_start(task_start)
 
         # Then
         assert task_start.spec.metadata["weave_run_url"] == "test_url"
@@ -321,7 +368,9 @@ class TestConcurrencyOnSampleEnd:
     """
 
     @pytest.mark.asyncio
-    async def test_on_sample_end_returns_immediately_without_blocking(self, test_settings: WeaveSettings) -> None:
+    async def test_on_sample_end_returns_immediately_without_blocking(
+        self, test_settings: WeaveSettings
+    ) -> None:
         """Test that on_sample_end returns immediately without waiting for Weave operations"""
         import time
 
@@ -340,8 +389,15 @@ class TestConcurrencyOnSampleEnd:
                 input="test_input",
                 target="test_output",
                 scores={"test_score": Score(value=1.0)},
-                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
-            )
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -354,7 +410,9 @@ class TestConcurrencyOnSampleEnd:
         assert duration < 0.01
 
     @pytest.mark.asyncio
-    async def test_on_sample_end_creates_background_task(self, test_settings: WeaveSettings) -> None:
+    async def test_on_sample_end_creates_background_task(
+        self, test_settings: WeaveSettings
+    ) -> None:
         """Test that on_sample_end creates a background task for Weave operations"""
         from unittest.mock import patch
 
@@ -373,16 +431,25 @@ class TestConcurrencyOnSampleEnd:
                 input="test_input",
                 target="test_output",
                 scores={},
-                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
-            )
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
         )
 
-        with patch('asyncio.create_task') as mock_create_task:
+        with patch("asyncio.create_task") as mock_create_task:
             await hooks.on_sample_end(sample)
             mock_create_task.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_prevents_double_finish_on_concurrent_samples(self, test_settings: WeaveSettings) -> None:
+    async def test_prevents_double_finish_on_concurrent_samples(
+        self, test_settings: WeaveSettings
+    ) -> None:
         """Test that finish() is only called once even with concurrent access"""
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -399,8 +466,15 @@ class TestConcurrencyOnSampleEnd:
                 input="test_input",
                 target="test_output",
                 scores={},
-                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
-            )
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -418,7 +492,9 @@ class TestConcurrencyOnSampleEnd:
         mock_score_logger.finish.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_uses_alog_score_instead_of_log_score(self, test_settings: WeaveSettings) -> None:
+    async def test_uses_alog_score_instead_of_log_score(
+        self, test_settings: WeaveSettings
+    ) -> None:
         """Test that alog_score is used instead of log_score to avoid event loop conflicts"""
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -435,8 +511,15 @@ class TestConcurrencyOnSampleEnd:
                 input="test_input",
                 target="test_output",
                 scores={"test_score": Score(value=1.0)},
-                output=ModelOutput(model="mockllm/model", choices=[ChatCompletionChoice(message=ChatMessageAssistant(content="test_output"))])
-            )
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
         )
 
         mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
@@ -449,13 +532,14 @@ class TestConcurrencyOnSampleEnd:
         await hooks._log_sample_to_weave_async(sample)
 
         mock_score_logger.alog_score.assert_called_once_with(
-            scorer="test_score",
-            score=1.0
+            scorer="test_score", score=1.0
         )
         mock_score_logger.log_score.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_background_task_exceptions_handled_properly(self, test_settings: WeaveSettings) -> None:
+    async def test_background_task_exceptions_handled_properly(
+        self, test_settings: WeaveSettings
+    ) -> None:
         """Test that exceptions in background tasks are handled without crashing evaluation"""
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -465,13 +549,16 @@ class TestConcurrencyOnSampleEnd:
         mock_weave_eval_logger.log_prediction.side_effect = Exception("Weave error")
         hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
         with pytest.raises(Exception, match="Weave error"):
-            hooks._handle_weave_task_result(MagicMock(exception=lambda: Exception("Weave error")))
+            hooks._handle_weave_task_result(
+                MagicMock(exception=lambda: Exception("Weave error"))
+            )
 
 
 class TestTraceSamplesDisabled:
-
     @pytest.mark.asyncio
-    async def test_on_sample_start_is_noop_when_eval_traces_only(self, create_task_start: Callable[[dict | None], TaskStart]) -> None:
+    async def test_on_sample_start_is_noop_when_eval_traces_only(
+        self, create_task_start: Callable[[dict | None], TaskStart]
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = WeaveSettings(
@@ -510,7 +597,7 @@ class TestTraceSamplesDisabled:
         sample_end.eval_id = "test_eval_id"
 
         # When
-        with patch('asyncio.create_task') as mock_create_task:
+        with patch("asyncio.create_task") as mock_create_task:
             await hooks.on_sample_end(sample_end)
 
         # Then
@@ -527,8 +614,10 @@ class TestTraceSamplesDisabled:
         )
 
         # When
-        with patch('inspect_wandb.weave.hooks.get_inspect_patcher') as mock_get_patcher, \
-             patch('inspect_wandb.weave.hooks.integrations') as mock_integrations:
+        with (
+            patch("inspect_wandb.weave.hooks.get_inspect_patcher") as mock_get_patcher,
+            patch("inspect_wandb.weave.hooks.integrations") as mock_integrations,
+        ):
             hooks._autopatch(model="openai/gpt-4")
 
         # Then
@@ -542,47 +631,71 @@ class TestWeaveTransportQueryErrors:
     """
 
     @pytest.mark.asyncio
-    async def test_weave_disabled_on_invalid_entity_error(self, test_settings: WeaveSettings, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_weave_disabled_on_invalid_entity_error(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[dict | None, TaskStart],
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
         hooks._hooks_enabled = True
-        mock_init = MagicMock(side_effect=TransportQueryError("Entity test-entity not found"))
+        mock_init = MagicMock(
+            side_effect=TransportQueryError("Entity test-entity not found")
+        )
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.weave.hooks.weave_init', mock_init), \
-             patch('inspect_wandb.weave.hooks.logger') as mock_logger:
+        with (
+            patch("inspect_wandb.weave.hooks.weave_init", mock_init),
+            patch("inspect_wandb.weave.hooks.logger") as mock_logger,
+        ):
             await hooks.on_task_start(task_start)
 
         # Then
         mock_init.assert_called_once()
         assert hooks.settings.enabled is False
         assert hooks._hooks_enabled is False
-        mock_logger.warning.assert_called_once_with("Weave integration disabled: invalid entity: test-entity. Entity test-entity not found")
+        mock_logger.warning.assert_called_once_with(
+            "Weave integration disabled: invalid entity: test-entity. Entity test-entity not found"
+        )
 
     @pytest.mark.asyncio
-    async def test_weave_disabled_on_invalid_project_error(self, test_settings: WeaveSettings, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_weave_disabled_on_invalid_project_error(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[dict | None, TaskStart],
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
         hooks._hooks_enabled = True
-        mock_init = MagicMock(side_effect=TransportQueryError("Project test-project not found"))
+        mock_init = MagicMock(
+            side_effect=TransportQueryError("Project test-project not found")
+        )
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.weave.hooks.weave_init', mock_init), \
-             patch('inspect_wandb.weave.hooks.logger') as mock_logger:
+        with (
+            patch("inspect_wandb.weave.hooks.weave_init", mock_init),
+            patch("inspect_wandb.weave.hooks.logger") as mock_logger,
+        ):
             await hooks.on_task_start(task_start)
 
         # Then
         mock_init.assert_called_once()
         assert hooks.settings.enabled is False
         assert hooks._hooks_enabled is False
-        mock_logger.warning.assert_called_once_with("Weave integration disabled: invalid project: test-project. Project test-project not found")
+        mock_logger.warning.assert_called_once_with(
+            "Weave integration disabled: invalid project: test-project. Project test-project not found"
+        )
 
     @pytest.mark.asyncio
-    async def test_weave_disabled_on_generic_transport_query_error(self, test_settings: WeaveSettings, create_task_start: Callable[dict | None, TaskStart]) -> None:
+    async def test_weave_disabled_on_generic_transport_query_error(
+        self,
+        test_settings: WeaveSettings,
+        create_task_start: Callable[dict | None, TaskStart],
+    ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -591,12 +704,16 @@ class TestWeaveTransportQueryErrors:
         task_start = create_task_start()
 
         # When
-        with patch('inspect_wandb.weave.hooks.weave_init', mock_init), \
-             patch('inspect_wandb.weave.hooks.logger') as mock_logger:
+        with (
+            patch("inspect_wandb.weave.hooks.weave_init", mock_init),
+            patch("inspect_wandb.weave.hooks.logger") as mock_logger,
+        ):
             await hooks.on_task_start(task_start)
 
         # Then
         mock_init.assert_called_once()
         assert hooks.settings.enabled is False
         assert hooks._hooks_enabled is False
-        mock_logger.warning.assert_called_once_with("Weave integration disabled: connection timeout")
+        mock_logger.warning.assert_called_once_with(
+            "Weave integration disabled: connection timeout"
+        )

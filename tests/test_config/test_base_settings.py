@@ -10,7 +10,6 @@ READ_NETRC_PATH = "inspect_wandb.config.settings.base.read_netrc_auth"
 
 @pytest.mark.no_mock_api_key
 class TestBaseSettingsApiKeyValidation:
-
     def test_disables_when_no_api_key(self) -> None:
         # Given
         env = {k: v for k, v in os.environ.items() if k != "WANDB_API_KEY"}

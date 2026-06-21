@@ -31,14 +31,14 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "myst_parser",
-    "sphinx_copybutton"
+    "sphinx_copybutton",
 ]
 
 
 # MyST Parser configuration - enables macros and cross-references
 myst_enable_extensions = [
     "substitution",  # Enables {{ macro_name }} syntax
-    "colon_fence",   # Enables {ref}`label` and {doc}`filename` links
+    "colon_fence",  # Enables {ref}`label` and {doc}`filename` links
     "html_admonition",  # Enables HTML admonitions with details/summary
     "deflist",  # Enables definition lists
 ]
@@ -71,14 +71,14 @@ html_theme = "sphinx_rtd_theme"
 
 # RTD Theme configuration for external links
 html_theme_options = {
-    'vcs_pageview_mode': 'blob',
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
+    "vcs_pageview_mode": "blob",
+    "prev_next_buttons_location": "bottom",
+    "style_external_links": False,
+    "collapse_navigation": True,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -88,5 +88,5 @@ html_static_path = ["_static"]
 
 # Custom CSS files
 html_css_files = [
-    'custom.css',
+    "custom.css",
 ]

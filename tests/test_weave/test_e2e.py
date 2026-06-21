@@ -6,16 +6,23 @@ from inspect_ai.dataset import Sample
 from inspect_ai.scorer import exact
 from inspect_ai.solver import generate
 
+
 class TestEndToEndInspectRuns:
     """
     A test class for tests which simulate an entire Inspect eval run
     """
-    def test_weave_init_not_called_on_run_start_when_disabled(self, patched_weave_evaluation_hooks: dict[str, MagicMock], hello_world_eval: Callable[[], Task], monkeypatch: MonkeyPatch) -> None:
+
+    def test_weave_init_not_called_on_run_start_when_disabled(
+        self,
+        patched_weave_evaluation_hooks: dict[str, MagicMock],
+        hello_world_eval: Callable[[], Task],
+        monkeypatch: MonkeyPatch,
+    ) -> None:
         # Given - Mock settings loader to return disabled weave settings
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "false")
-        
+
         weave_init = patched_weave_evaluation_hooks["weave_init"]
-        
+
         # When
         inspect_eval(hello_world_eval, model="mockllm/model")
 
@@ -26,7 +33,11 @@ class TestEndToEndInspectRuns:
         # Cleanup
         monkeypatch.delenv("INSPECT_WANDB_WEAVE_ENABLED")
 
-    def test_weave_init_called_on_run_start(self, patched_weave_evaluation_hooks: dict[str, MagicMock], hello_world_eval: Callable[[], Task]) -> None:
+    def test_weave_init_called_on_run_start(
+        self,
+        patched_weave_evaluation_hooks: dict[str, MagicMock],
+        hello_world_eval: Callable[[], Task],
+    ) -> None:
         weave_init = patched_weave_evaluation_hooks["weave_init"]
 
         # When
@@ -36,9 +47,15 @@ class TestEndToEndInspectRuns:
         assert isinstance(weave_init, MagicMock)
         weave_init.assert_called_once()
 
-    def test_weave_evaluation_finalised_with_exception_on_error(self, patched_weave_evaluation_hooks: dict[str, MagicMock], error_eval: Callable[[], Task]) -> None:
+    def test_weave_evaluation_finalised_with_exception_on_error(
+        self,
+        patched_weave_evaluation_hooks: dict[str, MagicMock],
+        error_eval: Callable[[], Task],
+    ) -> None:
         # Given
-        weave_evaluation_logger = patched_weave_evaluation_hooks["weave_evaluation_logger"]
+        weave_evaluation_logger = patched_weave_evaluation_hooks[
+            "weave_evaluation_logger"
+        ]
         weave_evaluation_logger.finish = MagicMock()
         weave_evaluation_logger._is_finalized = False
 
@@ -46,11 +63,20 @@ class TestEndToEndInspectRuns:
         inspect_eval(error_eval, model="mockllm/model")
 
         # Then
-        assert weave_evaluation_logger.finish.call_args_list[0][1]["exception"].error == "RuntimeError('Simulated failure')"
+        assert (
+            weave_evaluation_logger.finish.call_args_list[0][1]["exception"].error
+            == "RuntimeError('Simulated failure')"
+        )
 
-    def test_weave_evaluation_logger_created_on_task_start(self, patched_weave_evaluation_hooks: dict[str, MagicMock], hello_world_eval: Callable[[], Task]) -> None:
+    def test_weave_evaluation_logger_created_on_task_start(
+        self,
+        patched_weave_evaluation_hooks: dict[str, MagicMock],
+        hello_world_eval: Callable[[], Task],
+    ) -> None:
         # Given
-        weave_evaluation_logger = patched_weave_evaluation_hooks["weave_evaluation_logger"]
+        weave_evaluation_logger = patched_weave_evaluation_hooks[
+            "weave_evaluation_logger"
+        ]
 
         # When
         eval_logs = inspect_eval(hello_world_eval, model="mockllm/model")
@@ -82,25 +108,30 @@ class TestEndToEndInspectRuns:
                     "run_id": run_id,
                     "task_id": task_id,
                     "eval_id": eval_id,
-                    'epochs': epochs, 
-                    'epochs_reducer': epochs_reducer, 
-                    'fail_on_error': fail_on_error, 
-                    'continue_on_fail': continue_on_fail,
-                    'sandbox_cleanup': sandbox_cleanup, 
-                    'log_samples': log_samples, 
-                    'log_realtime': log_realtime, 
-                    'log_images': log_images,
-                    'log_model_api': log_model_api,
-                    'score_display': score_display
-                }
+                    "epochs": epochs,
+                    "epochs_reducer": epochs_reducer,
+                    "fail_on_error": fail_on_error,
+                    "continue_on_fail": continue_on_fail,
+                    "sandbox_cleanup": sandbox_cleanup,
+                    "log_samples": log_samples,
+                    "log_realtime": log_realtime,
+                    "log_images": log_images,
+                    "log_model_api": log_model_api,
+                    "score_display": score_display,
+                },
             },
-            scorers=None
+            scorers=None,
         )
 
-    def test_eval_with_high_concurrency_completes_without_errors(self, patched_weave_evaluation_hooks: dict[str, MagicMock], monkeypatch: MonkeyPatch) -> None:
+    def test_eval_with_high_concurrency_completes_without_errors(
+        self,
+        patched_weave_evaluation_hooks: dict[str, MagicMock],
+        monkeypatch: MonkeyPatch,
+    ) -> None:
         """
         Test that evaluations with many samples and low max_connections complete without concurrency errors.
         """
+
         # Given
         @task
         def high_concurrency_eval():
@@ -115,20 +146,20 @@ class TestEndToEndInspectRuns:
                 solver=[generate()],
                 scorer=exact(),
                 metadata={"test": "concurrency_test"},
-                name="high_concurrency_eval"
+                name="high_concurrency_eval",
             )
 
         monkeypatch.setenv("INSPECT_WANDB_WEAVE_ENABLED", "true")
 
-        weave_evaluation_logger = patched_weave_evaluation_hooks["weave_evaluation_logger"]
+        weave_evaluation_logger = patched_weave_evaluation_hooks[
+            "weave_evaluation_logger"
+        ]
         weave_evaluation_logger.finish = MagicMock()
         weave_evaluation_logger._is_finalized = False
 
         # When
         eval_logs = inspect_eval(
-            high_concurrency_eval,
-            model="mockllm/model",
-            max_connections=3
+            high_concurrency_eval, model="mockllm/model", max_connections=3
         )
 
         # Then
