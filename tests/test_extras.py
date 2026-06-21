@@ -77,7 +77,6 @@ class TestExtraInstallations:
     def test_weave_hooks_dont_run_with_base_install(
         self, base_install_venv: Path
     ) -> None:
-
         # Given (base_install)
         # When
         proc = subprocess.Popen(
@@ -103,7 +102,6 @@ class TestExtraInstallations:
     def test_weave_hooks_run_with_weave_install(
         self, base_and_weave_install_venv: Path
     ) -> None:
-
         # Given (base_and_weave_install)
         # When
         proc = subprocess.Popen(
@@ -129,7 +127,6 @@ class TestExtraInstallations:
     def test_all_hooks_run_with_all_extras_install(
         self, all_extras_install_venv: Path
     ) -> None:
-
         # Given (all_extras_install)
         # When
         proc = subprocess.Popen(
@@ -155,7 +152,6 @@ class TestExtraInstallations:
     def test_models_hooks_run_with_viz_install(
         self, base_and_vision_install_venv: Path
     ) -> None:
-
         # Given (base_and_vision_install)
         # When
         proc = subprocess.Popen(

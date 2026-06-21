@@ -2,6 +2,7 @@ from typing import Any
 from inspect_ai.hooks import (
     RunEnd,
     SampleEnd,
+    SampleEvent,
     SampleStart,
     TaskStart,
     TaskEnd,
@@ -29,6 +30,7 @@ from weave import integrations
 from importlib.util import find_spec
 from gql.transport.exceptions import TransportQueryError
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
+from inspect_wandb.weave.sessions import AgentSessionEmitter
 
 logger = getLogger(__name__)
 
@@ -45,6 +47,16 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _weave_initialized: bool = False
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
+    _session_emitters: dict[str, AgentSessionEmitter] = {}
+    _task_models: dict[str, str] = {}
+
+    def _agent_sessions_active(self) -> bool:
+        return bool(
+            self._hooks_enabled
+            and self.settings is not None
+            and self.settings.agent_sessions
+            and not self.settings.eval_traces_only
+        )
 
     @override
     async def on_eval_set_start(self, data: EvalSetStart) -> None:
@@ -80,6 +92,8 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         self.weave_eval_loggers.clear()
         self.task_mapping.clear()
+        self._session_emitters.clear()
+        self._task_models.clear()
 
         if not self._eval_set:
             self.weave_client.finish(use_progress_bar=False)
@@ -88,7 +102,6 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
-
         if self._hooks_enabled is None:
             self._metadata_overrides = (
                 self._extract_settings_overrides_from_eval_metadata(data)
@@ -145,6 +158,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
         self.task_mapping[data.eval_id] = data.spec.task
+        self._task_models[data.eval_id] = data.spec.model
 
         assert weave_eval_logger._evaluate_call is not None
         call_context.push_call(weave_eval_logger._evaluate_call)
@@ -199,16 +213,31 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     inputs={"input": data.summary.input},
                 )
 
-            sample_logger.predict_call.display_name = format_sample_display_name(
+            display_name = format_sample_display_name(
                 self.settings.sample_name_template,
                 task_name=task_name,
                 sample_id=data.summary.id,
                 epoch=data.summary.epoch,
             )
+            sample_logger.predict_call.display_name = display_name
 
             call_context.push_call(sample_logger.predict_call)
 
             self.sample_calls[data.sample_id] = sample_logger
+
+            if self._agent_sessions_active():
+                self._session_emitters[data.sample_id] = AgentSessionEmitter(
+                    session_id=data.sample_id,
+                    session_name=display_name,
+                    agent_name=task_name,
+                    model=self._task_models.get(data.eval_id, ""),
+                )
+
+    @override
+    async def on_sample_event(self, data: SampleEvent) -> None:
+        emitter = self._session_emitters.get(data.sample_id)
+        if emitter is not None:
+            emitter.handle_event(data.event)
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
@@ -216,6 +245,10 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             self.settings is not None and self.settings.eval_traces_only
         ):
             return
+
+        emitter = self._session_emitters.pop(data.sample_id, None)
+        if emitter is not None:
+            emitter.finish()
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         task.add_done_callback(self._handle_weave_task_result)
@@ -283,7 +316,6 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     def _get_eval_metadata(
         self, data: TaskStart, log_dir: str | None = None
     ) -> dict[str, str | dict[str, Any]]:
-
         eval_metadata = data.spec.metadata or {}
 
         inspect_data = {

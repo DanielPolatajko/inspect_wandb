@@ -1,5 +1,11 @@
 ## Unreleased
 
+### Added
+- Add opt-in `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. See the new agent monitoring demo in the docs.
+
+### Changed
+- Bump minimum `weave` to `0.52.43` (agent Session SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
+
 ## [v0.2.3](https://pypi.org/project/inspect-wandb/0.2.3/) (16 March 2026)
 
 ### Fixed

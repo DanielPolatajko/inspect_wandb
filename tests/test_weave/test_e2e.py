@@ -84,19 +84,13 @@ class TestEndToEndInspectRuns:
         # Then
         assert isinstance(weave_evaluation_logger, MagicMock)
         assert len(eval_logs) == 1
-        run_id = eval_logs[0].eval.run_id
-        task_id = eval_logs[0].eval.task_id
-        eval_id = eval_logs[0].eval.eval_id
-        epochs = eval_logs[0].eval.config.epochs
-        epochs_reducer = eval_logs[0].eval.config.epochs_reducer
-        fail_on_error = eval_logs[0].eval.config.fail_on_error
-        continue_on_fail = eval_logs[0].eval.config.continue_on_fail
-        sandbox_cleanup = eval_logs[0].eval.config.sandbox_cleanup
-        log_samples = eval_logs[0].eval.config.log_samples
-        log_realtime = eval_logs[0].eval.config.log_realtime
-        log_images = eval_logs[0].eval.config.log_images
-        log_model_api = eval_logs[0].eval.config.log_model_api
-        score_display = eval_logs[0].eval.config.score_display
+        config = eval_logs[0].eval.config
+        expected_inspect = {
+            "run_id": eval_logs[0].eval.run_id,
+            "task_id": eval_logs[0].eval.task_id,
+            "eval_id": eval_logs[0].eval.eval_id,
+            **{k: v for k, v in config.__dict__.items() if v is not None},
+        }
 
         weave_evaluation_logger.assert_called_once_with(
             name="hello_world_eval",
@@ -104,21 +98,7 @@ class TestEndToEndInspectRuns:
             model="mockllm__model",
             eval_attributes={
                 "test": "test",
-                "inspect": {
-                    "run_id": run_id,
-                    "task_id": task_id,
-                    "eval_id": eval_id,
-                    "epochs": epochs,
-                    "epochs_reducer": epochs_reducer,
-                    "fail_on_error": fail_on_error,
-                    "continue_on_fail": continue_on_fail,
-                    "sandbox_cleanup": sandbox_cleanup,
-                    "log_samples": log_samples,
-                    "log_realtime": log_realtime,
-                    "log_images": log_images,
-                    "log_model_api": log_model_api,
-                    "score_display": score_display,
-                },
+                "inspect": expected_inspect,
             },
             scorers=None,
         )

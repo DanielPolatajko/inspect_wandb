@@ -13,6 +13,10 @@ class WeaveSettings(InspectWandBBaseSettings):
         default=False,
         description="When True, only eval-level summary logging is performed and sample-level Weave traces are disabled.",
     )
+    agent_sessions: bool = Field(
+        default=False,
+        description="When True, stream each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, in addition to eval logging.",
+    )
     sample_name_template: str = Field(
         default="{task_name}-sample-{sample_id}-epoch-{epoch}",
         description="Template for sample display names. Available variables: {task_name}, {sample_id}, {epoch}",
