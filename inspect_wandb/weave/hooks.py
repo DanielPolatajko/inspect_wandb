@@ -30,7 +30,11 @@ from weave import integrations
 from importlib.util import find_spec
 from gql.transport.exceptions import TransportQueryError
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
-from inspect_wandb.weave.sessions import AgentSessionEmitter
+from inspect_wandb.weave.sessions import (
+    AgentSessionEmitter,
+    build_outcome,
+    flatten_metadata,
+)
 
 logger = getLogger(__name__)
 
@@ -49,6 +53,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _eval_set_log_dir: str | None = None
     _session_emitters: dict[str, AgentSessionEmitter] = {}
     _task_models: dict[str, str] = {}
+    _task_context: dict[str, dict[str, Any]] = {}
 
     def _agent_sessions_active(self) -> bool:
         return bool(
@@ -94,6 +99,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         self.task_mapping.clear()
         self._session_emitters.clear()
         self._task_models.clear()
+        self._task_context.clear()
 
         if not self._eval_set:
             self.weave_client.finish(use_progress_bar=False)
@@ -159,6 +165,11 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
         self.task_mapping[data.eval_id] = data.spec.task
         self._task_models[data.eval_id] = data.spec.model
+        self._task_context[data.eval_id] = {
+            "task_id": data.spec.task_id,
+            "dataset": data.spec.dataset.name,
+            "sandbox": data.spec.sandbox.type if data.spec.sandbox else None,
+        }
 
         assert weave_eval_logger._evaluate_call is not None
         call_context.push_call(weave_eval_logger._evaluate_call)
@@ -226,11 +237,27 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             self.sample_calls[data.sample_id] = sample_logger
 
             if self._agent_sessions_active():
+                task_context = self._task_context.get(data.eval_id, {})
+                identity = {
+                    "task": task_name,
+                    "task_id": task_context.get("task_id"),
+                    "eval_id": data.eval_id,
+                    "run_id": data.run_id,
+                    "eval_set_id": data.eval_set_id,
+                    "sample_id": data.summary.id,
+                    "sample_uuid": data.sample_id,
+                    "epoch": data.summary.epoch,
+                    "target": data.summary.target,
+                    "dataset": task_context.get("dataset"),
+                    "sandbox": task_context.get("sandbox"),
+                    **flatten_metadata(data.summary.metadata),
+                }
                 self._session_emitters[data.sample_id] = AgentSessionEmitter(
                     session_id=data.sample_id,
                     session_name=display_name,
                     agent_name=task_name,
                     model=self._task_models.get(data.eval_id, ""),
+                    identity=identity,
                 )
 
     @override
@@ -248,7 +275,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         emitter = self._session_emitters.pop(data.sample_id, None)
         if emitter is not None:
-            emitter.finish()
+            emitter.finish(build_outcome(data.sample))
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         task.add_done_callback(self._handle_weave_task_result)

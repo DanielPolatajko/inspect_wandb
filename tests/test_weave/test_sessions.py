@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
-import pytest
 from inspect_ai.event import ModelEvent, ToolEvent
 from inspect_ai.model import (
     ChatCompletionChoice,
@@ -11,12 +11,17 @@ from inspect_ai.model import (
     ModelOutput,
     ModelUsage,
 )
+from inspect_ai.scorer import Score
 
 from inspect_wandb.weave.sessions import (
     AgentSessionEmitter,
-    model_event_to_llm,
+    build_outcome,
+    flatten_metadata,
+    llm_span_attrs,
     to_messages,
-    tool_event_to_tool,
+    tool_span_attrs,
+    usage_attrs,
+    usage_from_event,
 )
 
 T0 = datetime(2026, 6, 21, 12, 0, 0, tzinfo=timezone.utc)
@@ -24,24 +29,18 @@ T1 = datetime(2026, 6, 21, 12, 0, 1, tzinfo=timezone.utc)
 T2 = datetime(2026, 6, 21, 12, 0, 2, tzinfo=timezone.utc)
 
 
-def make_model_event(
-    completion: str = "thinking",
-    input_tokens: int = 100,
-    output_tokens: int = 20,
-    timestamp: datetime = T0,
-    completed: datetime = T1,
-) -> ModelEvent:
+def make_model_event(input_tokens: int = 100, output_tokens: int = 20) -> ModelEvent:
     return ModelEvent(
         model="anthropic/claude-haiku-4-5",
         input=[ChatMessageUser(content="solve the task")],
         tools=[],
         tool_choice="auto",
-        config=GenerateConfig(temperature=0.5, max_tokens=1024),
+        config=GenerateConfig(temperature=0.5, max_tokens=1024, top_k=40),
         output=ModelOutput(
             model="anthropic/claude-haiku-4-5",
             choices=[
                 ChatCompletionChoice(
-                    message=ChatMessageAssistant(content=completion),
+                    message=ChatMessageAssistant(content="thinking"),
                     stop_reason="tool_calls",
                 )
             ],
@@ -51,180 +50,194 @@ def make_model_event(
                 total_tokens=input_tokens + output_tokens,
             ),
         ),
-        timestamp=timestamp,
-        completed=completed,
+        timestamp=T0,
+        completed=T1,
     )
 
 
-def make_tool_event(
-    tool_id: str = "call_1",
-    function: str = "bash",
-    result: str = "command output",
-    timestamp: datetime = T1,
-    completed: datetime = T2,
-) -> ToolEvent:
+def make_tool_event(tool_id: str = "call_1", function: str = "bash") -> ToolEvent:
     return ToolEvent(
         id=tool_id,
         function=function,
         arguments={"cmd": "ls -la"},
-        result=result,
-        timestamp=timestamp,
-        completed=completed,
+        result="command output",
+        timestamp=T1,
+        completed=T2,
     )
 
 
-class TestPureMappers:
+class TestPureBuilders:
     def test_to_messages_maps_roles(self) -> None:
         # Given
-        messages = [
-            ChatMessageUser(content="hello"),
-            ChatMessageAssistant(content="hi there"),
-        ]
+        messages = [ChatMessageUser(content="hi"), ChatMessageAssistant(content="yo")]
 
         # When
         result = to_messages(messages)
 
         # Then
         assert [(m.role, m.content) for m in result] == [
-            ("user", "hello"),
-            ("assistant", "hi there"),
+            ("user", "hi"),
+            ("assistant", "yo"),
         ]
 
-    def test_model_event_maps_usage_timing_and_provider(self) -> None:
+    def test_llm_span_attrs_has_usage_provider_and_inspect_extras(self) -> None:
         # Given
         event = make_model_event(input_tokens=321, output_tokens=99)
 
         # When
-        llm = model_event_to_llm(event)
+        attrs = llm_span_attrs(event, conversation_id="sess-1")
 
         # Then
-        assert llm.model == "anthropic/claude-haiku-4-5"
-        assert llm.provider_name == "anthropic"
-        assert llm.usage.input_tokens == 321
-        assert llm.usage.output_tokens == 99
-        assert llm.finish_reasons == ["tool_calls"]
-        assert llm.request_temperature == 0.5
-        assert llm.request_max_tokens == 1024
-        assert llm.started_at == T0
-        assert llm.ended_at == T1
+        assert attrs["gen_ai.request.model"] == "anthropic/claude-haiku-4-5"
+        assert attrs["gen_ai.provider.name"] == "anthropic"
+        assert attrs["gen_ai.usage.input_tokens"] == 321
+        assert attrs["gen_ai.usage.output_tokens"] == 99
+        assert attrs["gen_ai.request.temperature"] == 0.5
+        assert attrs["inspect.generate.top_k"] == 40
 
-    def test_tool_event_maps_fields(self) -> None:
+    def test_tool_span_attrs_truncates_and_adds_inspect_extras(self) -> None:
         # Given
-        event = make_tool_event(tool_id="call_42", function="python")
+        event = make_tool_event()
+        event.result = "x" * 10000
+        event.working_time = 1.5
 
         # When
-        tool = tool_event_to_tool(event)
+        attrs = tool_span_attrs(event, conversation_id="sess-1")
 
         # Then
-        assert tool.name == "python"
-        assert tool.tool_call_id == "call_42"
-        assert '"cmd"' in tool.arguments
-        assert tool.result == "command output"
-        assert tool.started_at == T1
-        assert tool.ended_at == T2
+        assert attrs["gen_ai.operation.name"] == "execute_tool"
+        assert attrs["inspect.tool.working_time"] == 1.5
+        assert any("…[truncated]" in str(v) for v in attrs.values())
 
-    def test_tool_result_is_truncated(self) -> None:
+    def test_usage_rollup_sums_and_builds_gen_ai_keys(self) -> None:
         # Given
-        event = make_tool_event(result="x" * 10000)
+        e1 = make_model_event(input_tokens=100, output_tokens=10)
+        e2 = make_model_event(input_tokens=50, output_tokens=5)
 
         # When
-        tool = tool_event_to_tool(event)
+        from inspect_wandb.weave.sessions import _add_usage
+
+        total = _add_usage(usage_from_event(e1), usage_from_event(e2))
+        attrs = usage_attrs(total)
 
         # Then
-        assert tool.result.endswith("…[truncated]")
-        assert len(tool.result) < 10000
+        assert attrs["gen_ai.usage.input_tokens"] == 150
+        assert attrs["gen_ai.usage.output_tokens"] == 15
+
+    def test_flatten_metadata(self) -> None:
+        # Given
+        metadata = {"difficulty": "hard", "category": "crypto"}
+
+        # When
+        result = flatten_metadata(metadata)
+
+        # Then
+        assert result == {"metadata.difficulty": "hard", "metadata.category": "crypto"}
+
+    def test_build_outcome_includes_scores_timing_and_tokens(self) -> None:
+        # Given
+        sample = SimpleNamespace(
+            total_time=12.3,
+            working_time=10.1,
+            error=None,
+            limit=None,
+            scores={"includes": Score(value=1.0, answer="73")},
+            model_usage={"anthropic/claude-haiku-4-5": ModelUsage(total_tokens=7815)},
+        )
+
+        # When
+        outcome = build_outcome(sample)
+
+        # Then
+        assert outcome["total_time"] == 12.3
+        assert outcome["score.includes"] == 1.0
+        assert outcome["score.includes.answer"] == "73"
+        assert outcome["total_tokens"] == 7815
 
 
 class TestAgentSessionEmitter:
-    def _emitter(self) -> AgentSessionEmitter:
-        return AgentSessionEmitter(
-            session_id="sample-uuid",
-            session_name="task-sample-1",
-            agent_name="my_agent",
-            model="anthropic/claude-haiku-4-5",
-        )
+    def _run(self, events: list, outcome: dict | None = None) -> list:
+        recorded: list = []
 
-    def test_segments_turns_on_model_event_boundary(self) -> None:
+        def fake_emit(tracer, name, parent_ctx, start_ns, end_ns, attrs):  # noqa: ANN001
+            recorded.append((name, dict(attrs)))
+            return MagicMock()
+
+        emitter = AgentSessionEmitter(
+            session_id="sess-uuid",
+            session_name="task-sample-1",
+            agent_name="my_task",
+            model="anthropic/claude-haiku-4-5",
+            identity={"task": "my_task", "sample_id": 1},
+        )
+        with (
+            patch("inspect_wandb.weave.sessions._emit_span", side_effect=fake_emit),
+            patch(
+                "inspect_wandb.weave.sessions.set_span_in_context", return_value=None
+            ),
+            patch(
+                "inspect_wandb.weave.sessions.otel_trace.get_tracer",
+                return_value=MagicMock(),
+            ),
+        ):
+            for event in events:
+                emitter.handle_event(event)
+            emitter.finish(outcome)
+        return recorded
+
+    def test_segments_turns_and_rolls_up_usage(self) -> None:
         # Given
-        emitter = self._emitter()
         events = [
-            make_model_event(),
+            make_model_event(input_tokens=100, output_tokens=10),
             make_tool_event(tool_id="a"),
+            make_model_event(input_tokens=50, output_tokens=5),
             make_tool_event(tool_id="b"),
-            make_model_event(),
-            make_tool_event(tool_id="c"),
         ]
 
         # When
-        with patch("inspect_wandb.weave.sessions.log_turn") as mock_log_turn:
-            for event in events:
-                emitter.handle_event(event)
-            emitter.finish()
+        recorded = self._run(events)
 
         # Then
-        assert mock_log_turn.call_count == 2
-        first_spans = mock_log_turn.call_args_list[0].kwargs["spans"]
-        second_spans = mock_log_turn.call_args_list[1].kwargs["spans"]
-        assert len(first_spans) == 3
-        assert len(second_spans) == 2
-        assert all(
-            call.kwargs["session_id"] == "sample-uuid"
-            for call in mock_log_turn.call_args_list
-        )
+        turns = [(n, a) for n, a in recorded if n.startswith("invoke_agent")]
+        assert len(turns) == 2
+        assert turns[0][1]["gen_ai.usage.input_tokens"] == 100
+        assert turns[0][1]["inspect.turn_index"] == 0
+        assert turns[1][1]["inspect.turn_index"] == 1
+        assert turns[0][1]["inspect.task"] == "my_task"
 
-    def test_final_turn_flushed_on_finish(self) -> None:
+    def test_final_turn_carries_outcome(self) -> None:
         # Given
-        emitter = self._emitter()
+        events = [make_model_event(), make_tool_event()]
 
         # When
-        with patch("inspect_wandb.weave.sessions.log_turn") as mock_log_turn:
-            emitter.handle_event(make_model_event())
-            assert mock_log_turn.call_count == 0
-            emitter.finish()
+        recorded = self._run(events, outcome={"score.includes": 1.0, "total_time": 5.0})
 
         # Then
-        assert mock_log_turn.call_count == 1
-
-    def test_tool_event_before_model_event_is_ignored(self) -> None:
-        # Given
-        emitter = self._emitter()
-
-        # When
-        with patch("inspect_wandb.weave.sessions.log_turn") as mock_log_turn:
-            emitter.handle_event(make_tool_event())
-            emitter.finish()
-
-        # Then
-        assert mock_log_turn.call_count == 0
+        turns = [(n, a) for n, a in recorded if n.startswith("invoke_agent")]
+        assert turns[-1][1]["inspect.score.includes"] == 1.0
+        assert turns[-1][1]["inspect.total_time"] == 5.0
 
     def test_emit_failure_is_swallowed(self) -> None:
         # Given
-        emitter = self._emitter()
+        emitter = AgentSessionEmitter(
+            session_id="s",
+            session_name="n",
+            agent_name="a",
+            model="m",
+            identity={},
+        )
 
         # When / Then
         with patch(
-            "inspect_wandb.weave.sessions.log_turn",
-            side_effect=RuntimeError("weave down"),
+            "inspect_wandb.weave.sessions._emit_span",
+            side_effect=RuntimeError("otel down"),
         ):
             emitter.handle_event(make_model_event())
             emitter.finish()  # must not raise
 
+    def test_tool_before_model_is_ignored(self) -> None:
+        # Given / When
+        recorded = self._run([make_tool_event()])
 
-class TestHookWiring:
-    @pytest.mark.asyncio
-    async def test_agent_sessions_disabled_creates_no_emitter(self) -> None:
-        # Given
-        from inspect_wandb.config.settings import WeaveSettings
-        from inspect_wandb.weave.hooks import WeaveEvaluationHooks
-
-        hooks = WeaveEvaluationHooks()
-        hooks._hooks_enabled = True
-        hooks.settings = WeaveSettings(
-            enabled=True,
-            entity="e",
-            project="p",
-            agent_sessions=False,
-        )
-
-        # When / Then
-        assert hooks._agent_sessions_active() is False
+        # Then
+        assert recorded == []
