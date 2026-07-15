@@ -88,7 +88,6 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     @override
     async def on_task_start(self, data: TaskStart) -> None:
-
         if self._hooks_enabled is None:
             self._metadata_overrides = (
                 self._extract_settings_overrides_from_eval_metadata(data)
@@ -283,7 +282,6 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     def _get_eval_metadata(
         self, data: TaskStart, log_dir: str | None = None
     ) -> dict[str, str | dict[str, Any]]:
-
         eval_metadata = data.spec.metadata or {}
 
         inspect_data = {

@@ -511,7 +511,7 @@ class TestWandBModelHooks:
         assert task_start.spec.metadata["wandb_run_url"] == "mock_wandb_url"
 
     @pytest.mark.asyncio
-    async def test_keyboard_interrupt_exception_finishes_with_exit_code_1(
+    async def test_keyboard_interrupt_exception_finishes_with_exit_code_2(
         self, mock_wandb_run: Run
     ) -> None:
         # Given
@@ -536,8 +536,8 @@ class TestWandBModelHooks:
             )
 
         # Then
-        hooks.run.finish.assert_called_once_with(exit_code=1)
-        mock_logger.error.assert_called_with("Inspect exited due to KeyboardInterrupt")
+        hooks.run.finish.assert_called_once_with(exit_code=2)
+        mock_logger.error.assert_called_with("Inspect exited due to exception")
 
     @pytest.mark.asyncio
     async def test_system_exit_exception_finishes_with_exit_code_3(
@@ -598,6 +598,45 @@ class TestWandBModelHooks:
         mock_logger.error.assert_called_with("Inspect exited due to exception")
 
     @pytest.mark.asyncio
+    async def test_cancelled_tasks_when_last_run_finishes_with_exit_code_1(
+        self, mock_wandb_run: Run
+    ) -> None:
+        # Given
+        hooks = WandBModelHooks()
+        hooks.run = mock_wandb_run
+        hooks.settings = ModelsSettings(
+            enabled=True, entity="test-entity", project="test-project"
+        )
+        hooks._hooks_enabled = True
+        hooks._wandb_initialized = True
+        hooks._active_runs = {"test-run": {"running": False, "exception": None}}
+
+        mock_success_log = MagicMock()
+        mock_success_log.status = "success"
+        mock_success_log.eval.task = "SuccessfulTask"
+
+        mock_cancelled_log = MagicMock()
+        mock_cancelled_log.status = "cancelled"
+        mock_cancelled_log.eval.task = "CancelledTask"
+
+        # When
+        with patch("inspect_wandb.models.hooks.logger") as mock_logger:
+            await hooks.on_run_end(
+                RunEnd(
+                    eval_set_id=None,
+                    run_id="test-run",
+                    exception=None,
+                    logs=[mock_success_log, mock_cancelled_log],
+                )
+            )
+
+        # Then
+        hooks.run.finish.assert_called_once_with(exit_code=1)
+        mock_logger.warning.assert_called_with(
+            "One or more tasks cancelled by user: CancelledTask"
+        )
+
+    @pytest.mark.asyncio
     async def test_failed_tasks_when_last_run_finishes_with_exit_code_4(
         self, mock_wandb_run: Run
     ) -> None:
@@ -611,8 +650,13 @@ class TestWandBModelHooks:
         hooks._wandb_initialized = True
         hooks._active_runs = {"test-run": {"running": False, "exception": None}}
 
+        mock_success_log = MagicMock()
+        mock_success_log.status = "success"
+        mock_success_log.eval.task = "SuccessfulTask"
+
         mock_failed_log = MagicMock()
         mock_failed_log.status = "failed"
+        mock_failed_log.eval.task = "FailedTask"
 
         # When
         with patch("inspect_wandb.models.hooks.logger") as mock_logger:
@@ -621,14 +665,14 @@ class TestWandBModelHooks:
                     eval_set_id=None,
                     run_id="test-run",
                     exception=None,
-                    logs=[mock_failed_log],
+                    logs=[mock_success_log, mock_failed_log],
                 )
             )
 
         # Then
         hooks.run.finish.assert_called_once_with(exit_code=4)
         mock_logger.warning.assert_called_with(
-            "One or more tasks failed, may retry if eval-set"
+            "One or more tasks were unsuccessful: FailedTask"
         )
 
     @pytest.mark.asyncio
