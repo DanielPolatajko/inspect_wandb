@@ -8,7 +8,9 @@ from inspect_ai.solver._plan import logger
 from inspect_ai._util.registry import registry_info
 
 
-def _postprocess_solver_inputs(inputs: dict[str, TaskState | Generate]) -> dict[str, dict[str, Any]]:
+def _postprocess_solver_inputs(
+    inputs: dict[str, TaskState | Generate],
+) -> dict[str, dict[str, Any]]:
     state = cast(TaskState, inputs["state"])
     return {"state": state_jsonable(state)}
 
