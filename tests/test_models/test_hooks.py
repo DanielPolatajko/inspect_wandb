@@ -511,7 +511,7 @@ class TestWandBModelHooks:
         assert task_start.spec.metadata["wandb_run_url"] == "mock_wandb_url"
 
     @pytest.mark.asyncio
-    async def test_keyboard_interrupt_exception_finishes_with_exit_code_1(
+    async def test_keyboard_interrupt_exception_finishes_with_exit_code_2(
         self, mock_wandb_run: Run
     ) -> None:
         # Given
@@ -536,8 +536,8 @@ class TestWandBModelHooks:
             )
 
         # Then
-        hooks.run.finish.assert_called_once_with(exit_code=1)
-        mock_logger.error.assert_called_with("Inspect exited due to KeyboardInterrupt")
+        hooks.run.finish.assert_called_once_with(exit_code=2)
+        mock_logger.error.assert_called_with("Inspect exited due to exception")
 
     @pytest.mark.asyncio
     async def test_system_exit_exception_finishes_with_exit_code_3(
