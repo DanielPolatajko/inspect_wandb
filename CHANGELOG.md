@@ -1,10 +1,11 @@
 ## Unreleased
 
 ### Added
-- Add opt-in `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. Each trajectory is logged as an agent (named after the task, versioned by model) with per-sample sessions; turns carry rolled-up token usage and rich `inspect.*` metadata (task/eval/sample identity, sample metadata, generation config, per-tool errors/timing, and final scores/outcome) for filtering and analysis. See the new agent monitoring demo in the docs.
-
-### Changed
+- Add `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. 
 - Bump minimum `weave` to `0.52.43` (agent Session SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
+
+### Fixed
+- Postprocess Task States using Inspect AI's state_jsonable method to show readable dicts instead of showing Python object reprs in Weave.
 
 ## [v0.2.3](https://pypi.org/project/inspect-wandb/0.2.3/) (16 March 2026)
 
