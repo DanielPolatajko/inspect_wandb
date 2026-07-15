@@ -31,6 +31,7 @@ from importlib.util import find_spec
 from gql.transport.exceptions import TransportQueryError
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
 from inspect_wandb.weave.sessions import (
+    SESSIONS_AVAILABLE,
     AgentSessionEmitter,
     build_outcome,
     flatten_metadata,
@@ -57,7 +58,8 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     def _agent_sessions_active(self) -> bool:
         return bool(
-            self._hooks_enabled
+            SESSIONS_AVAILABLE
+            and self._hooks_enabled
             and self.settings is not None
             and self.settings.agent_sessions
             and not self.settings.eval_traces_only
@@ -258,6 +260,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     agent_name=task_name,
                     model=self._task_models.get(data.eval_id, ""),
                     identity=identity,
+                    include_content=self.settings.agent_sessions_include_content,
                 )
 
     @override

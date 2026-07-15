@@ -1,6 +1,13 @@
 from inspect_ai.log import EvalLog
-from unittest.mock import MagicMock, PropertyMock, patch
-from inspect_ai.hooks import SampleEnd, SampleStart, TaskEnd, RunEnd, TaskStart
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from inspect_ai.hooks import (
+    SampleEnd,
+    SampleEvent,
+    SampleStart,
+    TaskEnd,
+    RunEnd,
+    TaskStart,
+)
 from inspect_ai.model import ChatCompletionChoice, ModelOutput, ChatMessageAssistant
 from inspect_ai.log import EvalSample
 from inspect_ai._eval.eval import EvalLogs
@@ -717,3 +724,92 @@ class TestWeaveTransportQueryErrors:
         mock_logger.warning.assert_called_once_with(
             "Weave integration disabled: connection timeout"
         )
+
+
+class TestAgentSessionsWiring:
+    """Tests for the agent-sessions hook lifecycle wiring."""
+
+    def _enabled_hooks(self) -> WeaveEvaluationHooks:
+        hooks = WeaveEvaluationHooks()
+        hooks._hooks_enabled = True
+        hooks.settings = WeaveSettings(
+            enabled=True, entity="e", project="p", agent_sessions=True
+        )
+        return hooks
+
+    def test_agent_sessions_inactive_when_weave_unavailable(self) -> None:
+        # Given
+        hooks = self._enabled_hooks()
+
+        # When
+        with patch("inspect_wandb.weave.hooks.SESSIONS_AVAILABLE", False):
+            active = hooks._agent_sessions_active()
+
+        # Then
+        assert active is False
+
+    def test_agent_sessions_inactive_when_setting_disabled(self) -> None:
+        # Given
+        hooks = self._enabled_hooks()
+        hooks.settings = WeaveSettings(
+            enabled=True, entity="e", project="p", agent_sessions=False
+        )
+
+        # When / Then
+        assert hooks._agent_sessions_active() is False
+
+    def test_agent_sessions_active_when_enabled(self) -> None:
+        # Given
+        hooks = self._enabled_hooks()
+
+        # When / Then
+        assert hooks._agent_sessions_active() is True
+
+    @pytest.mark.asyncio
+    async def test_on_sample_event_routes_to_emitter(self) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        emitter = MagicMock()
+        hooks._session_emitters = {"sid": emitter}
+        event = object()
+        data = SampleEvent(
+            eval_set_id=None, run_id="r", eval_id="e", sample_id="sid", event=event
+        )
+
+        # When
+        await hooks.on_sample_event(data)
+
+        # Then
+        emitter.handle_event.assert_called_once_with(event)
+
+    @pytest.mark.asyncio
+    async def test_on_sample_end_finishes_emitter_with_outcome(
+        self, test_settings: WeaveSettings
+    ) -> None:
+        # Given
+        hooks = WeaveEvaluationHooks()
+        hooks._hooks_enabled = True
+        hooks.settings = test_settings
+        emitter = MagicMock()
+        hooks._session_emitters = {"sid": emitter}
+        data = SampleEnd(
+            eval_set_id=None,
+            run_id="r",
+            eval_id="e",
+            sample_id="sid",
+            sample=EvalSample(
+                id=1,
+                epoch=1,
+                input="i",
+                target="t",
+                output=ModelOutput(model="mockllm/model"),
+            ),
+        )
+
+        # When
+        with patch.object(hooks, "_log_sample_to_weave_async", new=AsyncMock()):
+            await hooks.on_sample_end(data)
+
+        # Then
+        emitter.finish.assert_called_once()
+        assert "sid" not in hooks._session_emitters

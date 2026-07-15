@@ -15,6 +15,8 @@ from inspect_ai.scorer import Score
 
 from inspect_wandb.weave.sessions import (
     AgentSessionEmitter,
+    _coerce,
+    _emit_span,
     build_outcome,
     flatten_metadata,
     llm_span_attrs,
@@ -109,6 +111,29 @@ class TestPureBuilders:
         assert attrs["inspect.tool.working_time"] == 1.5
         assert any("…[truncated]" in str(v) for v in attrs.values())
 
+    def test_include_content_false_drops_messages_keeps_usage(self) -> None:
+        # Given
+        event = make_model_event(input_tokens=100, output_tokens=20)
+
+        # When
+        attrs = llm_span_attrs(event, conversation_id="sess-1", include_content=False)
+
+        # Then
+        assert "gen_ai.input.messages" not in attrs
+        assert "gen_ai.output.messages" not in attrs
+        assert attrs["gen_ai.usage.input_tokens"] == 100
+
+    def test_tool_include_content_false_drops_args_and_result(self) -> None:
+        # Given
+        event = make_tool_event()
+
+        # When
+        attrs = tool_span_attrs(event, conversation_id="sess-1", include_content=False)
+
+        # Then
+        assert attrs["gen_ai.operation.name"] == "execute_tool"
+        assert all("ls -la" not in str(v) for v in attrs.values())
+
     def test_usage_rollup_sums_and_builds_gen_ai_keys(self) -> None:
         # Given
         e1 = make_model_event(input_tokens=100, output_tokens=10)
@@ -133,6 +158,46 @@ class TestPureBuilders:
 
         # Then
         assert result == {"metadata.difficulty": "hard", "metadata.category": "crypto"}
+
+    def test_flatten_metadata_ignores_non_dict(self) -> None:
+        # Given / When / Then
+        assert flatten_metadata("not a dict") == {}
+
+    def test_coerce_preserves_scalars_and_json_encodes_collections(self) -> None:
+        # Given / When / Then
+        assert _coerce(True) is True  # bool checked before int
+        assert _coerce(5) == 5
+        assert _coerce("x") == "x"
+        assert _coerce(["a", "b"]) == '["a", "b"]'
+        assert _coerce(None) is None
+
+    def test_usage_from_event_handles_missing_usage(self) -> None:
+        # Given
+        event = make_model_event()
+        event.output.usage = None
+
+        # When
+        usage = usage_from_event(event)
+
+        # Then
+        assert usage.input_tokens == 0
+        assert usage.output_tokens == 0
+
+    def test_emit_span_sets_attrs_skips_empty_and_ends(self) -> None:
+        # Given
+        tracer = MagicMock()
+        span = MagicMock()
+        tracer.start_span.return_value = span
+
+        # When
+        _emit_span(tracer, "chat x", None, 100, 200, {"a": 1, "b": None, "c": ""})
+
+        # Then
+        tracer.start_span.assert_called_once_with(
+            "chat x", context=None, start_time=100
+        )
+        span.set_attribute.assert_called_once_with("a", 1)
+        span.end.assert_called_once_with(end_time=200)
 
     def test_build_outcome_includes_scores_timing_and_tokens(self) -> None:
         # Given

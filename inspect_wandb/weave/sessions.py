@@ -118,17 +118,22 @@ def usage_attrs(usage: Usage) -> dict[str, Any]:
     return attrs
 
 
-def llm_span_attrs(event: ModelEvent, *, conversation_id: str) -> dict[str, Any]:
+def llm_span_attrs(
+    event: ModelEvent, *, conversation_id: str, include_content: bool = True
+) -> dict[str, Any]:
     config = event.config
     output = event.output
+    output_messages = (
+        to_messages([output.choices[0].message])
+        if output.choices
+        else [Message.assistant(output.completion)]
+    )
     base = llm_attributes(
         model=event.model,
         provider_name=_provider(event.model),
         conversation_id=conversation_id,
-        input_messages=to_messages(event.input),
-        output_messages=to_messages([output.choices[0].message])
-        if output.choices
-        else [Message.assistant(output.completion)],
+        input_messages=to_messages(event.input) if include_content else None,
+        output_messages=output_messages if include_content else None,
         usage=usage_from_event(event),
         finish_reasons=[c.stop_reason for c in output.choices if c.stop_reason],
         response_model=output.model or "",
@@ -151,15 +156,19 @@ def llm_span_attrs(event: ModelEvent, *, conversation_id: str) -> dict[str, Any]
     return {**base, **extra}
 
 
-def tool_span_attrs(event: ToolEvent, *, conversation_id: str) -> dict[str, Any]:
+def tool_span_attrs(
+    event: ToolEvent, *, conversation_id: str, include_content: bool = True
+) -> dict[str, Any]:
     result = str(event.result)
     if len(result) > MAX_TOOL_RESULT_CHARS:
         result = result[:MAX_TOOL_RESULT_CHARS] + "…[truncated]"
     base = execute_tool_attributes(
         tool_name=event.function,
         conversation_id=conversation_id,
-        tool_call_arguments=json.dumps(event.arguments, default=str),
-        tool_call_result=result,
+        tool_call_arguments=json.dumps(event.arguments, default=str)
+        if include_content
+        else "",
+        tool_call_result=result if include_content else "",
         tool_call_id=event.id,
     )
     extra = _inspect_attrs(
@@ -215,12 +224,14 @@ class AgentSessionEmitter:
         agent_name: str,
         model: str,
         identity: dict[str, Any],
+        include_content: bool = True,
     ) -> None:
         self._session_id = session_id
         self._session_name = session_name
         self._agent_name = agent_name
         self._model = model
         self._identity_attrs = _inspect_attrs(identity)
+        self._include_content = include_content
         self._turn_index = 0
         self._reset_turn()
 
@@ -240,7 +251,11 @@ class AgentSessionEmitter:
                 self._children.append(
                     (
                         f"chat {event.model}",
-                        llm_span_attrs(event, conversation_id=self._session_id),
+                        llm_span_attrs(
+                            event,
+                            conversation_id=self._session_id,
+                            include_content=self._include_content,
+                        ),
                         _ns(event.timestamp),
                         _ns(event.completed),
                     )
@@ -251,7 +266,11 @@ class AgentSessionEmitter:
                 self._children.append(
                     (
                         f"execute_tool {event.function}",
-                        tool_span_attrs(event, conversation_id=self._session_id),
+                        tool_span_attrs(
+                            event,
+                            conversation_id=self._session_id,
+                            include_content=self._include_content,
+                        ),
                         _ns(event.timestamp),
                         _ns(event.completed),
                     )

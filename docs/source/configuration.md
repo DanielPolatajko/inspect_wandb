@@ -36,6 +36,7 @@ The following is a list of all of the configurable settings you can tweak in Ins
 | **SAMPLE_NAME_TEMPLATE** | Sets a template which is used to name sample traces in the Weave UI. The three variables `task_name, sample_id, epoch` will be filled from the Inspect context, allowing you to change the static text that appears around them. | `{task_name}-sample-{sample_id}-epoch-{epoch}` |
 | **EVAL_TRACES_ONLY** | When `true`, disables sample-level Weave traces and only logs eval-level summaries. Useful for large evals where per-sample trace volume is prohibitive. | `False` |
 | **AGENT_SESSIONS** | When `true`, streams each sample's agent trajectory to Weave's agent Session SDK (the [Agents view](https://docs.wandb.ai/weave/guides/tracking/view-agent-activity)) as turns complete, in addition to eval logging. Enables live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. See {doc}`demo-agent-monitoring`. | `False` |
+| **AGENT_SESSIONS_INCLUDE_CONTENT** | When `agent_sessions` is enabled, whether to include full message and tool content on the streamed spans. Set `false` to log only structure (turns, tool names, tokens, timing, scores) for very long-horizon evals where per-turn transcript volume is prohibitive. | `True` |
 
 ## Configuration Priority
 
