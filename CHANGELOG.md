@@ -2,6 +2,7 @@
 
 ### Fixed
 - Postprocess Task States using Inspect AI's state_jsonable method to show readable dicts instead of showing Python object reprs in Weave.
+- Stop importing `wandb.old.core.wandb_dir`, which was removed in wandb 0.27.1 and made the package fail to import on newer wandb versions. The wandb settings directory is now resolved with a small stdlib-only helper.
 
 ## [v0.2.3](https://pypi.org/project/inspect-wandb/0.2.3/) (16 March 2026)
 

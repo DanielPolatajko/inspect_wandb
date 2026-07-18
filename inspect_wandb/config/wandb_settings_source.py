@@ -1,13 +1,29 @@
 import configparser
+import os
 from pathlib import Path
 from typing import Any
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings.sources import PydanticBaseSettingsSource
-from wandb.old.core import wandb_dir
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def wandb_dir() -> str:
+    """Return the directory wandb uses for local run data and its settings file.
+
+    Reimplements wandb's own resolution without importing the private
+    ``wandb.old.core`` module, which was removed in wandb 0.27.1. The root is
+    ``$WANDB_DIR`` if set, otherwise the current working directory, and the
+    hidden ``.wandb`` subdirectory is preferred over ``wandb`` when it already
+    exists (mirroring ``wandb.sdk.wandb_settings``). Only the settings-file
+    lookup is needed here, so the original's writability fallback to a temp
+    directory is intentionally omitted.
+    """
+    root = os.environ.get("WANDB_DIR") or os.getcwd()
+    dirname = ".wandb" if os.path.isdir(os.path.join(root, ".wandb")) else "wandb"
+    return os.path.join(root, dirname)
 
 
 class WandBSettingsSource(PydanticBaseSettingsSource):

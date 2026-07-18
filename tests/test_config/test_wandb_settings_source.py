@@ -1,7 +1,9 @@
-from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
+import os
+from inspect_wandb.config.wandb_settings_source import WandBSettingsSource, wandb_dir
 from inspect_wandb.config.settings import ModelsSettings
 from pathlib import Path
 from unittest.mock import patch
+import pytest
 
 
 class TestWandBSettingsSource:
@@ -91,3 +93,56 @@ class TestWandBSettingsSource:
         # Then
         assert result1 == result2
         assert result1["entity"] == "cached-entity"
+
+
+class TestWandBDirResolution:
+    """Tests for the local wandb_dir() helper that replaces wandb.old.core."""
+
+    def test_honors_wandb_dir_env_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Given
+        monkeypatch.setenv("WANDB_DIR", str(tmp_path))
+
+        # When / Then
+        assert wandb_dir() == str(tmp_path / "wandb")
+
+    def test_prefers_hidden_directory_when_present(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Given
+        monkeypatch.setenv("WANDB_DIR", str(tmp_path))
+        (tmp_path / ".wandb").mkdir()
+
+        # When / Then
+        assert wandb_dir() == str(tmp_path / ".wandb")
+
+    def test_falls_back_to_cwd_when_env_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Given
+        monkeypatch.delenv("WANDB_DIR", raising=False)
+        monkeypatch.chdir(tmp_path)
+
+        # When / Then
+        assert wandb_dir() == os.path.join(os.getcwd(), "wandb")
+
+    def test_source_reads_settings_located_via_wandb_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """End-to-end: the source resolves the settings file through the real
+        wandb_dir() helper (no wandb.old import), honoring WANDB_DIR."""
+        # Given
+        monkeypatch.setenv("WANDB_DIR", str(tmp_path))
+        wandb_subdir = tmp_path / "wandb"
+        wandb_subdir.mkdir()
+        (wandb_subdir / "settings").write_text(
+            "[default]\nentity = env-entity\nproject = env-project\n"
+        )
+
+        # When
+        source = WandBSettingsSource(ModelsSettings)
+        result = source()
+
+        # Then
+        assert result == {"entity": "env-entity", "project": "env-project"}
