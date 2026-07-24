@@ -2,6 +2,7 @@ import configparser
 import os
 from pathlib import Path
 from typing import Any
+import wandb
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings.sources import PydanticBaseSettingsSource
@@ -10,12 +11,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def wandb_dir() -> str:
-    # Mirrors wandb's own settings-dir resolution without importing the private
-    # wandb.old.core module (removed in wandb 0.27.1).
-    root = os.environ.get("WANDB_DIR") or os.getcwd()
-    dirname = ".wandb" if os.path.isdir(os.path.join(root, ".wandb")) else "wandb"
-    return os.path.join(root, dirname)
+def _wandb_settings_path() -> Path:
+    settings = wandb.Settings()
+    settings.update_from_env_vars(dict(os.environ))
+    return Path(settings.settings_workspace)
 
 
 class WandBSettingsSource(PydanticBaseSettingsSource):
@@ -27,7 +26,7 @@ class WandBSettingsSource(PydanticBaseSettingsSource):
         if self._wandb_settings is not None:
             return self._wandb_settings
 
-        settings_path = Path(wandb_dir()) / "settings"
+        settings_path = _wandb_settings_path()
 
         if not settings_path.exists():
             logger.debug("Wandb settings file not found, skipping WandBSettingsSource")
