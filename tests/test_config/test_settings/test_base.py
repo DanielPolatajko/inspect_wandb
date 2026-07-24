@@ -18,8 +18,8 @@ class TestInspectWandBBaseSettings:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = InspectWandBBaseSettings.model_validate({})
 
@@ -86,8 +86,8 @@ class TestPriorityOrdering:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = InspectWandBBaseSettings(
                 enabled=True,
@@ -112,8 +112,8 @@ class TestPriorityOrdering:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = InspectWandBBaseSettings.model_validate({})
 
@@ -128,8 +128,8 @@ class TestPriorityOrdering:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = InspectWandBBaseSettings.model_validate({})
 

@@ -1,3 +1,4 @@
+import asyncio
 from inspect_ai.log import EvalLog
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 from inspect_ai.hooks import (
@@ -542,6 +543,81 @@ class TestConcurrencyOnSampleEnd:
             scorer="test_score", score=1.0
         )
         mock_score_logger.log_score.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_on_task_end_drains_pending_sample_logging_before_summary(
+        self, task_end_eval_log: EvalLog, test_settings: WeaveSettings
+    ) -> None:
+        """Pending per-sample Weave logging must complete before on_task_end
+        finalizes the evaluation via log_summary. Otherwise the still-pending
+        alog_score races the finalization and Weave raises
+        "Cannot log score after finish has been called", silently dropping
+        scores from the Weave UI (guaranteed on single-sample evals).
+        """
+        hooks = WeaveEvaluationHooks()
+        hooks.settings = test_settings
+        hooks._hooks_enabled = True
+
+        call_order: list[str] = []
+
+        async def _record_alog_score(*args: object, **kwargs: object) -> None:
+            # Yield the event loop so that, without draining, on_task_end's
+            # synchronous log_summary would win the race and finalize first.
+            await asyncio.sleep(0)
+            call_order.append("alog_score")
+
+        mock_score_logger = MagicMock(spec=ScoreLogger)
+        mock_score_logger._has_finished = False
+        mock_score_logger.alog_score = AsyncMock(side_effect=_record_alog_score)
+        mock_score_logger.finish = MagicMock(
+            side_effect=lambda: call_order.append("finish")
+        )
+
+        mock_weave_eval_logger = MagicMock(spec=EvaluationLogger)
+        mock_weave_eval_logger._evaluate_call = MagicMock(spec=Call)
+        mock_weave_eval_logger.log_summary = MagicMock(
+            side_effect=lambda *a, **k: call_order.append("log_summary")
+        )
+
+        hooks.weave_eval_loggers["test_eval_id"] = mock_weave_eval_logger
+        hooks.sample_calls["test_sample_id"] = mock_score_logger
+
+        sample_end = SampleEnd(
+            eval_set_id=None,
+            run_id="test_run_id",
+            eval_id="test_eval_id",
+            sample_id="test_sample_id",
+            sample=EvalSample(
+                id=1,
+                epoch=1,
+                input="test_input",
+                target="test_output",
+                scores={"test_score": Score(value=1.0)},
+                output=ModelOutput(
+                    model="mockllm/model",
+                    choices=[
+                        ChatCompletionChoice(
+                            message=ChatMessageAssistant(content="test_output")
+                        )
+                    ],
+                ),
+            ),
+        )
+        task_end = TaskEnd(
+            eval_set_id=None,
+            run_id="test_run_id",
+            eval_id="test_eval_id",
+            log=task_end_eval_log,
+        )
+
+        # When: sample logging is scheduled fire-and-forget, then the task ends
+        await hooks.on_sample_end(sample_end)
+        await hooks.on_task_end(task_end)
+
+        # Then: the score was logged and its prediction finished before the
+        # evaluation summary was finalized, and no pending tasks remain
+        assert call_order == ["alog_score", "finish", "log_summary"]
+        assert hooks._pending_sample_tasks == set()
 
     @pytest.mark.asyncio
     async def test_background_task_exceptions_handled_properly(
