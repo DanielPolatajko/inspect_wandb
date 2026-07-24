@@ -13,8 +13,8 @@ class TestModelsSettings:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = ModelsSettings.model_validate({})
 
@@ -99,8 +99,8 @@ class TestModelsSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings = ModelsSettings(
                     WANDB_PROJECT="init-project", WANDB_ENTITY="init-entity"
@@ -126,8 +126,8 @@ class TestModelsSettings:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(Path.cwd() / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=Path.cwd() / "wandb" / "settings",
         ):
             settings = ModelsSettings.model_validate({})
 
@@ -160,8 +160,8 @@ class TestModelsSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings = ModelsSettings()
 
@@ -194,8 +194,8 @@ class TestModelsSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings = ModelsSettings.model_validate({})
 
@@ -226,8 +226,8 @@ class TestModelsSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings_field = ModelsSettings.model_validate({})
 
@@ -239,8 +239,8 @@ class TestModelsSettings:
             pyproject_path.write_text(pyproject_content_alias)
 
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings_alias = ModelsSettings.model_validate({})
 

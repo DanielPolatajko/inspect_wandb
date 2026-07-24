@@ -12,8 +12,8 @@ class TestWeaveSettings:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = WeaveSettings.model_validate({})
 
@@ -52,8 +52,8 @@ class TestWeaveSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings = WeaveSettings.model_validate({})
 
@@ -85,8 +85,8 @@ class TestWeaveSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings = WeaveSettings.model_validate({})
 
@@ -118,8 +118,8 @@ class TestWeaveSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings = WeaveSettings.model_validate({})
 
@@ -149,8 +149,8 @@ class TestWeaveSettings:
         try:
             os.chdir(tmp_path)
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings_field = WeaveSettings.model_validate({})
 
@@ -162,8 +162,8 @@ class TestWeaveSettings:
             pyproject_path.write_text(pyproject_content_alias)
 
             with patch(
-                "inspect_wandb.config.wandb_settings_source.wandb_dir",
-                return_value=str(wandb_dir),
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=wandb_dir / "settings",
             ):
                 settings_alias = WeaveSettings.model_validate({})
 
@@ -182,8 +182,8 @@ class TestWeaveSettings:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = WeaveSettings.model_validate({})
 
@@ -196,8 +196,8 @@ class TestWeaveSettings:
 
         # When
         with patch(
-            "inspect_wandb.config.wandb_settings_source.wandb_dir",
-            return_value=str(cwd / "wandb"),
+            "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+            return_value=cwd / "wandb" / "settings",
         ):
             settings = WeaveSettings.model_validate({"eval_traces_only": True})
 
