@@ -1,7 +1,4 @@
-from inspect_wandb.config.wandb_settings_source import (
-    WandBSettingsSource,
-    _wandb_settings_path,
-)
+from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
 from inspect_wandb.config.settings import ModelsSettings
 from pathlib import Path
 from unittest.mock import patch
@@ -92,19 +89,7 @@ class TestWandBSettingsSource:
         assert result1["entity"] == "cached-entity"
 
 
-class TestWandBSettingsPathResolution:
-    def test_resolves_settings_file_honoring_wandb_dir_env(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Given
-        monkeypatch.setenv("WANDB_DIR", str(tmp_path))
-
-        # When
-        path = _wandb_settings_path()
-
-        # Then
-        assert path == tmp_path / "wandb" / "settings"
-
+class TestWandBSettingsSourceIntegration:
     def test_source_reads_settings_resolved_via_wandb(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
