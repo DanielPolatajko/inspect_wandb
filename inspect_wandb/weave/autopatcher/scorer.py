@@ -15,15 +15,15 @@ from inspect_ai.solver import TaskState
 from inspect_ai.solver._task_state import state_jsonable
 
 
-def _postprocess_scorer_inputs(inputs: dict[str, TaskState | Target]) -> dict[str, dict[str, Any] | list[str]]:
+def _postprocess_scorer_inputs(
+    inputs: dict[str, TaskState | Target],
+) -> dict[str, dict[str, Any] | list[str]]:
     state = cast(TaskState, inputs["state"])
     target = cast(Target, inputs["target"])
     return {
-            "state": state_jsonable(state),
-            "target": target.target,
-        }
-
-
+        "state": state_jsonable(state),
+        "target": target.target,
+    }
 
 
 class PatchedScorer(Scorer):
