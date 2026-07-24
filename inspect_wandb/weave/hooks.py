@@ -45,6 +45,11 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _weave_initialized: bool = False
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
+    _pending_sample_tasks: set[asyncio.Task[None]]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._pending_sample_tasks = set()
 
     @override
     async def on_eval_set_start(self, data: EvalSetStart) -> None:
@@ -157,6 +162,11 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         if not self._hooks_enabled:
             return
 
+        # Drain pending per-sample logging before log_summary finalizes the
+        # evaluation; otherwise a late alog_score is dropped after finish.
+        if self._pending_sample_tasks:
+            await asyncio.gather(*self._pending_sample_tasks, return_exceptions=True)
+
         weave_eval_logger = self.weave_eval_loggers.get(data.eval_id)
         assert weave_eval_logger is not None
 
@@ -217,6 +227,8 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             return
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
+        self._pending_sample_tasks.add(task)
+        task.add_done_callback(self._pending_sample_tasks.discard)
         task.add_done_callback(self._handle_weave_task_result)
 
     def _handle_weave_task_result(self, task: asyncio.Task) -> None:
