@@ -8,9 +8,19 @@ from typing import Generator
 import pytest
 from unittest.mock import MagicMock, patch
 from .conftest import WeaveTestClient
-from inspect_wandb.weave.autopatcher.scorer import PatchedScorer, _postprocess_scorer_inputs
-from inspect_wandb.weave.autopatcher.plan import _postprocess_solver_inputs, _postprocess_solver_output
-from inspect_ai._util.registry import registry_info, is_registry_object, set_registry_info
+from inspect_wandb.weave.autopatcher.scorer import (
+    PatchedScorer,
+    _postprocess_scorer_inputs,
+)
+from inspect_wandb.weave.autopatcher.plan import (
+    _postprocess_solver_inputs,
+    _postprocess_solver_output,
+)
+from inspect_ai._util.registry import (
+    registry_info,
+    is_registry_object,
+    set_registry_info,
+)
 from inspect_ai.scorer._metric import Score
 
 
@@ -292,7 +302,6 @@ def _make_task_state() -> TaskState:
 
 
 class TestPostprocessSolverInputs:
-
     def test_serializes_task_state(self):
         # Given
         state = _make_task_state()
@@ -320,7 +329,6 @@ class TestPostprocessSolverInputs:
 
 
 class TestPostprocessSolverOutput:
-
     def test_serializes_task_state(self):
         # Given
         state = _make_task_state()
@@ -346,7 +354,6 @@ class TestPostprocessSolverOutput:
 
 
 class TestPostprocessScorerInputs:
-
     def test_serializes_state_and_target(self):
         # Given
         state = _make_task_state()
@@ -383,4 +390,3 @@ class TestPostprocessScorerInputs:
 
         # Then
         assert result["target"] == ["answer1", "answer2"]
-
