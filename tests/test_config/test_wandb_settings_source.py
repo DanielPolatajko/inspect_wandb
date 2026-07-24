@@ -96,8 +96,6 @@ class TestWandBSettingsSource:
 
 
 class TestWandBDirResolution:
-    """Tests for the local wandb_dir() helper that replaces wandb.old.core."""
-
     def test_honors_wandb_dir_env_var(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -130,8 +128,6 @@ class TestWandBDirResolution:
     def test_source_reads_settings_located_via_wandb_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """End-to-end: the source resolves the settings file through the real
-        wandb_dir() helper (no wandb.old import), honoring WANDB_DIR."""
         # Given
         monkeypatch.setenv("WANDB_DIR", str(tmp_path))
         wandb_subdir = tmp_path / "wandb"
