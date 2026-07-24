@@ -274,9 +274,12 @@ class TestWeaveEnablementPriority:
         self,
         test_settings: WeaveSettings,
         create_task_start: Callable[[dict | None], TaskStart],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test script metadata weave_enabled: true overrides settings.enabled: false"""
         # Given
+        monkeypatch.setenv("WANDB_ENTITY", "test-entity")
+        monkeypatch.setenv("WANDB_PROJECT", "test-project")
         test_settings.enabled = False
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
@@ -296,9 +299,12 @@ class TestWeaveEnablementPriority:
         self,
         test_settings: WeaveSettings,
         create_task_start: Callable[[dict | None], TaskStart],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test falls back to settings.enabled when no script metadata override"""
         # Given
+        monkeypatch.setenv("WANDB_ENTITY", "test-entity")
+        monkeypatch.setenv("WANDB_PROJECT", "test-project")
         test_settings.enabled = True
         hooks = WeaveEvaluationHooks()
         hooks.settings = test_settings
