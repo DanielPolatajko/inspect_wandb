@@ -6,6 +6,7 @@ installation.md
 tutorial.md
 concepts.md
 configuration.md
+demo-agent-monitoring.md
 contributing.md
 faq.md
 ```

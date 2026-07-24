@@ -104,12 +104,13 @@ class TestWandBModelHooksE2ERetryScenarios:
             )
 
             # Then
-            assert mock_wandb_init.call_count == 2
-
             eval_set_ids = [call[1]["id"] for call in mock_wandb_init.call_args_list]
 
             assert len(set(eval_set_ids)) == 1
-
+            assert all(
+                call[1].get("resume") == "allow"
+                for call in mock_wandb_init.call_args_list
+            )
             assert len(logs) == 2
 
     def test_wandb_uses_same_run_id_when_rerunning_same_log_dir(

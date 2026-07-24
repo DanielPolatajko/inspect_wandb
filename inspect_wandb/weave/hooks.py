@@ -2,6 +2,7 @@ from typing import Any
 from inspect_ai.hooks import (
     RunEnd,
     SampleEnd,
+    SampleEvent,
     SampleStart,
     TaskStart,
     TaskEnd,
@@ -29,6 +30,12 @@ from weave import integrations
 from importlib.util import find_spec
 from gql.transport.exceptions import TransportQueryError
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
+from inspect_wandb.weave.sessions import (
+    SESSIONS_AVAILABLE,
+    AgentSessionEmitter,
+    build_outcome,
+    flatten_metadata,
+)
 
 logger = getLogger(__name__)
 
@@ -45,11 +52,23 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _weave_initialized: bool = False
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
+    _session_emitters: dict[str, AgentSessionEmitter] = {}
+    _task_models: dict[str, str] = {}
+    _task_context: dict[str, dict[str, Any]] = {}
     _pending_sample_tasks: set[asyncio.Task[None]]
 
     def __init__(self) -> None:
         super().__init__()
         self._pending_sample_tasks = set()
+
+    def _agent_sessions_active(self) -> bool:
+        return bool(
+            SESSIONS_AVAILABLE
+            and self._hooks_enabled
+            and self.settings is not None
+            and self.settings.agent_sessions
+            and not self.settings.eval_traces_only
+        )
 
     @override
     async def on_eval_set_start(self, data: EvalSetStart) -> None:
@@ -85,6 +104,9 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         self.weave_eval_loggers.clear()
         self.task_mapping.clear()
+        self._session_emitters.clear()
+        self._task_models.clear()
+        self._task_context.clear()
 
         if not self._eval_set:
             self.weave_client.finish(use_progress_bar=False)
@@ -149,6 +171,12 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         self.weave_eval_loggers[data.eval_id] = weave_eval_logger
         self.task_mapping[data.eval_id] = data.spec.task
+        self._task_models[data.eval_id] = data.spec.model
+        self._task_context[data.eval_id] = {
+            "task_id": data.spec.task_id,
+            "dataset": data.spec.dataset.name,
+            "sandbox": data.spec.sandbox.type if data.spec.sandbox else None,
+        }
 
         assert weave_eval_logger._evaluate_call is not None
         call_context.push_call(weave_eval_logger._evaluate_call)
@@ -208,16 +236,48 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     inputs={"input": data.summary.input},
                 )
 
-            sample_logger.predict_call.display_name = format_sample_display_name(
+            display_name = format_sample_display_name(
                 self.settings.sample_name_template,
                 task_name=task_name,
                 sample_id=data.summary.id,
                 epoch=data.summary.epoch,
             )
+            sample_logger.predict_call.display_name = display_name
 
             call_context.push_call(sample_logger.predict_call)
 
             self.sample_calls[data.sample_id] = sample_logger
+
+            if self._agent_sessions_active():
+                task_context = self._task_context.get(data.eval_id, {})
+                identity = {
+                    "task": task_name,
+                    "task_id": task_context.get("task_id"),
+                    "eval_id": data.eval_id,
+                    "run_id": data.run_id,
+                    "eval_set_id": data.eval_set_id,
+                    "sample_id": data.summary.id,
+                    "sample_uuid": data.sample_id,
+                    "epoch": data.summary.epoch,
+                    "target": data.summary.target,
+                    "dataset": task_context.get("dataset"),
+                    "sandbox": task_context.get("sandbox"),
+                    **flatten_metadata(data.summary.metadata),
+                }
+                self._session_emitters[data.sample_id] = AgentSessionEmitter(
+                    session_id=data.sample_id,
+                    session_name=display_name,
+                    agent_name=task_name,
+                    model=self._task_models.get(data.eval_id, ""),
+                    identity=identity,
+                    include_content=self.settings.agent_sessions_include_content,
+                )
+
+    @override
+    async def on_sample_event(self, data: SampleEvent) -> None:
+        emitter = self._session_emitters.get(data.sample_id)
+        if emitter is not None:
+            emitter.handle_event(data.event)
 
     @override
     async def on_sample_end(self, data: SampleEnd) -> None:
@@ -225,6 +285,10 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             self.settings is not None and self.settings.eval_traces_only
         ):
             return
+
+        emitter = self._session_emitters.pop(data.sample_id, None)
+        if emitter is not None:
+            emitter.finish(build_outcome(data.sample))
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         self._pending_sample_tasks.add(task)
