@@ -45,10 +45,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _weave_initialized: bool = False
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
-    # Per-sample Weave logging is scheduled fire-and-forget in on_sample_end. We
-    # track the pending tasks per instance (not on the class) so runs don't share
-    # state, and drain them before the evaluation is finalized in on_task_end.
-    _pending_sample_tasks: set["asyncio.Task[None]"]
+    _pending_sample_tasks: set[asyncio.Task[None]]
 
     def __init__(self) -> None:
         super().__init__()
@@ -165,11 +162,8 @@ class WeaveEvaluationHooks(InspectWandBHooks):
         if not self._hooks_enabled:
             return
 
-        # log_summary below finalizes the Weave evaluation, after which no further
-        # scores can be logged. Drain the fire-and-forget per-sample logging tasks
-        # first; otherwise a still-pending alog_score races the finalization and
-        # Weave raises "Cannot log score after finish has been called", silently
-        # dropping scores from the Weave UI (guaranteed on single-sample evals).
+        # Drain pending per-sample logging before log_summary finalizes the
+        # evaluation; otherwise a late alog_score is dropped after finish.
         if self._pending_sample_tasks:
             await asyncio.gather(*self._pending_sample_tasks, return_exceptions=True)
 
