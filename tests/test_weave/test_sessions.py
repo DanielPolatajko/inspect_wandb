@@ -22,7 +22,6 @@ from inspect_wandb.weave.sessions import (
     llm_span_attrs,
     to_messages,
     tool_span_attrs,
-    usage_attrs,
     usage_from_event,
 )
 
@@ -134,21 +133,6 @@ class TestPureBuilders:
         assert attrs["gen_ai.operation.name"] == "execute_tool"
         assert all("ls -la" not in str(v) for v in attrs.values())
 
-    def test_usage_rollup_sums_and_builds_gen_ai_keys(self) -> None:
-        # Given
-        e1 = make_model_event(input_tokens=100, output_tokens=10)
-        e2 = make_model_event(input_tokens=50, output_tokens=5)
-
-        # When
-        from inspect_wandb.weave.sessions import _add_usage
-
-        total = _add_usage(usage_from_event(e1), usage_from_event(e2))
-        attrs = usage_attrs(total)
-
-        # Then
-        assert attrs["gen_ai.usage.input_tokens"] == 150
-        assert attrs["gen_ai.usage.output_tokens"] == 15
-
     def test_flatten_metadata(self) -> None:
         # Given
         metadata = {"difficulty": "hard", "category": "crypto"}
@@ -250,7 +234,7 @@ class TestAgentSessionEmitter:
             emitter.finish(outcome)
         return recorded
 
-    def test_segments_turns_and_rolls_up_usage(self) -> None:
+    def test_segments_turns_with_usage_on_llm_children_not_turn(self) -> None:
         # Given
         events = [
             make_model_event(input_tokens=100, output_tokens=10),
@@ -264,11 +248,15 @@ class TestAgentSessionEmitter:
 
         # Then
         turns = [(n, a) for n, a in recorded if n.startswith("invoke_agent")]
+        chats = [(n, a) for n, a in recorded if n.startswith("chat")]
         assert len(turns) == 2
-        assert turns[0][1]["gen_ai.usage.input_tokens"] == 100
         assert turns[0][1]["inspect.turn_index"] == 0
         assert turns[1][1]["inspect.turn_index"] == 1
         assert turns[0][1]["inspect.task"] == "my_task"
+        # Usage lives on the child chat spans, not the turn span; weave rolls it
+        # up, so setting it on the turn too would double-count in the Agents view
+        assert "gen_ai.usage.input_tokens" not in turns[0][1]
+        assert chats[0][1]["gen_ai.usage.input_tokens"] == 100
 
     def test_final_turn_carries_outcome(self) -> None:
         # Given

@@ -89,35 +89,6 @@ def usage_from_event(event: ModelEvent) -> Usage:
     )
 
 
-def _add_usage(total: Usage, other: Usage) -> Usage:
-    return Usage(
-        input_tokens=total.input_tokens + other.input_tokens,
-        output_tokens=total.output_tokens + other.output_tokens,
-        reasoning_tokens=total.reasoning_tokens + other.reasoning_tokens,
-        cache_creation_input_tokens=total.cache_creation_input_tokens
-        + other.cache_creation_input_tokens,
-        cache_read_input_tokens=total.cache_read_input_tokens
-        + other.cache_read_input_tokens,
-    )
-
-
-def usage_attrs(usage: Usage) -> dict[str, Any]:
-    attrs: dict[str, Any] = {}
-    if usage.input_tokens:
-        attrs["gen_ai.usage.input_tokens"] = usage.input_tokens
-    if usage.output_tokens:
-        attrs["gen_ai.usage.output_tokens"] = usage.output_tokens
-    if usage.reasoning_tokens:
-        attrs["gen_ai.usage.reasoning_tokens"] = usage.reasoning_tokens
-    if usage.cache_creation_input_tokens:
-        attrs["gen_ai.usage.cache_creation.input_tokens"] = (
-            usage.cache_creation_input_tokens
-        )
-    if usage.cache_read_input_tokens:
-        attrs["gen_ai.usage.cache_read.input_tokens"] = usage.cache_read_input_tokens
-    return attrs
-
-
 def llm_span_attrs(
     event: ModelEvent, *, conversation_id: str, include_content: bool = True
 ) -> dict[str, Any]:
@@ -208,12 +179,15 @@ class AgentSessionEmitter:
     Weave's agent Session SDK as gen_ai OpenTelemetry spans, one turn at a time.
 
     Emits the spans directly via the weave-configured global tracer (rather than
-    weave's imperative ``log_turn``) so we can roll child token usage up onto the
-    turn span and attach rich ``inspect.*`` metadata. A turn is one model
-    generation plus the tool calls it triggered; a new ``ModelEvent`` closes the
-    open turn and starts the next, and ``finish`` flushes the last turn with
-    sample outcome metadata attached. All emission is best-effort: failures are
-    logged and never propagate into the eval run.
+    weave's imperative ``log_turn``) so we can attach rich ``inspect.*`` metadata
+    and preserve the original Inspect event timestamps. Token usage is carried on
+    the child ``chat`` spans only, matching weave's own contract (its
+    ``invoke_agent`` spans never carry ``gen_ai.usage.*``); weave rolls usage up
+    onto the turn, so also setting it on the turn span would double-count in the
+    Agents view. A turn is one model generation plus the tool calls it triggered;
+    a new ``ModelEvent`` closes the open turn and starts the next, and ``finish``
+    flushes the last turn with sample outcome metadata attached. All emission is
+    best-effort: failures are logged and never propagate into the eval run.
     """
 
     def __init__(
@@ -237,7 +211,6 @@ class AgentSessionEmitter:
 
     def _reset_turn(self) -> None:
         self._children: list[tuple[str, dict[str, Any], int | None, int | None]] = []
-        self._turn_usage = Usage()
         self._turn_start: datetime | None = None
         self._turn_end: datetime | None = None
 
@@ -247,7 +220,6 @@ class AgentSessionEmitter:
         try:
             if isinstance(event, ModelEvent):
                 self._flush_turn()
-                self._turn_usage = _add_usage(self._turn_usage, usage_from_event(event))
                 self._children.append(
                     (
                         f"chat {event.model}",
@@ -300,7 +272,6 @@ class AgentSessionEmitter:
                 model=self._model,
                 agent_version=self._model,
             ),
-            **usage_attrs(self._turn_usage),
             **self._identity_attrs,
             "inspect.turn_index": self._turn_index,
             **(outcome or {}),
