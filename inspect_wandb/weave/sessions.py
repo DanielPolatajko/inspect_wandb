@@ -154,6 +154,37 @@ def tool_span_attrs(
     return {**base, **extra}
 
 
+def _set_attrs(span: Any, attrs: dict[str, Any]) -> None:
+    for key, value in attrs.items():
+        if value is not None and value != "":
+            span.set_attribute(key, value)
+
+
+def _start_span(
+    tracer: Any,
+    name: str,
+    parent_ctx: Any,
+    start_ns: int | None,
+    attrs: dict[str, Any],
+) -> Any:
+    """Start a span and leave it open. The caller must call ``_end_span``."""
+    span = (
+        tracer.start_span(name, context=parent_ctx, start_time=start_ns)
+        if start_ns is not None
+        else tracer.start_span(name, context=parent_ctx)
+    )
+    _set_attrs(span, attrs)
+    return span
+
+
+def _end_span(
+    span: Any, end_ns: int | None, attrs: dict[str, Any] | None = None
+) -> None:
+    if attrs:
+        _set_attrs(span, attrs)
+    span.end(end_time=end_ns) if end_ns is not None else span.end()
+
+
 def _emit_span(
     tracer: Any,
     name: str,
@@ -162,15 +193,9 @@ def _emit_span(
     end_ns: int | None,
     attrs: dict[str, Any],
 ) -> Any:
-    span = (
-        tracer.start_span(name, context=parent_ctx, start_time=start_ns)
-        if start_ns is not None
-        else tracer.start_span(name, context=parent_ctx)
-    )
-    for key, value in attrs.items():
-        if value is not None and value != "":
-            span.set_attribute(key, value)
-    span.end(end_time=end_ns) if end_ns is not None else span.end()
+    """Emit a complete (already finished) span: start and end it immediately."""
+    span = _start_span(tracer, name, parent_ctx, start_ns, attrs)
+    _end_span(span, end_ns)
     return span
 
 
@@ -180,14 +205,25 @@ class AgentSessionEmitter:
 
     Emits the spans directly via the weave-configured global tracer (rather than
     weave's imperative ``log_turn``) so we can attach rich ``inspect.*`` metadata
-    and preserve the original Inspect event timestamps. Token usage is carried on
-    the child ``chat`` spans only, matching weave's own contract (its
-    ``invoke_agent`` spans never carry ``gen_ai.usage.*``); weave rolls usage up
-    onto the turn, so also setting it on the turn span would double-count in the
-    Agents view. A turn is one model generation plus the tool calls it triggered;
-    a new ``ModelEvent`` closes the open turn and starts the next, and ``finish``
-    flushes the last turn with sample outcome metadata attached. All emission is
-    best-effort: failures are logged and never propagate into the eval run.
+    and preserve the original Inspect event timestamps.
+
+    Emission is *incremental*: the ``invoke_agent`` turn span is opened when the
+    turn starts and each child (``chat``/``execute_tool``) span is emitted as its
+    event arrives, rather than buffering the whole turn and emitting at turn end.
+    Because the OTel batch processor exports a span only once it ends, emitting
+    children eagerly is what makes an in-progress turn observable in the Agents
+    view — a turn stuck on a slow or hung tool shows its completed steps instead
+    of nothing at all. Weave groups those children into the conversation by
+    ``gen_ai.conversation.id`` and nests them under the turn once it closes.
+
+    Token usage is carried on the child ``chat`` spans only, matching weave's own
+    contract (its ``invoke_agent`` spans never carry ``gen_ai.usage.*``); weave
+    rolls usage up onto the turn, so also setting it on the turn span would
+    double-count in the Agents view. A turn is one model generation plus the tool
+    calls it triggered; a new ``ModelEvent`` closes the open turn and starts the
+    next, and ``finish`` closes the last turn with sample outcome metadata
+    attached. All emission is best-effort: failures are logged and never
+    propagate into the eval run.
     """
 
     def __init__(
@@ -210,8 +246,8 @@ class AgentSessionEmitter:
         self._reset_turn()
 
     def _reset_turn(self) -> None:
-        self._children: list[tuple[str, dict[str, Any], int | None, int | None]] = []
-        self._turn_start: datetime | None = None
+        self._turn_span: Any = None
+        self._child_ctx: Any = None
         self._turn_end: datetime | None = None
 
     def handle_event(self, event: Event) -> None:
@@ -219,33 +255,29 @@ class AgentSessionEmitter:
             return
         try:
             if isinstance(event, ModelEvent):
-                self._flush_turn()
-                self._children.append(
-                    (
-                        f"chat {event.model}",
-                        llm_span_attrs(
-                            event,
-                            conversation_id=self._session_id,
-                            include_content=self._include_content,
-                        ),
-                        _ns(event.timestamp),
-                        _ns(event.completed),
-                    )
-                )
-                self._turn_start = event.timestamp
+                self._close_turn()
+                self._open_turn(event.timestamp)
                 self._turn_end = event.completed or event.timestamp
-            elif isinstance(event, ToolEvent) and self._children:
-                self._children.append(
-                    (
-                        f"execute_tool {event.function}",
-                        tool_span_attrs(
-                            event,
-                            conversation_id=self._session_id,
-                            include_content=self._include_content,
-                        ),
-                        _ns(event.timestamp),
-                        _ns(event.completed),
-                    )
+                self._emit_child(
+                    f"chat {event.model}",
+                    llm_span_attrs(
+                        event,
+                        conversation_id=self._session_id,
+                        include_content=self._include_content,
+                    ),
+                    _ns(event.timestamp),
+                    _ns(event.completed),
+                )
+            elif isinstance(event, ToolEvent) and self._turn_span is not None:
+                self._emit_child(
+                    f"execute_tool {event.function}",
+                    tool_span_attrs(
+                        event,
+                        conversation_id=self._session_id,
+                        include_content=self._include_content,
+                    ),
+                    _ns(event.timestamp),
+                    _ns(event.completed),
                 )
                 if event.completed is not None:
                     self._turn_end = event.completed
@@ -257,13 +289,12 @@ class AgentSessionEmitter:
     def finish(self, outcome: dict[str, Any] | None = None) -> None:
         if not SESSIONS_AVAILABLE:
             return
-        self._flush_turn(outcome=_inspect_attrs(outcome) if outcome else {})
+        try:
+            self._close_turn(outcome=_inspect_attrs(outcome) if outcome else {})
+        except Exception:
+            logger.warning("Failed to finish Weave agent session", exc_info=True)
 
-    def _flush_turn(self, outcome: dict[str, Any] | None = None) -> None:
-        if not self._children:
-            return
-        children = self._children
-        turn_start, turn_end = self._turn_start, self._turn_end
+    def _open_turn(self, start: datetime | None) -> None:
         turn_attrs = {
             **invoke_agent_attributes(
                 agent_name=self._agent_name,
@@ -274,25 +305,39 @@ class AgentSessionEmitter:
             ),
             **self._identity_attrs,
             "inspect.turn_index": self._turn_index,
-            **(outcome or {}),
         }
+        self._turn_span = _start_span(
+            otel_trace.get_tracer(_TRACER_NAME),
+            f"invoke_agent {self._agent_name}",
+            Context(),
+            _ns(start),
+            turn_attrs,
+        )
+        self._child_ctx = set_span_in_context(self._turn_span)
         self._turn_index += 1
+
+    def _emit_child(
+        self,
+        name: str,
+        attrs: dict[str, Any],
+        start_ns: int | None,
+        end_ns: int | None,
+    ) -> None:
+        _emit_span(
+            otel_trace.get_tracer(_TRACER_NAME),
+            name,
+            self._child_ctx,
+            start_ns,
+            end_ns,
+            attrs,
+        )
+
+    def _close_turn(self, outcome: dict[str, Any] | None = None) -> None:
+        if self._turn_span is None:
+            return
+        turn_span, turn_end = self._turn_span, self._turn_end
         self._reset_turn()
-        try:
-            tracer = otel_trace.get_tracer(_TRACER_NAME)
-            turn_span = _emit_span(
-                tracer,
-                f"invoke_agent {self._agent_name}",
-                Context(),
-                _ns(turn_start),
-                _ns(turn_end),
-                turn_attrs,
-            )
-            child_ctx = set_span_in_context(turn_span)
-            for name, attrs, start_ns, end_ns in children:
-                _emit_span(tracer, name, child_ctx, start_ns, end_ns, attrs)
-        except Exception:
-            logger.warning("Failed to emit Weave agent turn", exc_info=True)
+        _end_span(turn_span, _ns(turn_end), outcome or None)
 
 
 def build_outcome(sample: Any) -> dict[str, Any]:
