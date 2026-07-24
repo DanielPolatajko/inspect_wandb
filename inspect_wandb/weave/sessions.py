@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 try:
     from opentelemetry import trace as otel_trace
     from opentelemetry.context import Context
-    from opentelemetry.trace import set_span_in_context
+    from opentelemetry.trace import Status, StatusCode, set_span_in_context
     from weave.session.session_otel import (
         execute_tool_attributes,
         invoke_agent_attributes,
@@ -161,6 +161,9 @@ def _emit_span(
     start_ns: int | None,
     end_ns: int | None,
     attrs: dict[str, Any],
+    *,
+    failed: bool = False,
+    exception: BaseException | None = None,
 ) -> Any:
     span = (
         tracer.start_span(name, context=parent_ctx, start_time=start_ns)
@@ -170,6 +173,11 @@ def _emit_span(
     for key, value in attrs.items():
         if value is not None and value != "":
             span.set_attribute(key, value)
+    if failed:
+        description = str(exception) if exception else None
+        span.set_status(Status(StatusCode.ERROR, description))
+        if exception:
+            span.record_exception(exception)
     span.end(end_time=end_ns) if end_ns is not None else span.end()
     return span
 
@@ -210,16 +218,22 @@ class AgentSessionEmitter:
         self._reset_turn()
 
     def _reset_turn(self) -> None:
-        self._children: list[tuple[str, dict[str, Any], int | None, int | None]] = []
+        self._children: list[
+            tuple[str, dict[str, Any], int | None, int | None, bool, BaseException | None]
+        ] = []
         self._turn_start: datetime | None = None
         self._turn_end: datetime | None = None
 
-    def handle_event(self, event: Event) -> None:
+        def handle_event(self, event: Event) -> None:
         if not SESSIONS_AVAILABLE:
             return
         try:
             if isinstance(event, ModelEvent):
                 self._flush_turn()
+                model_failed = bool(event.error)
+                exception: BaseException | None = None
+                if event.error:
+                    exception = Exception(event.error)
                 self._children.append(
                     (
                         f"chat {event.model}",
@@ -230,11 +244,17 @@ class AgentSessionEmitter:
                         ),
                         _ns(event.timestamp),
                         _ns(event.completed),
+                        model_failed,
+                        exception,
                     )
                 )
                 self._turn_start = event.timestamp
                 self._turn_end = event.completed or event.timestamp
             elif isinstance(event, ToolEvent) and self._children:
+                tool_failed = event.failed or event.error is not None
+                exc: BaseException | None = None
+                if event.error:
+                    exc = Exception(event.error.message)
                 self._children.append(
                     (
                         f"execute_tool {event.function}",
@@ -245,6 +265,8 @@ class AgentSessionEmitter:
                         ),
                         _ns(event.timestamp),
                         _ns(event.completed),
+                        tool_failed,
+                        exc,
                     )
                 )
                 if event.completed is not None:
@@ -259,7 +281,7 @@ class AgentSessionEmitter:
             return
         self._flush_turn(outcome=_inspect_attrs(outcome) if outcome else {})
 
-    def _flush_turn(self, outcome: dict[str, Any] | None = None) -> None:
+       def _flush_turn(self, outcome: dict[str, Any] | None = None) -> None:
         if not self._children:
             return
         children = self._children
@@ -289,11 +311,19 @@ class AgentSessionEmitter:
                 turn_attrs,
             )
             child_ctx = set_span_in_context(turn_span)
-            for name, attrs, start_ns, end_ns in children:
-                _emit_span(tracer, name, child_ctx, start_ns, end_ns, attrs)
+            for name, attrs, start_ns, end_ns, failed, exception in children:
+                _emit_span(
+                    tracer,
+                    name,
+                    child_ctx,
+                    start_ns,
+                    end_ns,
+                    attrs,
+                    failed=failed,
+                    exception=exception,
+                )
         except Exception:
             logger.warning("Failed to emit Weave agent turn", exc_info=True)
-
 
 def build_outcome(sample: Any) -> dict[str, Any]:
     """Build sample-outcome metadata (known only at sample end) for the final turn."""
