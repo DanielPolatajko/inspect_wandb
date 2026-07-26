@@ -157,3 +157,9 @@ burn budget. Full intervention support in Inspect WandB is tracked as follow-up 
   rolls up, not lost data: cache-read and cache-write tokens are streamed on every LLM span
   and shown separately in a conversation's **Token breakdown** panel, and the per-span
   input/output/cache figures match Inspect exactly.
+- **Per-turn input is a delta**: each turn's `chat` span carries only the messages *new that
+  turn*, not the whole re-shipped history — this keeps transcript volume linear rather than
+  quadratic on long runs. The full conversation is still reconstructable turn-by-turn, and a
+  context compaction re-ships the (compacted) history in full on the next turn. A consequence:
+  a turn may show only a couple of input messages while its input-token count is large (the
+  model still processed the full, possibly-cached context) — that is expected, not a bug.

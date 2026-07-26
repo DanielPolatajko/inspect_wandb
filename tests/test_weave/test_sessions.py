@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from inspect_ai.event import ModelEvent, ToolEvent
+from inspect_ai.event import CompactionEvent, ModelEvent, ToolEvent
 from inspect_ai.model import (
     ChatCompletionChoice,
     ChatMessageAssistant,
@@ -67,6 +67,12 @@ def make_tool_event(tool_id: str = "call_1", function: str = "bash") -> ToolEven
     )
 
 
+def make_model_event_with_history(contents: list[str]) -> ModelEvent:
+    event = make_model_event()
+    event.input = [ChatMessageUser(content=text) for text in contents]
+    return event
+
+
 class TestPureBuilders:
     def test_to_messages_maps_roles(self) -> None:
         # Given
@@ -123,6 +129,33 @@ class TestPureBuilders:
         assert "gen_ai.input.messages" not in attributes
         assert "gen_ai.output.messages" not in attributes
         assert attributes["gen_ai.usage.input_tokens"] == 100
+
+    def test_llm_span_attributes_trims_input_to_index(self) -> None:
+        # Given
+        event = make_model_event_with_history(["MSG_A", "MSG_B", "MSG_C"])
+
+        # When
+        attributes = llm_span_attributes(
+            event, conversation_id="sess-1", input_from_index=1
+        )
+
+        # Then
+        serialized_input = attributes["gen_ai.input.messages"]
+        assert "MSG_B" in serialized_input
+        assert "MSG_C" in serialized_input
+        assert "MSG_A" not in serialized_input
+
+    def test_llm_span_attributes_include_content_false_ignores_index(self) -> None:
+        # Given
+        event = make_model_event_with_history(["MSG_A", "MSG_B"])
+
+        # When
+        attributes = llm_span_attributes(
+            event, conversation_id="sess-1", include_content=False, input_from_index=1
+        )
+
+        # Then
+        assert "gen_ai.input.messages" not in attributes
 
     def test_tool_include_content_false_drops_args_and_result(self) -> None:
         # Given
@@ -357,3 +390,68 @@ class TestAgentSessionEmitter:
 
         # Then
         assert recorded == []
+
+    def _chat_inputs(self, recorded: list) -> list[str]:
+        return [
+            attributes.get("gen_ai.input.messages", "")
+            for kind, name, attributes in recorded
+            if name and name.startswith("chat")
+        ]
+
+    def test_input_trimmed_to_delta_across_turns(self) -> None:
+        # Given: turn 1 sends one message, turn 2 re-ships it plus two new ones
+        events = [
+            make_model_event_with_history(["MSG_A"]),
+            make_model_event_with_history(["MSG_A", "MSG_B", "MSG_C"]),
+        ]
+
+        # When
+        first_input, second_input = self._chat_inputs(self._run(events))
+
+        # Then: turn 1 is full (prev=0); turn 2 carries only the new delta
+        assert "MSG_A" in first_input
+        assert "MSG_B" in second_input
+        assert "MSG_C" in second_input
+        assert "MSG_A" not in second_input
+
+    def test_compaction_event_resets_to_full_input(self) -> None:
+        # Given: history is rewritten to a summary between the two turns
+        events = [
+            make_model_event_with_history(["MSG_A", "MSG_B"]),
+            CompactionEvent(type="summary"),
+            make_model_event_with_history(["SUMMARY"]),
+        ]
+
+        # When
+        first_input, second_input = self._chat_inputs(self._run(events))
+
+        # Then: without the reset, prev_len=2 would slice the 1-message input to
+        # empty; the CompactionEvent forces the next turn to re-ship in full
+        assert "MSG_A" in first_input
+        assert "SUMMARY" in second_input
+
+    def test_aggregate_input_volume_is_linear_not_quadratic(self) -> None:
+        # Given: an agent whose history grows by one message each turn, so the
+        # previous input length equals the turn index
+        turns = 20
+        events = [
+            make_model_event_with_history([f"m{i}" for i in range(turn + 1)])
+            for turn in range(turns)
+        ]
+
+        def serialized_input_length(event: ModelEvent, input_from_index: int) -> int:
+            attributes = llm_span_attributes(
+                event, conversation_id="s", input_from_index=input_from_index
+            )
+            return len(attributes["gen_ai.input.messages"])
+
+        # When: comparing the delta (from the previous turn's length) against
+        # re-shipping the full history every turn, using the same serialization
+        delta_volume = sum(
+            serialized_input_length(event, turn) for turn, event in enumerate(events)
+        )
+        full_volume = sum(serialized_input_length(event, 0) for event in events)
+
+        # Then: delta emits ~one message per turn (linear) rather than the whole
+        # history each turn (quadratic)
+        assert delta_volume < full_volume / 5
