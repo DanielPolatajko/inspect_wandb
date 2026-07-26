@@ -19,9 +19,9 @@ from inspect_wandb.weave.sessions import (
     _emit_span,
     build_outcome,
     flatten_metadata,
-    llm_span_attrs,
+    llm_span_attributes,
     to_messages,
-    tool_span_attrs,
+    tool_span_attributes,
     usage_from_event,
 )
 
@@ -86,15 +86,15 @@ class TestPureBuilders:
         event = make_model_event(input_tokens=321, output_tokens=99)
 
         # When
-        attrs = llm_span_attrs(event, conversation_id="sess-1")
+        attributes = llm_span_attributes(event, conversation_id="sess-1")
 
         # Then
-        assert attrs["gen_ai.request.model"] == "anthropic/claude-haiku-4-5"
-        assert attrs["gen_ai.provider.name"] == "anthropic"
-        assert attrs["gen_ai.usage.input_tokens"] == 321
-        assert attrs["gen_ai.usage.output_tokens"] == 99
-        assert attrs["gen_ai.request.temperature"] == 0.5
-        assert attrs["inspect.generate.top_k"] == 40
+        assert attributes["gen_ai.request.model"] == "anthropic/claude-haiku-4-5"
+        assert attributes["gen_ai.provider.name"] == "anthropic"
+        assert attributes["gen_ai.usage.input_tokens"] == 321
+        assert attributes["gen_ai.usage.output_tokens"] == 99
+        assert attributes["gen_ai.request.temperature"] == 0.5
+        assert attributes["inspect.generate.top_k"] == 40
 
     def test_tool_span_attrs_truncates_and_adds_inspect_extras(self) -> None:
         # Given
@@ -103,35 +103,39 @@ class TestPureBuilders:
         event.working_time = 1.5
 
         # When
-        attrs = tool_span_attrs(event, conversation_id="sess-1")
+        attributes = tool_span_attributes(event, conversation_id="sess-1")
 
         # Then
-        assert attrs["gen_ai.operation.name"] == "execute_tool"
-        assert attrs["inspect.tool.working_time"] == 1.5
-        assert any("…[truncated]" in str(v) for v in attrs.values())
+        assert attributes["gen_ai.operation.name"] == "execute_tool"
+        assert attributes["inspect.tool.working_time"] == 1.5
+        assert any("…[truncated]" in str(v) for v in attributes.values())
 
     def test_include_content_false_drops_messages_keeps_usage(self) -> None:
         # Given
         event = make_model_event(input_tokens=100, output_tokens=20)
 
         # When
-        attrs = llm_span_attrs(event, conversation_id="sess-1", include_content=False)
+        attributes = llm_span_attributes(
+            event, conversation_id="sess-1", include_content=False
+        )
 
         # Then
-        assert "gen_ai.input.messages" not in attrs
-        assert "gen_ai.output.messages" not in attrs
-        assert attrs["gen_ai.usage.input_tokens"] == 100
+        assert "gen_ai.input.messages" not in attributes
+        assert "gen_ai.output.messages" not in attributes
+        assert attributes["gen_ai.usage.input_tokens"] == 100
 
     def test_tool_include_content_false_drops_args_and_result(self) -> None:
         # Given
         event = make_tool_event()
 
         # When
-        attrs = tool_span_attrs(event, conversation_id="sess-1", include_content=False)
+        attributes = tool_span_attributes(
+            event, conversation_id="sess-1", include_content=False
+        )
 
         # Then
-        assert attrs["gen_ai.operation.name"] == "execute_tool"
-        assert all("ls -la" not in str(v) for v in attrs.values())
+        assert attributes["gen_ai.operation.name"] == "execute_tool"
+        assert all("ls -la" not in str(v) for v in attributes.values())
 
     def test_flatten_metadata(self) -> None:
         # Given
@@ -205,12 +209,31 @@ class TestPureBuilders:
 
 
 class TestAgentSessionEmitter:
-    def _run(self, events: list, outcome: dict | None = None) -> list:
+    def _run(
+        self,
+        events: list,
+        outcome: dict | None = None,
+        finish_run: bool = True,
+    ) -> list:
+        """Drive the emitter, recording (kind, name, attributes) in emission order.
+
+        Kinds are "turn_open" (turn span started and left open), "child" (a
+        complete chat/execute_tool span) and "turn_close" (turn span ended).
+        """
         recorded: list = []
 
-        def fake_emit(tracer, name, parent_ctx, start_ns, end_ns, attrs):  # noqa: ANN001
-            recorded.append((name, dict(attrs)))
+        def fake_start(tracer, name, parent_context, start_nanoseconds, attributes):  # noqa: ANN001
+            recorded.append(("turn_open", name, dict(attributes)))
             return MagicMock()
+
+        def fake_emit(
+            tracer, name, parent_context, start_nanoseconds, end_nanoseconds, attributes
+        ):  # noqa: ANN001
+            recorded.append(("child", name, dict(attributes)))
+            return MagicMock()
+
+        def fake_end(span, end_nanoseconds, attributes=None):  # noqa: ANN001
+            recorded.append(("turn_close", None, dict(attributes or {})))
 
         emitter = AgentSessionEmitter(
             session_id="sess-uuid",
@@ -220,7 +243,9 @@ class TestAgentSessionEmitter:
             identity={"task": "my_task", "sample_id": 1},
         )
         with (
+            patch("inspect_wandb.weave.sessions._start_span", side_effect=fake_start),
             patch("inspect_wandb.weave.sessions._emit_span", side_effect=fake_emit),
+            patch("inspect_wandb.weave.sessions._end_span", side_effect=fake_end),
             patch(
                 "inspect_wandb.weave.sessions.set_span_in_context", return_value=None
             ),
@@ -231,8 +256,35 @@ class TestAgentSessionEmitter:
         ):
             for event in events:
                 emitter.handle_event(event)
-            emitter.finish(outcome)
+            if finish_run:
+                emitter.finish(outcome)
         return recorded
+
+    def test_in_flight_turn_emits_children_before_turn_closes(self) -> None:
+        # Given
+        events = [make_model_event(), make_tool_event()]
+
+        # When: the turn has started but the sample has not ended
+        recorded = self._run(events, finish_run=False)
+
+        # Then: completed steps are already emitted while the turn is still open,
+        # which is what makes an in-progress turn observable in the Agents view
+        assert [kind for kind, _, _ in recorded] == ["turn_open", "child", "child"]
+        assert recorded[1][1].startswith("chat")
+        assert recorded[2][1].startswith("execute_tool")
+
+    def test_hung_tool_leaves_chat_child_emitted_with_no_tool_child(self) -> None:
+        # Given: the model requested a tool that never completed, so Inspect never
+        # delivers a ToolEvent
+        events = [make_model_event()]
+
+        # When
+        recorded = self._run(events, finish_run=False)
+
+        # Then: the chat span is still visible with no execute_tool following it —
+        # the signal a Monitor keys on to detect a hung tool call
+        assert [kind for kind, _, _ in recorded] == ["turn_open", "child"]
+        assert recorded[1][1].startswith("chat")
 
     def test_segments_turns_with_usage_on_llm_children_not_turn(self) -> None:
         # Given
@@ -247,8 +299,8 @@ class TestAgentSessionEmitter:
         recorded = self._run(events)
 
         # Then
-        turns = [(n, a) for n, a in recorded if n.startswith("invoke_agent")]
-        chats = [(n, a) for n, a in recorded if n.startswith("chat")]
+        turns = [(n, a) for kind, n, a in recorded if kind == "turn_open"]
+        chats = [(n, a) for kind, n, a in recorded if n and n.startswith("chat")]
         assert len(turns) == 2
         assert turns[0][1]["inspect.turn_index"] == 0
         assert turns[1][1]["inspect.turn_index"] == 1
@@ -257,6 +309,17 @@ class TestAgentSessionEmitter:
         # up, so setting it on the turn too would double-count in the Agents view
         assert "gen_ai.usage.input_tokens" not in turns[0][1]
         assert chats[0][1]["gen_ai.usage.input_tokens"] == 100
+        # Each turn is closed before the next one opens
+        assert [kind for kind, _, _ in recorded] == [
+            "turn_open",
+            "child",
+            "child",
+            "turn_close",
+            "turn_open",
+            "child",
+            "child",
+            "turn_close",
+        ]
 
     def test_final_turn_carries_outcome(self) -> None:
         # Given
@@ -265,10 +328,10 @@ class TestAgentSessionEmitter:
         # When
         recorded = self._run(events, outcome={"score.includes": 1.0, "total_time": 5.0})
 
-        # Then
-        turns = [(n, a) for n, a in recorded if n.startswith("invoke_agent")]
-        assert turns[-1][1]["inspect.score.includes"] == 1.0
-        assert turns[-1][1]["inspect.total_time"] == 5.0
+        # Then: outcome is attached when the last turn is closed
+        closes = [a for kind, _, a in recorded if kind == "turn_close"]
+        assert closes[-1]["inspect.score.includes"] == 1.0
+        assert closes[-1]["inspect.total_time"] == 5.0
 
     def test_emit_failure_is_swallowed(self) -> None:
         # Given
@@ -282,7 +345,7 @@ class TestAgentSessionEmitter:
 
         # When / Then
         with patch(
-            "inspect_wandb.weave.sessions._emit_span",
+            "inspect_wandb.weave.sessions._start_span",
             side_effect=RuntimeError("otel down"),
         ):
             emitter.handle_event(make_model_event())

@@ -150,3 +150,10 @@ burn budget. Full intervention support in Inspect WandB is tracked as follow-up 
   scales identically to a real long-horizon run — only the eval is small.
 - **Simulating "long"**: a 20-turn looping agent is enough to demonstrate live detection;
   the same setup works unchanged on a million-token, hours-long agentic eval.
+- **Token counts vs. Inspect**: the Agents view's headline **Tokens** tile counts prompt
+  (input) + completion (output) tokens only. Inspect's per-sample token total additionally
+  folds in prompt-cache reads and writes, so when caching is active the two totals differ
+  by the cached amount — Weave will read *lower*. This is a difference in what each headline
+  rolls up, not lost data: cache-read and cache-write tokens are streamed on every LLM span
+  and shown separately in a conversation's **Token breakdown** panel, and the per-span
+  input/output/cache figures match Inspect exactly.
