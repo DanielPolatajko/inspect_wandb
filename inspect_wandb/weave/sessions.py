@@ -28,13 +28,15 @@ except Exception:  # pragma: no cover - guards against weave internal changes
     )
 
 MAX_TOOL_RESULT_CHARS = 4000
-MAX_ATTR_VALUE_CHARS = 16000
+MAX_ATTRIBUTE_VALUE_CHARS = 16000
 _WEAVE_ROLES = {"user", "assistant", "system", "tool"}
 _TRACER_NAME = "weave.session"
 
 
-def _ns(dt: datetime | None) -> int | None:
-    return int(dt.timestamp() * 1_000_000_000) if dt is not None else None
+def _to_nanoseconds(event_time: datetime | None) -> int | None:
+    return (
+        int(event_time.timestamp() * 1_000_000_000) if event_time is not None else None
+    )
 
 
 def _provider(model: str) -> str:
@@ -46,11 +48,11 @@ def _coerce(value: Any) -> str | int | float | bool | None:
     if value is None or isinstance(value, (bool, int, float)):
         return value
     if isinstance(value, str):
-        return value[:MAX_ATTR_VALUE_CHARS]
-    return json.dumps(value, default=str)[:MAX_ATTR_VALUE_CHARS]
+        return value[:MAX_ATTRIBUTE_VALUE_CHARS]
+    return json.dumps(value, default=str)[:MAX_ATTRIBUTE_VALUE_CHARS]
 
 
-def _inspect_attrs(values: dict[str, Any]) -> dict[str, Any]:
+def _inspect_attributes(values: dict[str, Any]) -> dict[str, Any]:
     """Build namespaced ``inspect.*`` attributes, coercing and dropping empties."""
     out: dict[str, Any] = {}
     for key, raw in values.items():
@@ -63,16 +65,16 @@ def _inspect_attrs(values: dict[str, Any]) -> dict[str, Any]:
 def flatten_metadata(metadata: Any, prefix: str = "metadata") -> dict[str, Any]:
     if not isinstance(metadata, dict):
         return {}
-    return {f"{prefix}.{k}": v for k, v in metadata.items()}
+    return {f"{prefix}.{key}": value for key, value in metadata.items()}
 
 
 def to_messages(messages: list[ChatMessage]) -> list[Message]:
     return [
         Message(
-            role=m.role if m.role in _WEAVE_ROLES else "user",
-            content=m.text or "",
+            role=message.role if message.role in _WEAVE_ROLES else "user",
+            content=message.text or "",
         )
-        for m in messages
+        for message in messages
     ]
 
 
@@ -89,7 +91,7 @@ def usage_from_event(event: ModelEvent) -> Usage:
     )
 
 
-def llm_span_attrs(
+def llm_span_attributes(
     event: ModelEvent, *, conversation_id: str, include_content: bool = True
 ) -> dict[str, Any]:
     config = event.config
@@ -106,7 +108,9 @@ def llm_span_attrs(
         input_messages=to_messages(event.input) if include_content else None,
         output_messages=output_messages if include_content else None,
         usage=usage_from_event(event),
-        finish_reasons=[c.stop_reason for c in output.choices if c.stop_reason],
+        finish_reasons=[
+            choice.stop_reason for choice in output.choices if choice.stop_reason
+        ],
         response_model=output.model or "",
         request_temperature=config.temperature,
         request_max_tokens=config.max_tokens,
@@ -116,7 +120,7 @@ def llm_span_attrs(
         request_seed=config.seed,
         request_stop_sequences=config.stop_seqs,
     )
-    extra = _inspect_attrs(
+    extra = _inspect_attributes(
         {
             "generate.top_k": config.top_k,
             "generate.reasoning_effort": config.reasoning_effort,
@@ -127,7 +131,7 @@ def llm_span_attrs(
     return {**base, **extra}
 
 
-def tool_span_attrs(
+def tool_span_attributes(
     event: ToolEvent, *, conversation_id: str, include_content: bool = True
 ) -> dict[str, Any]:
     result = str(event.result)
@@ -142,7 +146,7 @@ def tool_span_attrs(
         tool_call_result=result if include_content else "",
         tool_call_id=event.id,
     )
-    extra = _inspect_attrs(
+    extra = _inspect_attributes(
         {
             "tool.error": getattr(event.error, "message", None)
             if event.error
@@ -154,8 +158,8 @@ def tool_span_attrs(
     return {**base, **extra}
 
 
-def _set_attrs(span: Any, attrs: dict[str, Any]) -> None:
-    for key, value in attrs.items():
+def _set_attributes(span: Any, attributes: dict[str, Any]) -> None:
+    for key, value in attributes.items():
         if value is not None and value != "":
             span.set_attribute(key, value)
 
@@ -163,39 +167,39 @@ def _set_attrs(span: Any, attrs: dict[str, Any]) -> None:
 def _start_span(
     tracer: Any,
     name: str,
-    parent_ctx: Any,
-    start_ns: int | None,
-    attrs: dict[str, Any],
+    parent_context: Any,
+    start_nanoseconds: int | None,
+    attributes: dict[str, Any],
 ) -> Any:
     """Start a span and leave it open. The caller must call ``_end_span``."""
     span = (
-        tracer.start_span(name, context=parent_ctx, start_time=start_ns)
-        if start_ns is not None
-        else tracer.start_span(name, context=parent_ctx)
+        tracer.start_span(name, context=parent_context, start_time=start_nanoseconds)
+        if start_nanoseconds is not None
+        else tracer.start_span(name, context=parent_context)
     )
-    _set_attrs(span, attrs)
+    _set_attributes(span, attributes)
     return span
 
 
 def _end_span(
-    span: Any, end_ns: int | None, attrs: dict[str, Any] | None = None
+    span: Any, end_nanoseconds: int | None, attributes: dict[str, Any] | None = None
 ) -> None:
-    if attrs:
-        _set_attrs(span, attrs)
-    span.end(end_time=end_ns) if end_ns is not None else span.end()
+    if attributes:
+        _set_attributes(span, attributes)
+    span.end(end_time=end_nanoseconds) if end_nanoseconds is not None else span.end()
 
 
 def _emit_span(
     tracer: Any,
     name: str,
-    parent_ctx: Any,
-    start_ns: int | None,
-    end_ns: int | None,
-    attrs: dict[str, Any],
+    parent_context: Any,
+    start_nanoseconds: int | None,
+    end_nanoseconds: int | None,
+    attributes: dict[str, Any],
 ) -> Any:
     """Emit a complete (already finished) span: start and end it immediately."""
-    span = _start_span(tracer, name, parent_ctx, start_ns, attrs)
-    _end_span(span, end_ns)
+    span = _start_span(tracer, name, parent_context, start_nanoseconds, attributes)
+    _end_span(span, end_nanoseconds)
     return span
 
 
@@ -240,14 +244,14 @@ class AgentSessionEmitter:
         self._session_name = session_name
         self._agent_name = agent_name
         self._model = model
-        self._identity_attrs = _inspect_attrs(identity)
+        self._identity_attributes = _inspect_attributes(identity)
         self._include_content = include_content
         self._turn_index = 0
         self._reset_turn()
 
     def _reset_turn(self) -> None:
         self._turn_span: Any = None
-        self._child_ctx: Any = None
+        self._child_context: Any = None
         self._turn_end: datetime | None = None
 
     def handle_event(self, event: Event) -> None:
@@ -260,24 +264,24 @@ class AgentSessionEmitter:
                 self._turn_end = event.completed or event.timestamp
                 self._emit_child(
                     f"chat {event.model}",
-                    llm_span_attrs(
+                    llm_span_attributes(
                         event,
                         conversation_id=self._session_id,
                         include_content=self._include_content,
                     ),
-                    _ns(event.timestamp),
-                    _ns(event.completed),
+                    _to_nanoseconds(event.timestamp),
+                    _to_nanoseconds(event.completed),
                 )
             elif isinstance(event, ToolEvent) and self._turn_span is not None:
                 self._emit_child(
                     f"execute_tool {event.function}",
-                    tool_span_attrs(
+                    tool_span_attributes(
                         event,
                         conversation_id=self._session_id,
                         include_content=self._include_content,
                     ),
-                    _ns(event.timestamp),
-                    _ns(event.completed),
+                    _to_nanoseconds(event.timestamp),
+                    _to_nanoseconds(event.completed),
                 )
                 if event.completed is not None:
                     self._turn_end = event.completed
@@ -290,12 +294,12 @@ class AgentSessionEmitter:
         if not SESSIONS_AVAILABLE:
             return
         try:
-            self._close_turn(outcome=_inspect_attrs(outcome) if outcome else {})
+            self._close_turn(outcome=_inspect_attributes(outcome) if outcome else {})
         except Exception:
             logger.warning("Failed to finish Weave agent session", exc_info=True)
 
     def _open_turn(self, start: datetime | None) -> None:
-        turn_attrs = {
+        turn_attributes = {
             **invoke_agent_attributes(
                 agent_name=self._agent_name,
                 conversation_id=self._session_id,
@@ -303,33 +307,33 @@ class AgentSessionEmitter:
                 model=self._model,
                 agent_version=self._model,
             ),
-            **self._identity_attrs,
+            **self._identity_attributes,
             "inspect.turn_index": self._turn_index,
         }
         self._turn_span = _start_span(
             otel_trace.get_tracer(_TRACER_NAME),
             f"invoke_agent {self._agent_name}",
             Context(),
-            _ns(start),
-            turn_attrs,
+            _to_nanoseconds(start),
+            turn_attributes,
         )
-        self._child_ctx = set_span_in_context(self._turn_span)
+        self._child_context = set_span_in_context(self._turn_span)
         self._turn_index += 1
 
     def _emit_child(
         self,
         name: str,
-        attrs: dict[str, Any],
-        start_ns: int | None,
-        end_ns: int | None,
+        attributes: dict[str, Any],
+        start_nanoseconds: int | None,
+        end_nanoseconds: int | None,
     ) -> None:
         _emit_span(
             otel_trace.get_tracer(_TRACER_NAME),
             name,
-            self._child_ctx,
-            start_ns,
-            end_ns,
-            attrs,
+            self._child_context,
+            start_nanoseconds,
+            end_nanoseconds,
+            attributes,
         )
 
     def _close_turn(self, outcome: dict[str, Any] | None = None) -> None:
@@ -337,7 +341,7 @@ class AgentSessionEmitter:
             return
         turn_span, turn_end = self._turn_span, self._turn_end
         self._reset_turn()
-        _end_span(turn_span, _ns(turn_end), outcome or None)
+        _end_span(turn_span, _to_nanoseconds(turn_end), outcome or None)
 
 
 def build_outcome(sample: Any) -> dict[str, Any]:
@@ -356,7 +360,9 @@ def build_outcome(sample: Any) -> dict[str, Any]:
                 outcome[f"score.{name}.answer"] = score.answer
     usages = getattr(sample, "model_usage", None) or {}
     total_tokens = sum(
-        (u.total_tokens or 0) for u in usages.values() if u.total_tokens is not None
+        (usage.total_tokens or 0)
+        for usage in usages.values()
+        if usage.total_tokens is not None
     )
     if total_tokens:
         outcome["total_tokens"] = total_tokens

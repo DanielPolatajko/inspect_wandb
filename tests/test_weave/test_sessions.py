@@ -19,9 +19,9 @@ from inspect_wandb.weave.sessions import (
     _emit_span,
     build_outcome,
     flatten_metadata,
-    llm_span_attrs,
+    llm_span_attributes,
     to_messages,
-    tool_span_attrs,
+    tool_span_attributes,
     usage_from_event,
 )
 
@@ -86,15 +86,15 @@ class TestPureBuilders:
         event = make_model_event(input_tokens=321, output_tokens=99)
 
         # When
-        attrs = llm_span_attrs(event, conversation_id="sess-1")
+        attributes = llm_span_attributes(event, conversation_id="sess-1")
 
         # Then
-        assert attrs["gen_ai.request.model"] == "anthropic/claude-haiku-4-5"
-        assert attrs["gen_ai.provider.name"] == "anthropic"
-        assert attrs["gen_ai.usage.input_tokens"] == 321
-        assert attrs["gen_ai.usage.output_tokens"] == 99
-        assert attrs["gen_ai.request.temperature"] == 0.5
-        assert attrs["inspect.generate.top_k"] == 40
+        assert attributes["gen_ai.request.model"] == "anthropic/claude-haiku-4-5"
+        assert attributes["gen_ai.provider.name"] == "anthropic"
+        assert attributes["gen_ai.usage.input_tokens"] == 321
+        assert attributes["gen_ai.usage.output_tokens"] == 99
+        assert attributes["gen_ai.request.temperature"] == 0.5
+        assert attributes["inspect.generate.top_k"] == 40
 
     def test_tool_span_attrs_truncates_and_adds_inspect_extras(self) -> None:
         # Given
@@ -103,35 +103,39 @@ class TestPureBuilders:
         event.working_time = 1.5
 
         # When
-        attrs = tool_span_attrs(event, conversation_id="sess-1")
+        attributes = tool_span_attributes(event, conversation_id="sess-1")
 
         # Then
-        assert attrs["gen_ai.operation.name"] == "execute_tool"
-        assert attrs["inspect.tool.working_time"] == 1.5
-        assert any("…[truncated]" in str(v) for v in attrs.values())
+        assert attributes["gen_ai.operation.name"] == "execute_tool"
+        assert attributes["inspect.tool.working_time"] == 1.5
+        assert any("…[truncated]" in str(v) for v in attributes.values())
 
     def test_include_content_false_drops_messages_keeps_usage(self) -> None:
         # Given
         event = make_model_event(input_tokens=100, output_tokens=20)
 
         # When
-        attrs = llm_span_attrs(event, conversation_id="sess-1", include_content=False)
+        attributes = llm_span_attributes(
+            event, conversation_id="sess-1", include_content=False
+        )
 
         # Then
-        assert "gen_ai.input.messages" not in attrs
-        assert "gen_ai.output.messages" not in attrs
-        assert attrs["gen_ai.usage.input_tokens"] == 100
+        assert "gen_ai.input.messages" not in attributes
+        assert "gen_ai.output.messages" not in attributes
+        assert attributes["gen_ai.usage.input_tokens"] == 100
 
     def test_tool_include_content_false_drops_args_and_result(self) -> None:
         # Given
         event = make_tool_event()
 
         # When
-        attrs = tool_span_attrs(event, conversation_id="sess-1", include_content=False)
+        attributes = tool_span_attributes(
+            event, conversation_id="sess-1", include_content=False
+        )
 
         # Then
-        assert attrs["gen_ai.operation.name"] == "execute_tool"
-        assert all("ls -la" not in str(v) for v in attrs.values())
+        assert attributes["gen_ai.operation.name"] == "execute_tool"
+        assert all("ls -la" not in str(v) for v in attributes.values())
 
     def test_flatten_metadata(self) -> None:
         # Given
@@ -211,23 +215,25 @@ class TestAgentSessionEmitter:
         outcome: dict | None = None,
         finish_run: bool = True,
     ) -> list:
-        """Drive the emitter, recording (kind, name, attrs) in emission order.
+        """Drive the emitter, recording (kind, name, attributes) in emission order.
 
         Kinds are "turn_open" (turn span started and left open), "child" (a
         complete chat/execute_tool span) and "turn_close" (turn span ended).
         """
         recorded: list = []
 
-        def fake_start(tracer, name, parent_ctx, start_ns, attrs):  # noqa: ANN001
-            recorded.append(("turn_open", name, dict(attrs)))
+        def fake_start(tracer, name, parent_context, start_nanoseconds, attributes):  # noqa: ANN001
+            recorded.append(("turn_open", name, dict(attributes)))
             return MagicMock()
 
-        def fake_emit(tracer, name, parent_ctx, start_ns, end_ns, attrs):  # noqa: ANN001
-            recorded.append(("child", name, dict(attrs)))
+        def fake_emit(
+            tracer, name, parent_context, start_nanoseconds, end_nanoseconds, attributes
+        ):  # noqa: ANN001
+            recorded.append(("child", name, dict(attributes)))
             return MagicMock()
 
-        def fake_end(span, end_ns, attrs=None):  # noqa: ANN001
-            recorded.append(("turn_close", None, dict(attrs or {})))
+        def fake_end(span, end_nanoseconds, attributes=None):  # noqa: ANN001
+            recorded.append(("turn_close", None, dict(attributes or {})))
 
         emitter = AgentSessionEmitter(
             session_id="sess-uuid",

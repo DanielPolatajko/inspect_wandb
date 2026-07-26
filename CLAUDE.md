@@ -27,6 +27,7 @@ This project is an open-source extension for the Inspect AI LLM evals framework.
 ### General principles
 
 - Avoid unnecessary comments. Code should be written clearly with explanatory variable names and obvious flow. Only use comments when absolutely necessary to explain something unintuitive.
+- Spell names out in full rather than abbreviating — `context` not `ctx`, `attributes` not `attrs`, `message` not `m`. This applies to variables, parameters, functions and loop/comprehension bindings.
 - Never write module-level docstrings.
 - Keep the codebase lean and DRY. Remove dead code rather than leaving it around. Avoid duplication — if the same logic appears more than once, extract it.
 - We use ruff for linting — check with `uv run ruff check inspect_wandb tests`.
