@@ -170,6 +170,34 @@ class TestPureBuilders:
         assert attributes["gen_ai.operation.name"] == "execute_tool"
         assert all("ls -la" not in str(v) for v in attributes.values())
 
+    def test_tool_span_attributes_marks_failed_only_on_failure(self) -> None:
+        # Given
+        failed_event = make_tool_event()
+        failed_event.failed = True
+        ok_event = make_tool_event()
+
+        # When
+        failed_attributes = tool_span_attributes(failed_event, conversation_id="s")
+        ok_attributes = tool_span_attributes(ok_event, conversation_id="s")
+
+        # Then
+        assert failed_attributes["inspect.tool.failed"] is True
+        assert "inspect.tool.failed" not in ok_attributes
+
+    def test_llm_span_attributes_surfaces_model_error(self) -> None:
+        # Given
+        errored_event = make_model_event()
+        errored_event.error = "rate limit exceeded"
+        ok_event = make_model_event()
+
+        # When
+        errored_attributes = llm_span_attributes(errored_event, conversation_id="s")
+        ok_attributes = llm_span_attributes(ok_event, conversation_id="s")
+
+        # Then
+        assert errored_attributes["inspect.model.error"] == "rate limit exceeded"
+        assert "inspect.model.error" not in ok_attributes
+
     def test_flatten_metadata(self) -> None:
         # Given
         metadata = {"difficulty": "hard", "category": "crypto"}
