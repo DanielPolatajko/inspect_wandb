@@ -132,6 +132,7 @@ def llm_span_attributes(
             "generate.reasoning_effort": config.reasoning_effort,
             "model.retries": event.retries,
             "model.cache": event.cache,
+            "model.error": event.error,
         }
     )
     return {**base, **extra}
@@ -157,6 +158,7 @@ def tool_span_attributes(
             "tool.error": getattr(event.error, "message", None)
             if event.error
             else None,
+            "tool.failed": event.failed or None,
             "tool.truncated": event.truncated is not None,
             "tool.working_time": event.working_time,
         }
