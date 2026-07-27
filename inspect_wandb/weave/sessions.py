@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 try:
     from opentelemetry import trace as otel_trace
     from opentelemetry.context import Context
-    from opentelemetry.trace import set_span_in_context
+    from opentelemetry.trace import Status, StatusCode, set_span_in_context
     from weave.session.session_otel import (
         execute_tool_attributes,
         invoke_agent_attributes,
@@ -172,6 +172,16 @@ def _set_attributes(span: Any, attributes: dict[str, Any]) -> None:
             span.set_attribute(key, value)
 
 
+def _set_span_status(span: Any, *, failed: bool, error: str | None = None) -> None:
+    # ERROR (with the message as the status description) makes a failed step show
+    # up in Weave's native status column and error-rate; OK marks the rest so a
+    # successful span reads as OK rather than the default UNSET.
+    if failed:
+        span.set_status(Status(StatusCode.ERROR, error or None))
+    else:
+        span.set_status(Status(StatusCode.OK))
+
+
 def _start_span(
     tracer: Any,
     name: str,
@@ -190,10 +200,16 @@ def _start_span(
 
 
 def _end_span(
-    span: Any, end_nanoseconds: int | None, attributes: dict[str, Any] | None = None
+    span: Any,
+    end_nanoseconds: int | None,
+    attributes: dict[str, Any] | None = None,
+    *,
+    failed: bool = False,
+    error: str | None = None,
 ) -> None:
     if attributes:
         _set_attributes(span, attributes)
+    _set_span_status(span, failed=failed, error=error)
     span.end(end_time=end_nanoseconds) if end_nanoseconds is not None else span.end()
 
 
@@ -204,10 +220,13 @@ def _emit_span(
     start_nanoseconds: int | None,
     end_nanoseconds: int | None,
     attributes: dict[str, Any],
+    *,
+    failed: bool = False,
+    error: str | None = None,
 ) -> Any:
     """Emit a complete (already finished) span: start and end it immediately."""
     span = _start_span(tracer, name, parent_context, start_nanoseconds, attributes)
-    _end_span(span, end_nanoseconds)
+    _end_span(span, end_nanoseconds, failed=failed, error=error)
     return span
 
 
@@ -241,9 +260,14 @@ class AgentSessionEmitter:
     re-shipped history — keeping aggregate transcript volume ~O(n) instead of
     O(n²) on long-horizon runs. Token counts are unchanged (they reflect the real
     API call). A ``CompactionEvent`` rewrites the message stream, so it resets the
-    slice offset and the next turn re-ships its full (compacted) input. All
-    emission is best-effort: failures are logged and never propagate into the eval
-    run.
+    slice offset and the next turn re-ships its full (compacted) input.
+
+    Span status is set explicitly: a failed step (an errored/failed tool call, a
+    model-call error, or an errored sample on the closing turn) gets ``ERROR`` with
+    the message as its status description, and everything else gets ``OK`` — so
+    failures surface in Weave's native status column and error-rate rather than
+    being buried as custom attributes on an otherwise ``UNSET`` span. All emission
+    is best-effort: failures are logged and never propagate into the eval run.
     """
 
     def __init__(
@@ -289,6 +313,8 @@ class AgentSessionEmitter:
                     ),
                     _to_nanoseconds(event.timestamp),
                     _to_nanoseconds(event.completed),
+                    failed=event.error is not None,
+                    error=event.error,
                 )
                 self._prev_input_length = len(event.input)
             elif isinstance(event, CompactionEvent):
@@ -305,6 +331,8 @@ class AgentSessionEmitter:
                     ),
                     _to_nanoseconds(event.timestamp),
                     _to_nanoseconds(event.completed),
+                    failed=bool(event.failed) or event.error is not None,
+                    error=getattr(event.error, "message", None),
                 )
                 if event.completed is not None:
                     self._turn_end = event.completed
@@ -317,7 +345,15 @@ class AgentSessionEmitter:
         if not SESSIONS_AVAILABLE:
             return
         try:
-            self._close_turn(outcome=_inspect_attributes(outcome) if outcome else {})
+            sample_error = outcome.get("error") if outcome else None
+            error_message = getattr(sample_error, "message", None) or (
+                str(sample_error) if sample_error else None
+            )
+            self._close_turn(
+                outcome=_inspect_attributes(outcome) if outcome else {},
+                failed=sample_error is not None,
+                error=error_message,
+            )
         except Exception:
             logger.warning("Failed to finish Weave agent session", exc_info=True)
 
@@ -349,6 +385,9 @@ class AgentSessionEmitter:
         attributes: dict[str, Any],
         start_nanoseconds: int | None,
         end_nanoseconds: int | None,
+        *,
+        failed: bool = False,
+        error: str | None = None,
     ) -> None:
         _emit_span(
             otel_trace.get_tracer(_TRACER_NAME),
@@ -357,14 +396,28 @@ class AgentSessionEmitter:
             start_nanoseconds,
             end_nanoseconds,
             attributes,
+            failed=failed,
+            error=error,
         )
 
-    def _close_turn(self, outcome: dict[str, Any] | None = None) -> None:
+    def _close_turn(
+        self,
+        outcome: dict[str, Any] | None = None,
+        *,
+        failed: bool = False,
+        error: str | None = None,
+    ) -> None:
         if self._turn_span is None:
             return
         turn_span, turn_end = self._turn_span, self._turn_end
         self._reset_turn()
-        _end_span(turn_span, _to_nanoseconds(turn_end), outcome or None)
+        _end_span(
+            turn_span,
+            _to_nanoseconds(turn_end),
+            outcome or None,
+            failed=failed,
+            error=error,
+        )
 
 
 def build_outcome(sample: Any) -> dict[str, Any]:
