@@ -248,6 +248,22 @@ class TestPureBuilders:
         span.set_attribute.assert_called_once_with("a", 1)
         span.end.assert_called_once_with(end_time=200)
 
+    def test_set_span_status_marks_error_and_ok(self) -> None:
+        # Given / When / Then
+        from opentelemetry.trace import StatusCode
+
+        from inspect_wandb.weave.sessions import _set_span_status
+
+        errored = MagicMock()
+        _set_span_status(errored, failed=True, error="boom")
+        error_status = errored.set_status.call_args.args[0]
+        assert error_status.status_code == StatusCode.ERROR
+        assert error_status.description == "boom"
+
+        ok = MagicMock()
+        _set_span_status(ok, failed=False)
+        assert ok.set_status.call_args.args[0].status_code == StatusCode.OK
+
     def test_build_outcome_includes_scores_timing_and_tokens(self) -> None:
         # Given
         sample = SimpleNamespace(
@@ -284,17 +300,36 @@ class TestAgentSessionEmitter:
         recorded: list = []
 
         def fake_start(tracer, name, parent_context, start_nanoseconds, attributes):  # noqa: ANN001
-            recorded.append(("turn_open", name, dict(attributes)))
+            recorded.append(("turn_open", name, dict(attributes), {}))
             return MagicMock()
 
         def fake_emit(
-            tracer, name, parent_context, start_nanoseconds, end_nanoseconds, attributes
+            tracer,
+            name,
+            parent_context,
+            start_nanoseconds,
+            end_nanoseconds,
+            attributes,
+            *,
+            failed=False,
+            error=None,
         ):  # noqa: ANN001
-            recorded.append(("child", name, dict(attributes)))
+            recorded.append(
+                ("child", name, dict(attributes), {"failed": failed, "error": error})
+            )
             return MagicMock()
 
-        def fake_end(span, end_nanoseconds, attributes=None):  # noqa: ANN001
-            recorded.append(("turn_close", None, dict(attributes or {})))
+        def fake_end(
+            span, end_nanoseconds, attributes=None, *, failed=False, error=None
+        ):  # noqa: ANN001
+            recorded.append(
+                (
+                    "turn_close",
+                    None,
+                    dict(attributes or {}),
+                    {"failed": failed, "error": error},
+                )
+            )
 
         emitter = AgentSessionEmitter(
             session_id="sess-uuid",
@@ -330,7 +365,7 @@ class TestAgentSessionEmitter:
 
         # Then: completed steps are already emitted while the turn is still open,
         # which is what makes an in-progress turn observable in the Agents view
-        assert [kind for kind, _, _ in recorded] == ["turn_open", "child", "child"]
+        assert [kind for kind, *_ in recorded] == ["turn_open", "child", "child"]
         assert recorded[1][1].startswith("chat")
         assert recorded[2][1].startswith("execute_tool")
 
@@ -344,7 +379,7 @@ class TestAgentSessionEmitter:
 
         # Then: the chat span is still visible with no execute_tool following it —
         # the signal a Monitor keys on to detect a hung tool call
-        assert [kind for kind, _, _ in recorded] == ["turn_open", "child"]
+        assert [kind for kind, *_ in recorded] == ["turn_open", "child"]
         assert recorded[1][1].startswith("chat")
 
     def test_segments_turns_with_usage_on_llm_children_not_turn(self) -> None:
@@ -360,8 +395,8 @@ class TestAgentSessionEmitter:
         recorded = self._run(events)
 
         # Then
-        turns = [(n, a) for kind, n, a in recorded if kind == "turn_open"]
-        chats = [(n, a) for kind, n, a in recorded if n and n.startswith("chat")]
+        turns = [(n, a) for kind, n, a, *_ in recorded if kind == "turn_open"]
+        chats = [(n, a) for kind, n, a, *_ in recorded if n and n.startswith("chat")]
         assert len(turns) == 2
         assert turns[0][1]["inspect.turn_index"] == 0
         assert turns[1][1]["inspect.turn_index"] == 1
@@ -371,7 +406,7 @@ class TestAgentSessionEmitter:
         assert "gen_ai.usage.input_tokens" not in turns[0][1]
         assert chats[0][1]["gen_ai.usage.input_tokens"] == 100
         # Each turn is closed before the next one opens
-        assert [kind for kind, _, _ in recorded] == [
+        assert [kind for kind, *_ in recorded] == [
             "turn_open",
             "child",
             "child",
@@ -390,7 +425,7 @@ class TestAgentSessionEmitter:
         recorded = self._run(events, outcome={"score.includes": 1.0, "total_time": 5.0})
 
         # Then: outcome is attached when the last turn is closed
-        closes = [a for kind, _, a in recorded if kind == "turn_close"]
+        closes = [a for kind, _, a, *_ in recorded if kind == "turn_close"]
         assert closes[-1]["inspect.score.includes"] == 1.0
         assert closes[-1]["inspect.total_time"] == 5.0
 
@@ -422,7 +457,7 @@ class TestAgentSessionEmitter:
     def _chat_inputs(self, recorded: list) -> list[str]:
         return [
             attributes.get("gen_ai.input.messages", "")
-            for kind, name, attributes in recorded
+            for kind, name, attributes, *_ in recorded
             if name and name.startswith("chat")
         ]
 
@@ -483,3 +518,57 @@ class TestAgentSessionEmitter:
         # Then: delta emits ~one message per turn (linear) rather than the whole
         # history each turn (quadratic)
         assert delta_volume < full_volume / 5
+
+    def _status(self, recorded: list, name_prefix: str) -> dict:
+        for _kind, name, _attributes, status in recorded:
+            if name and name.startswith(name_prefix):
+                return status
+        raise AssertionError(f"no span starting with {name_prefix!r}")
+
+    def test_failed_tool_marks_span_status_error(self) -> None:
+        # Given
+        tool = make_tool_event()
+        tool.failed = True
+        events = [make_model_event(), tool]
+
+        # When
+        recorded = self._run(events, finish_run=False)
+
+        # Then: the execute_tool span carries ERROR status so it reads as failed
+        assert self._status(recorded, "execute_tool") == {"failed": True, "error": None}
+
+    def test_model_error_marks_chat_span_status_error(self) -> None:
+        # Given
+        model = make_model_event()
+        model.error = "rate limit exceeded"
+
+        # When
+        recorded = self._run([model], finish_run=False)
+
+        # Then
+        assert self._status(recorded, "chat") == {
+            "failed": True,
+            "error": "rate limit exceeded",
+        }
+
+    def test_successful_steps_marked_ok_not_unset(self) -> None:
+        # Given
+        events = [make_model_event(), make_tool_event()]
+
+        # When
+        recorded = self._run(events, finish_run=False)
+
+        # Then: non-failing spans are explicitly OK rather than left UNSET
+        assert self._status(recorded, "chat")["failed"] is False
+        assert self._status(recorded, "execute_tool")["failed"] is False
+
+    def test_turn_marked_error_when_sample_errored(self) -> None:
+        # Given
+        outcome = {"error": SimpleNamespace(message="sample crashed")}
+
+        # When
+        recorded = self._run([make_model_event()], outcome=outcome)
+
+        # Then: the closed turn reflects the sample-level failure
+        closes = [status for kind, _n, _a, status in recorded if kind == "turn_close"]
+        assert closes[-1] == {"failed": True, "error": "sample crashed"}
