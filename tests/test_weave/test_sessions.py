@@ -12,11 +12,13 @@ from inspect_ai.model import (
     ModelUsage,
 )
 from inspect_ai.scorer import Score
+from opentelemetry.trace import StatusCode
 
 from inspect_wandb.weave.sessions import (
     AgentSessionEmitter,
     _coerce,
     _emit_span,
+    _set_span_status,
     build_outcome,
     flatten_metadata,
     llm_span_attributes,
@@ -250,10 +252,6 @@ class TestPureBuilders:
 
     def test_set_span_status_marks_error_and_ok(self) -> None:
         # Given / When / Then
-        from opentelemetry.trace import StatusCode
-
-        from inspect_wandb.weave.sessions import _set_span_status
-
         errored = MagicMock()
         _set_span_status(errored, failed=True, error="boom")
         error_status = errored.set_status.call_args.args[0]
