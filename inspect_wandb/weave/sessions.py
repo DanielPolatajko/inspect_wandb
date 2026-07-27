@@ -3,7 +3,7 @@ from datetime import datetime
 from logging import getLogger
 from typing import Any
 
-from inspect_ai.event import Event, ModelEvent, ToolEvent
+from inspect_ai.event import CompactionEvent, Event, ModelEvent, ToolEvent
 from inspect_ai.model import ChatMessage
 from inspect_ai.scorer import Score
 
@@ -92,7 +92,11 @@ def usage_from_event(event: ModelEvent) -> Usage:
 
 
 def llm_span_attributes(
-    event: ModelEvent, *, conversation_id: str, include_content: bool = True
+    event: ModelEvent,
+    *,
+    conversation_id: str,
+    include_content: bool = True,
+    input_from_index: int = 0,
 ) -> dict[str, Any]:
     config = event.config
     output = event.output
@@ -105,7 +109,9 @@ def llm_span_attributes(
         model=event.model,
         provider_name=_provider(event.model),
         conversation_id=conversation_id,
-        input_messages=to_messages(event.input) if include_content else None,
+        input_messages=to_messages(event.input[input_from_index:])
+        if include_content
+        else None,
         output_messages=output_messages if include_content else None,
         usage=usage_from_event(event),
         finish_reasons=[
@@ -226,8 +232,16 @@ class AgentSessionEmitter:
     double-count in the Agents view. A turn is one model generation plus the tool
     calls it triggered; a new ``ModelEvent`` closes the open turn and starts the
     next, and ``finish`` closes the last turn with sample outcome metadata
-    attached. All emission is best-effort: failures are logged and never
-    propagate into the eval run.
+    attached.
+
+    Each ``chat`` span's ``input.messages`` carries only the messages *new that
+    turn* (``event.input`` sliced from the previous turn's length), not the whole
+    re-shipped history — keeping aggregate transcript volume ~O(n) instead of
+    O(n²) on long-horizon runs. Token counts are unchanged (they reflect the real
+    API call). A ``CompactionEvent`` rewrites the message stream, so it resets the
+    slice offset and the next turn re-ships its full (compacted) input. All
+    emission is best-effort: failures are logged and never propagate into the eval
+    run.
     """
 
     def __init__(
@@ -247,6 +261,7 @@ class AgentSessionEmitter:
         self._identity_attributes = _inspect_attributes(identity)
         self._include_content = include_content
         self._turn_index = 0
+        self._prev_input_length = 0
         self._reset_turn()
 
     def _reset_turn(self) -> None:
@@ -268,10 +283,16 @@ class AgentSessionEmitter:
                         event,
                         conversation_id=self._session_id,
                         include_content=self._include_content,
+                        input_from_index=self._prev_input_length,
                     ),
                     _to_nanoseconds(event.timestamp),
                     _to_nanoseconds(event.completed),
                 )
+                self._prev_input_length = len(event.input)
+            elif isinstance(event, CompactionEvent):
+                # History was rewritten; the next model input is a new stream, so
+                # re-ship it in full rather than delta against the old one.
+                self._prev_input_length = 0
             elif isinstance(event, ToolEvent) and self._turn_span is not None:
                 self._emit_child(
                     f"execute_tool {event.function}",
