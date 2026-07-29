@@ -3979,7 +3979,7 @@ wheels = [
 
 [[package]]
 name = "weave"
-version = "0.52.43"
+version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -3990,7 +3990,6 @@ dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
-    { name = "opentelemetry-semantic-conventions" },
     { name = "packaging" },
     { name = "polyfile-weave" },
     { name = "pydantic" },
@@ -3998,9 +3997,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/df/dcb32bf366eca5e11d345a8e15238256396a9ff7346a29b3290a358b9cd8/weave-0.52.43.tar.gz", hash = "sha256:3c4abcb4da33e0db8a03bd52739503d99c90bdb1922b704ca2b2df8a0f6d561e", size = 977397, upload-time = "2026-06-15T21:29:23.062Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4a/5f/b62f0c6ebc9258374d75afacc1324555ec410ecd7f4ad7a0a858d7b7cb8b/weave-0.53.3.tar.gz", hash = "sha256:df5c5e42c9bd654ab7a82c0248e26165c4eb0055171a06aed272631bdeae087e", size = 1160895, upload-time = "2026-07-27T18:45:48.773Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/a0/e823f714e337c6342a831307d21d2a12c87bc6a6015fc0ac62be9dd8e01f/weave-0.52.43-py3-none-any.whl", hash = "sha256:d7fb10e893c9da57c7663c8c51a1a67eb59216f9da0e4056a244a41de63faf19", size = 1199217, upload-time = "2026-06-15T21:29:21.267Z" },
+    { url = "https://files.pythonhosted.org/packages/30/f0/1d252032e7157f3b998530b9ef296e91382d49e2bf391de01602ea343baf/weave-0.53.3-py3-none-any.whl", hash = "sha256:aa7bf0b08ed4259e0389f5933fa0fdc6d89121e7c06a3a0bfb83c5388b7c80bc", size = 1405668, upload-time = "2026-07-27T18:45:46.964Z" },
 ]
 
 [[package]]
