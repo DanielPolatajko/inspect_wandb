@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime
 from logging import getLogger
@@ -13,12 +15,23 @@ try:
     from opentelemetry import trace as otel_trace
     from opentelemetry.context import Context
     from opentelemetry.trace import Status, StatusCode, set_span_in_context
-    from weave.session.session_otel import (
-        execute_tool_attributes,
-        invoke_agent_attributes,
-        llm_attributes,
-    )
-    from weave.session.types import Message, Usage
+
+    try:
+        # weave 0.53 renamed weave.session to weave.conversation. The old path
+        # survives as an empty shim that warns, so import the new one first.
+        from weave.conversation.conversation_otel import (
+            execute_tool_attributes,
+            invoke_agent_attributes,
+            llm_attributes,
+        )
+        from weave.conversation.types import Message, Usage
+    except ImportError:
+        from weave.session.session_otel import (
+            execute_tool_attributes,
+            invoke_agent_attributes,
+            llm_attributes,
+        )
+        from weave.session.types import Message, Usage
 
     SESSIONS_AVAILABLE = True
 except Exception:  # pragma: no cover - guards against weave internal changes
