@@ -1,8 +1,10 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Any
-from pydantic_settings import SettingsConfigDict
-from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 from os import getenv
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import SettingsConfigDict
+
+from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 
 
 class EnvironmentValidations(BaseModel):

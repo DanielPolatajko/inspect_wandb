@@ -8,9 +8,9 @@ from inspect_ai.log import EvalError, EvalSample, EvalSampleLimit
 from inspect_ai.model import ChatMessage
 from inspect_ai.scorer import Value
 from opentelemetry import trace as otel_trace
-from pydantic import BaseModel, Field
 from opentelemetry.context import Context
 from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context
+from pydantic import BaseModel, Field
 from weave.conversation.conversation_otel import (
     execute_tool_attributes,
     invoke_agent_attributes,

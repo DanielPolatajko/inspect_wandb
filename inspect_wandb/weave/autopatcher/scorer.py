@@ -1,18 +1,17 @@
 from typing import Any, cast
 
-from weave import op as weave_op
-
-from inspect_ai.scorer import Scorer, Target
-from inspect_ai.scorer._metric import Score
-from inspect_ai.solver._plan import logger
 from inspect_ai._util.registry import (
-    registry_info,
     is_registry_object,
+    registry_info,
     set_registry_info,
 )
-from weave.trace.context import call_context
+from inspect_ai.scorer import Scorer, Target
+from inspect_ai.scorer._metric import Score
 from inspect_ai.solver import TaskState
+from inspect_ai.solver._plan import logger
 from inspect_ai.solver._task_state import state_jsonable
+from weave import op as weave_op
+from weave.trace.context import call_context
 
 
 def _postprocess_scorer_inputs(

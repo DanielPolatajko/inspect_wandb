@@ -1,30 +1,31 @@
-import pytest
 import configparser
 import os
-from typing import Callable, Generator
+from collections.abc import Callable, Generator
+from datetime import UTC, datetime
 from pathlib import Path
-from inspect_ai import Task, task
-from inspect_ai.dataset import Sample
-from inspect_ai.scorer import exact
-from inspect_ai.solver import generate, Solver, TaskState, Generate, solver
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import inspect_ai.hooks._startup as hooks_startup_module
-from unittest.mock import patch
-from inspect_wandb.providers import weave_evaluation_hooks
-from pytest import TempPathFactory
+import pytest
+from inspect_ai import Task, task
 from inspect_ai._util.registry import registry_find
-from weave.evaluation.eval_imperative import EvaluationLogger
+from inspect_ai.dataset import Sample
 from inspect_ai.hooks import TaskStart
 from inspect_ai.log import (
-    EvalSpec,
     EvalConfig,
     EvalDataset,
     EvalLog,
+    EvalMetric,
     EvalResults,
     EvalScore,
-    EvalMetric,
+    EvalSpec,
 )
-from datetime import datetime
+from inspect_ai.scorer import exact
+from inspect_ai.solver import Generate, Solver, TaskState, generate, solver
+from pytest import TempPathFactory
+from weave.evaluation.eval_imperative import EvaluationLogger
+
+from inspect_wandb.providers import weave_evaluation_hooks
 
 ## Mock API key for all tests by default
 
@@ -212,7 +213,7 @@ def create_task_start() -> Callable[[dict | None], TaskStart]:
             spec=EvalSpec(
                 run_id="test_run_id",
                 task_id="test_task_id",
-                created=datetime.now().isoformat(),
+                created=datetime.now(UTC).isoformat(),
                 task="test_task",
                 dataset=EvalDataset(name="test-dataset"),
                 model="mockllm/model",
@@ -231,7 +232,7 @@ def task_end_eval_log() -> EvalLog:
             eval_set_id="test_eval_set_id",
             run_id="test_run_id",
             task_id="test_task_id",
-            created=datetime.now().isoformat(),
+            created=datetime.now(UTC).isoformat(),
             task="test_task",
             dataset=EvalDataset(),
             model="mockllm/model",
