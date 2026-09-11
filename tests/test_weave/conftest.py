@@ -1,11 +1,11 @@
-import pytest
-from unittest.mock import MagicMock, patch
-from weave.trace.weave_client import WeaveClient
-from typing import Generator
-from weave.trace.weave_client import Op, Call, ObjectRef
+from collections.abc import Callable, Generator
 from concurrent.futures import Future
-from typing import Any, Callable
+from typing import Any
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
+
+import pytest
+from weave.trace.weave_client import Call, ObjectRef, Op, WeaveClient
 
 
 class TestCall:
@@ -37,7 +37,7 @@ class WeaveTestClient(MagicMock):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(spec=WeaveClient, *args, **kwargs)
+        super().__init__(*args, spec=WeaveClient, **kwargs)
         self.calls: dict[str, TestCall] = {}
 
     def create_call(

@@ -1,7 +1,9 @@
 import importlib
-from weave.integrations.patcher import SymbolPatcher, MultiPatcher
-from weave.trace.autopatch import AutopatchSettings, IntegrationSettings
+
 from pydantic import Field
+from weave.integrations.patcher import MultiPatcher, SymbolPatcher
+from weave.trace.autopatch import AutopatchSettings, IntegrationSettings
+
 from inspect_wandb.weave.autopatcher.inspect import patched_task_run_sample
 
 inspect_patcher = MultiPatcher(

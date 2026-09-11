@@ -1,27 +1,29 @@
-from inspect_ai import task, Task, eval
-from inspect_ai.solver import generate
-from inspect_ai.scorer import exact, match, Target
-from inspect_ai.dataset import Sample
-from inspect_ai.solver import TaskState
-from inspect_ai.model import ModelOutput, ChatMessageUser, ChatMessageAssistant
-from typing import Generator
-import pytest
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
-from .conftest import WeaveTestClient
-from inspect_wandb.weave.autopatcher.scorer import (
-    PatchedScorer,
-    _postprocess_scorer_inputs,
+
+import pytest
+from inspect_ai import Task, eval, task
+from inspect_ai._util.registry import (
+    is_registry_object,
+    registry_info,
+    set_registry_info,
 )
+from inspect_ai.dataset import Sample
+from inspect_ai.model import ChatMessageAssistant, ChatMessageUser, ModelOutput
+from inspect_ai.scorer import Target, exact, match
+from inspect_ai.scorer._metric import Score
+from inspect_ai.solver import TaskState, generate
+
 from inspect_wandb.weave.autopatcher.plan import (
     _postprocess_solver_inputs,
     _postprocess_solver_output,
 )
-from inspect_ai._util.registry import (
-    registry_info,
-    is_registry_object,
-    set_registry_info,
+from inspect_wandb.weave.autopatcher.scorer import (
+    PatchedScorer,
+    _postprocess_scorer_inputs,
 )
-from inspect_ai.scorer._metric import Score
+
+from .conftest import WeaveTestClient
 
 
 @pytest.fixture(scope="function")
@@ -286,18 +288,18 @@ class TestPatchedScorerCall:
 
 
 def _make_task_state() -> TaskState:
-    defaults = dict(
-        model="test_model",
-        sample_id=1,
-        epoch=1,
-        input="test input",
-        messages=[
+    defaults = {
+        "model": "test_model",
+        "sample_id": 1,
+        "epoch": 1,
+        "input": "test input",
+        "messages": [
             ChatMessageUser(content="hello"),
             ChatMessageAssistant(content="world"),
         ],
-        output=ModelOutput.from_content(model="test_model", content="test output"),
-        completed=False,
-    )
+        "output": ModelOutput.from_content(model="test_model", content="test output"),
+        "completed": False,
+    }
     return TaskState(**defaults)
 
 

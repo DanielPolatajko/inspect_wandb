@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
-from inspect_wandb.config.settings import ModelsSettings
 from pydantic import ValidationError
+
+from inspect_wandb.config.settings import ModelsSettings
 
 
 class TestModelsSettings:

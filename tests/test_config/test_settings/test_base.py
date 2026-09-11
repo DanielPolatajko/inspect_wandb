@@ -1,8 +1,10 @@
-from inspect_wandb.config.settings.base import InspectWandBBaseSettings
-import pytest
+import os
 from pathlib import Path
 from unittest.mock import patch
-import os
+
+import pytest
+
+from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 
 
 class TestInspectWandBBaseSettings:

@@ -1,4 +1,5 @@
 from inspect_ai.hooks import hooks
+
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
 from inspect_wandb.models import WandBModelHooks
 

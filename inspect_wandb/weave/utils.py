@@ -1,7 +1,8 @@
-from weave.evaluation.eval_imperative import ScoreType
-from inspect_ai.scorer import Value, CORRECT, INCORRECT
-from typing import Sequence, Mapping
+from collections.abc import Mapping, Sequence
 from logging import getLogger
+
+from inspect_ai.scorer import CORRECT, INCORRECT, Value
+from weave.evaluation.eval_imperative import ScoreType
 
 utils_logger = getLogger(__name__)
 

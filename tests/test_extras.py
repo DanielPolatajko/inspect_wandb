@@ -1,7 +1,8 @@
-import pytest
-from pathlib import Path
 import subprocess
-from typing import Generator
+from collections.abc import Generator
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture(scope="function")

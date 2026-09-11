@@ -8,7 +8,8 @@ from pydantic_settings.sources import (
     PydanticBaseSettingsSource,
     PyprojectTomlConfigSettingsSource,
 )
-from wandb.env import API_KEY as WANDB_API_KEY_ENV, BASE_URL as WANDB_BASE_URL_ENV
+from wandb.env import API_KEY as WANDB_API_KEY_ENV
+from wandb.env import BASE_URL as WANDB_BASE_URL_ENV
 from wandb.sdk.lib.wbauth import read_netrc_auth
 
 from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
