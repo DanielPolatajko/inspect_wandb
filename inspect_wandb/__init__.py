@@ -8,4 +8,4 @@ if INSTALLED_EXTRAS["weave"]:
 else:
     __all__ = ["wandb_models_hooks"]
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"

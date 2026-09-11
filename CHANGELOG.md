@@ -1,8 +1,11 @@
-## Unreleased
+## [v0.3.0](https://pypi.org/project/inspect-wandb/0.3.0/) (11 September 2026)
 
 ### Added
 - Add `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. 
-- Bump minimum `weave` to `0.53.0` (the agent Conversation SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
+- Add `agent_sessions_include_content` Weave setting controlling whether full message and tool content is included on the streamed spans. Set `false` to log only structure (turns, tool names, tokens, timing, scores) for very long-horizon evals where per-turn transcript volume is prohibitive.
+
+### Changed
+- **Breaking:** the `weave` extra now requires `weave >= 0.53.0` (the agent Conversation SDK), raised from `0.52.43`, and `inspect_ai` requires `>= 0.3.217` (the `on_sample_event` hook). Environments pinned to weave 0.52.x must upgrade.
 
 ### Fixed
 - Follow weave's `weave.session` -> `weave.conversation` rename (weave 0.53). The old module was reduced to a deprecation shim with `session_otel`/`types` removed, which made `inspect_wandb.weave.hooks` unimportable and took the whole hook entry point down on any weave >= 0.53. Thanks to [@mlsimon734](https://github.com/mlsimon734) for the diagnosis.
