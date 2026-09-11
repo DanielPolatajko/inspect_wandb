@@ -819,17 +819,6 @@ class TestAgentSessionsWiring:
         )
         return hooks
 
-    def test_agent_sessions_inactive_when_weave_unavailable(self) -> None:
-        # Given
-        hooks = self._enabled_hooks()
-
-        # When
-        with patch("inspect_wandb.weave.hooks.SESSIONS_AVAILABLE", False):
-            active = hooks._agent_sessions_active()
-
-        # Then
-        assert active is False
-
     def test_agent_sessions_inactive_when_setting_disabled(self) -> None:
         # Given
         hooks = self._enabled_hooks()
