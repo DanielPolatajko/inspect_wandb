@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -28,9 +28,9 @@ from inspect_wandb.weave.sessions import (
     _coerce_to_otel_scalar,
 )
 
-T0 = datetime(2026, 6, 21, 12, 0, 0, tzinfo=timezone.utc)
-T1 = datetime(2026, 6, 21, 12, 0, 1, tzinfo=timezone.utc)
-T2 = datetime(2026, 6, 21, 12, 0, 2, tzinfo=timezone.utc)
+T0 = datetime(2026, 6, 21, 12, 0, 0, tzinfo=UTC)
+T1 = datetime(2026, 6, 21, 12, 0, 1, tzinfo=UTC)
+T2 = datetime(2026, 6, 21, 12, 0, 2, tzinfo=UTC)
 
 
 def make_model_event(input_tokens: int = 100, output_tokens: int = 20) -> ModelEvent:

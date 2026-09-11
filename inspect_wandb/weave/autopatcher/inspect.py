@@ -1,10 +1,11 @@
-from inspect_ai.scorer._metric import SampleScore
 from inspect_ai._eval.task.run import task_run_sample
+from inspect_ai.scorer import Scorer
+from inspect_ai.scorer._metric import SampleScore
+from inspect_ai.solver import Plan
+from inspect_ai.util._early_stopping import EarlyStop
+
 from inspect_wandb.weave.autopatcher.plan import PatchedPlan
 from inspect_wandb.weave.autopatcher.scorer import PatchedScorer
-from inspect_ai.util._early_stopping import EarlyStop
-from inspect_ai.solver import Plan
-from inspect_ai.scorer import Scorer
 
 
 async def patched_task_run_sample(

@@ -1,9 +1,9 @@
 import os
-import pytest
 from unittest.mock import patch
 
-from inspect_wandb.config.settings import ModelsSettings
+import pytest
 
+from inspect_wandb.config.settings import ModelsSettings
 
 READ_NETRC_PATH = "inspect_wandb.config.settings.base.read_netrc_auth"
 
@@ -14,13 +14,15 @@ class TestBaseSettingsApiKeyValidation:
         # Given
         env = {k: v for k, v in os.environ.items() if k != "WANDB_API_KEY"}
         # When
-        with patch.dict(os.environ, env, clear=True):
-            with patch(READ_NETRC_PATH, return_value=None):
-                settings = ModelsSettings(
-                    enabled=True,
-                    project="test-project",
-                    entity="test-entity",
-                )
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch(READ_NETRC_PATH, return_value=None),
+        ):
+            settings = ModelsSettings(
+                enabled=True,
+                project="test-project",
+                entity="test-entity",
+            )
 
         # Then
         assert settings.enabled is False
@@ -41,13 +43,15 @@ class TestBaseSettingsApiKeyValidation:
         # Given
         env = {k: v for k, v in os.environ.items() if k != "WANDB_API_KEY"}
         # When
-        with patch.dict(os.environ, env, clear=True):
-            with patch(READ_NETRC_PATH, return_value=None) as mock_read_netrc:
-                settings = ModelsSettings(
-                    enabled=False,
-                    project="test-project",
-                    entity="test-entity",
-                )
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch(READ_NETRC_PATH, return_value=None) as mock_read_netrc,
+        ):
+            settings = ModelsSettings(
+                enabled=False,
+                project="test-project",
+                entity="test-entity",
+            )
 
         # Then
         assert settings.enabled is False

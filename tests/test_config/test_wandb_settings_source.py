@@ -1,8 +1,10 @@
-from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
-from inspect_wandb.config.settings import ModelsSettings
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
+
+from inspect_wandb.config.settings import ModelsSettings
+from inspect_wandb.config.wandb_settings_source import WandBSettingsSource
 
 
 class TestWandBSettingsSource:
@@ -55,6 +57,25 @@ class TestWandBSettingsSource:
         with patch(
             "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
             return_value=settings_file,
+        ):
+            source = WandBSettingsSource(ModelsSettings)
+            result = source()
+
+        # Then
+        assert result == {}
+
+    def test_wandb_settings_source_with_unreadable_file(self, tmp_path: Path) -> None:
+        # Given
+        settings_file = tmp_path / "settings"
+        settings_file.write_text("[default]\nentity = some-entity\n")
+
+        # When
+        with (
+            patch(
+                "inspect_wandb.config.wandb_settings_source._wandb_settings_path",
+                return_value=settings_file,
+            ),
+            patch("builtins.open", side_effect=PermissionError("permission denied")),
         ):
             source = WandBSettingsSource(ModelsSettings)
             result = source()

@@ -1,13 +1,14 @@
-from inspect_viz import Component
-from inspect_viz.plot import write_png_async
 import logging
-from inspect_viz.view import scores_heatmap
-from inspect_viz import Data
 from pathlib import Path
+
 import pandas as pd
-from wandb import Run, log, Image
-from inspect_ai.hooks import RunEnd
 from inspect_ai.analysis import evals_df
+from inspect_ai.hooks import RunEnd
+from inspect_viz import Component, Data
+from inspect_viz.plot import write_png_async
+from inspect_viz.view import scores_heatmap
+
+from wandb import Image, Run, log
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class InspectVizWriter:
             run.config["logs"] = logs
             df = evals_df(logs)
             await self._log_scores_heatmap(data, df)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - plotting is best-effort and must never fail the run
             logger.warning(f"Error creating scores heatmap: {e}")
 
     async def _log_scores_heatmap(self, data: RunEnd, df: pd.DataFrame) -> None:

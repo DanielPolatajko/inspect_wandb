@@ -1,12 +1,14 @@
 import configparser
+import logging
 import os
 from pathlib import Path
 from typing import Any
-import wandb
+
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings.sources import PydanticBaseSettingsSource
-import logging
+
+import wandb
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +55,7 @@ class WandBSettingsSource(PydanticBaseSettingsSource):
                 f"Loaded wandb settings: entity={self._wandb_settings.get('entity')}, project={self._wandb_settings.get('project')}"
             )
 
-        except Exception as e:
+        except (OSError, configparser.Error, ValueError) as e:
             logger.warning(f"Failed to read wandb settings file: {e}")
             self._wandb_settings = {}
 

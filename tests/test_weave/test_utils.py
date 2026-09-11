@@ -1,8 +1,10 @@
-from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
-from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
-from inspect_ai.scorer import CORRECT, INCORRECT
-import pytest
 import re
+
+import pytest
+from inspect_ai.scorer import CORRECT, INCORRECT
+
+from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
+from inspect_wandb.weave.utils import format_sample_display_name, format_score_types
 
 
 @pytest.mark.parametrize(

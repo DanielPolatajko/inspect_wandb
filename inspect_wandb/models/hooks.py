@@ -1,16 +1,17 @@
 import logging
 from pathlib import Path
 from typing import Any
-from typing_extensions import override
 
-from wandb import init, Run
-from wandb.errors import CommError
-from inspect_ai.hooks import RunEnd, SampleEnd, TaskStart, EvalSetStart
+from inspect_ai.hooks import EvalSetStart, RunEnd, SampleEnd, TaskStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import CORRECT
-from inspect_wandb.config.settings import ModelsSettings
+from typing_extensions import override
+from wandb.errors import CommError
+
 from inspect_wandb.config.extras_manager import INSTALLED_EXTRAS
+from inspect_wandb.config.settings import ModelsSettings
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
+from wandb import Run, init
 
 if INSTALLED_EXTRAS["viz"]:
     from inspect_wandb.viz.inspect_viz_writer import InspectVizWriter
@@ -34,9 +35,10 @@ class WandBModelHooks(InspectWandBHooks):
     _total_samples: int = 0
     _wandb_initialized: bool = False
     _is_eval_set: bool = False
-    _active_runs: dict[str, dict[str, bool | BaseException | None]] = {}
+    _active_runs: dict[str, dict[str, bool | BaseException | None]]
 
     def __init__(self):
+        self._active_runs = {}
         if INSTALLED_EXTRAS["viz"]:
             self.viz_writer = InspectVizWriter()
         else:
@@ -74,7 +76,7 @@ class WandBModelHooks(InspectWandBHooks):
                             str(file), policy="now"
                         )  # TODO: fix wandb Symlinked warning for folder upload
                         logger.info(f"Successfully saved {file} to wandb")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 - wandb upload is best-effort and must never fail the run
                         logger.warning(f"Failed to save {file} to wandb: {e}")
                 else:
                     logger.warning(
@@ -85,7 +87,7 @@ class WandBModelHooks(InspectWandBHooks):
             logger.error(f"SystemExit running eval set: {data.exception}")
             self.run.finish(exit_code=3)
         elif (
-            last_run := all([not run["running"] for run in self._active_runs.values()])
+            last_run := all(not run["running"] for run in self._active_runs.values())
         ) and data.exception is not None:
             logger.error("Inspect exited due to exception")
             self.run.finish(exit_code=2)

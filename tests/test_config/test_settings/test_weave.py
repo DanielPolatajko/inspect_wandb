@@ -1,8 +1,10 @@
-from inspect_wandb.config.settings import WeaveSettings
-from unittest.mock import patch
-from pathlib import Path
 import os
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
+
+from inspect_wandb.config.settings import WeaveSettings
 
 
 class TestWeaveSettings:

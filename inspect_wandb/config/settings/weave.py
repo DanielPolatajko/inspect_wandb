@@ -1,6 +1,7 @@
-from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
+
+from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 
 
 class WeaveSettings(InspectWandBBaseSettings):
