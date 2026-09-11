@@ -1,36 +1,29 @@
 import json
 from datetime import datetime
 from logging import getLogger
-from typing import Any
+from typing import Any, get_args
 
 from inspect_ai.event import CompactionEvent, Event, ModelEvent, ToolEvent
+from inspect_ai.log import EvalError, EvalSample, EvalSampleLimit
 from inspect_ai.model import ChatMessage
-from inspect_ai.scorer import Score
+from inspect_ai.scorer import Value
+from opentelemetry import trace as otel_trace
+from opentelemetry.context import Context
+from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context
+from pydantic import BaseModel, Field
+from weave.conversation.conversation_otel import (
+    execute_tool_attributes,
+    invoke_agent_attributes,
+    llm_attributes,
+)
+from weave.conversation.types import Message, Usage
 
 logger = getLogger(__name__)
 
-try:
-    from opentelemetry import trace as otel_trace
-    from opentelemetry.context import Context
-    from opentelemetry.trace import Status, StatusCode, set_span_in_context
-    from weave.session.session_otel import (
-        execute_tool_attributes,
-        invoke_agent_attributes,
-        llm_attributes,
-    )
-    from weave.session.types import Message, Usage
-
-    SESSIONS_AVAILABLE = True
-except Exception:  # pragma: no cover - guards against weave internal changes
-    SESSIONS_AVAILABLE = False
-    logger.warning(
-        "Weave agent sessions unavailable: incompatible weave version", exc_info=True
-    )
-
 MAX_TOOL_RESULT_CHARS = 4000
 MAX_ATTRIBUTE_VALUE_CHARS = 16000
-_WEAVE_ROLES = {"user", "assistant", "system", "tool"}
-_TRACER_NAME = "weave.session"
+_WEAVE_ROLES = frozenset(get_args(Message.model_fields["role"].annotation))
+_TRACER_NAME = "weave.conversation"
 
 
 def _to_nanoseconds(event_time: datetime | None) -> int | None:
@@ -39,11 +32,7 @@ def _to_nanoseconds(event_time: datetime | None) -> int | None:
     )
 
 
-def _provider(model: str) -> str:
-    return model.split("/", 1)[0] if "/" in model else ""
-
-
-def _coerce(value: Any) -> str | int | float | bool | None:
+def _coerce_to_otel_scalar(value: Any) -> str | int | float | bool | None:
     """Coerce a value to a valid OTel attribute scalar, or None to skip."""
     if value is None or isinstance(value, (bool, int, float)):
         return value
@@ -56,178 +45,296 @@ def _inspect_attributes(values: dict[str, Any]) -> dict[str, Any]:
     """Build namespaced ``inspect.*`` attributes, coercing and dropping empties."""
     out: dict[str, Any] = {}
     for key, raw in values.items():
-        coerced = _coerce(raw)
+        coerced = _coerce_to_otel_scalar(raw)
         if coerced is not None and coerced != "":
             out[f"inspect.{key}"] = coerced
     return out
 
 
-def flatten_metadata(metadata: Any, prefix: str = "metadata") -> dict[str, Any]:
-    if not isinstance(metadata, dict):
-        return {}
-    return {f"{prefix}.{key}": value for key, value in metadata.items()}
+class SessionSpan(BaseModel):
+    """A gen_ai OTel span to emit: its name, attributes, timing and status.
+
+    Subclasses build the attributes for each span kind (``chat``, ``execute_tool``,
+    ``invoke_agent``) from the corresponding Inspect event; the ``SessionSpanWriter``
+    turns them into real OTel spans.
+    """
+
+    name: str
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    start_nanoseconds: int | None = None
+    end_nanoseconds: int | None = None
+    failed: bool = False
+    error: str | None = None
 
 
-def to_messages(messages: list[ChatMessage]) -> list[Message]:
-    return [
-        Message(
-            role=message.role if message.role in _WEAVE_ROLES else "user",
-            content=message.text or "",
+class ChatSpan(SessionSpan):
+    @staticmethod
+    def _to_messages(messages: list[ChatMessage]) -> list[Message]:
+        return [
+            Message(
+                role=message.role if message.role in _WEAVE_ROLES else "user",
+                content=message.text or "",
+            )
+            for message in messages
+        ]
+
+    @staticmethod
+    def _usage_from_event(event: ModelEvent) -> Usage:
+        usage = event.output.usage
+        if usage is None:
+            return Usage()
+        return Usage(
+            input_tokens=usage.input_tokens or 0,
+            output_tokens=usage.output_tokens or 0,
+            reasoning_tokens=usage.reasoning_tokens or 0,
+            cache_creation_input_tokens=usage.input_tokens_cache_write or 0,
+            cache_read_input_tokens=usage.input_tokens_cache_read or 0,
         )
-        for message in messages
-    ]
 
-
-def usage_from_event(event: ModelEvent) -> Usage:
-    usage = event.output.usage
-    if usage is None:
-        return Usage()
-    return Usage(
-        input_tokens=usage.input_tokens or 0,
-        output_tokens=usage.output_tokens or 0,
-        reasoning_tokens=usage.reasoning_tokens or 0,
-        cache_creation_input_tokens=usage.input_tokens_cache_write or 0,
-        cache_read_input_tokens=usage.input_tokens_cache_read or 0,
-    )
-
-
-def llm_span_attributes(
-    event: ModelEvent,
-    *,
-    conversation_id: str,
-    include_content: bool = True,
-    input_from_index: int = 0,
-) -> dict[str, Any]:
-    config = event.config
-    output = event.output
-    output_messages = (
-        to_messages([output.choices[0].message])
-        if output.choices
-        else [Message.assistant(output.completion)]
-    )
-    base = llm_attributes(
-        model=event.model,
-        provider_name=_provider(event.model),
-        conversation_id=conversation_id,
-        input_messages=to_messages(event.input[input_from_index:])
-        if include_content
-        else None,
-        output_messages=output_messages if include_content else None,
-        usage=usage_from_event(event),
-        finish_reasons=[
-            choice.stop_reason for choice in output.choices if choice.stop_reason
-        ],
-        response_model=output.model or "",
-        request_temperature=config.temperature,
-        request_max_tokens=config.max_tokens,
-        request_top_p=config.top_p,
-        request_frequency_penalty=config.frequency_penalty,
-        request_presence_penalty=config.presence_penalty,
-        request_seed=config.seed,
-        request_stop_sequences=config.stop_seqs,
-    )
-    extra = _inspect_attributes(
-        {
-            "generate.top_k": config.top_k,
-            "generate.reasoning_effort": config.reasoning_effort,
-            "model.retries": event.retries,
-            "model.cache": event.cache,
-            "model.error": event.error,
+    @classmethod
+    def from_event(
+        cls,
+        event: ModelEvent,
+        *,
+        conversation_id: str,
+        include_content: bool,
+        input_from_index: int,
+    ) -> "ChatSpan":
+        config = event.config
+        output = event.output
+        output_messages = (
+            cls._to_messages([output.choices[0].message])
+            if output.choices
+            else [Message.assistant(output.completion)]
+        )
+        provider_name = event.model.split("/", 1)[0] if "/" in event.model else ""
+        attributes = {
+            **llm_attributes(
+                model=event.model,
+                provider_name=provider_name,
+                conversation_id=conversation_id,
+                input_messages=cls._to_messages(event.input[input_from_index:])
+                if include_content
+                else None,
+                output_messages=output_messages if include_content else None,
+                usage=cls._usage_from_event(event),
+                finish_reasons=[
+                    choice.stop_reason
+                    for choice in output.choices
+                    if choice.stop_reason
+                ],
+                response_model=output.model or "",
+                request_temperature=config.temperature,
+                request_max_tokens=config.max_tokens,
+                request_top_p=config.top_p,
+                request_frequency_penalty=config.frequency_penalty,
+                request_presence_penalty=config.presence_penalty,
+                request_seed=config.seed,
+                request_stop_sequences=config.stop_seqs,
+            ),
+            **_inspect_attributes(
+                {
+                    # generation/sampling knobs not covered by gen_ai request.*
+                    "generate.top_k": config.top_k,
+                    "generate.best_of": config.best_of,
+                    "generate.num_choices": config.num_choices,
+                    "generate.logprobs": config.logprobs,
+                    "generate.top_logprobs": config.top_logprobs,
+                    # reasoning knobs
+                    "generate.reasoning_effort": config.reasoning_effort,
+                    "generate.effort": config.effort,
+                    "generate.reasoning_tokens": config.reasoning_tokens,
+                    "generate.verbosity": config.verbosity,
+                    # this model call
+                    "model.retries": event.retries,
+                    "model.cache": event.cache,
+                    "model.error": event.error,
+                }
+            ),
         }
-    )
-    return {**base, **extra}
+        return cls(
+            name=f"chat {event.model}",
+            attributes=attributes,
+            start_nanoseconds=_to_nanoseconds(event.timestamp),
+            end_nanoseconds=_to_nanoseconds(event.completed),
+            failed=event.error is not None,
+            error=event.error,
+        )
 
 
-def tool_span_attributes(
-    event: ToolEvent, *, conversation_id: str, include_content: bool = True
-) -> dict[str, Any]:
-    result = str(event.result)
-    if len(result) > MAX_TOOL_RESULT_CHARS:
-        result = result[:MAX_TOOL_RESULT_CHARS] + "…[truncated]"
-    base = execute_tool_attributes(
-        tool_name=event.function,
-        conversation_id=conversation_id,
-        tool_call_arguments=json.dumps(event.arguments, default=str)
-        if include_content
-        else "",
-        tool_call_result=result if include_content else "",
-        tool_call_id=event.id,
-    )
-    extra = _inspect_attributes(
-        {
-            "tool.error": getattr(event.error, "message", None)
-            if event.error
-            else None,
-            "tool.failed": event.failed or None,
-            "tool.truncated": event.truncated is not None,
-            "tool.working_time": event.working_time,
+class ToolSpan(SessionSpan):
+    @classmethod
+    def from_event(
+        cls, event: ToolEvent, *, conversation_id: str, include_content: bool
+    ) -> "ToolSpan":
+        result = str(event.result)
+        if len(result) > MAX_TOOL_RESULT_CHARS:
+            result = result[:MAX_TOOL_RESULT_CHARS] + "…[truncated]"
+        attributes = {
+            **execute_tool_attributes(
+                tool_name=event.function,
+                conversation_id=conversation_id,
+                tool_call_arguments=json.dumps(event.arguments, default=str)
+                if include_content
+                else "",
+                tool_call_result=result if include_content else "",
+                tool_call_id=event.id,
+            ),
+            **_inspect_attributes(
+                {
+                    "tool.error": getattr(event.error, "message", None)
+                    if event.error
+                    else None,
+                    "tool.failed": event.failed or None,
+                    "tool.truncated": event.truncated is not None,
+                    "tool.working_time": event.working_time,
+                }
+            ),
         }
-    )
-    return {**base, **extra}
+        return cls(
+            name=f"execute_tool {event.function}",
+            attributes=attributes,
+            start_nanoseconds=_to_nanoseconds(event.timestamp),
+            end_nanoseconds=_to_nanoseconds(event.completed),
+            failed=bool(event.failed) or event.error is not None,
+            error=getattr(event.error, "message", None),
+        )
 
 
-def _set_attributes(span: Any, attributes: dict[str, Any]) -> None:
-    for key, value in attributes.items():
-        if value is not None and value != "":
-            span.set_attribute(key, value)
+class TurnSpan(SessionSpan):
+    @classmethod
+    def opened(
+        cls,
+        *,
+        agent_name: str,
+        conversation_id: str,
+        conversation_name: str,
+        model: str,
+        identity_attributes: dict[str, Any],
+        turn_index: int,
+        start: datetime | None,
+    ) -> "TurnSpan":
+        attributes = {
+            **invoke_agent_attributes(
+                agent_name=agent_name,
+                conversation_id=conversation_id,
+                conversation_name=conversation_name,
+                model=model,
+                agent_version=model,
+            ),
+            **identity_attributes,
+            "inspect.turn_index": turn_index,
+        }
+        return cls(
+            name=f"invoke_agent {agent_name}",
+            attributes=attributes,
+            start_nanoseconds=_to_nanoseconds(start),
+        )
 
 
-def _set_span_status(span: Any, *, failed: bool, error: str | None = None) -> None:
-    # ERROR (with the message as the status description) makes a failed step show
-    # up in Weave's native status column and error-rate; OK marks the rest so a
-    # successful span reads as OK rather than the default UNSET.
-    if failed:
-        span.set_status(Status(StatusCode.ERROR, error or None))
-    else:
-        span.set_status(Status(StatusCode.OK))
+class SessionSpanWriter:
+    """Writes ``SessionSpan``s to the weave-configured global OTel tracer.
+
+    ``emit`` is for complete spans (a ``chat``/``execute_tool`` child, started and
+    ended in one go); ``open``/``close`` bracket the ``invoke_agent`` turn span,
+    which stays open while its children are emitted.
+    """
+
+    def __init__(self) -> None:
+        self._tracer = otel_trace.get_tracer(_TRACER_NAME)
+
+    def emit(self, span: SessionSpan, parent_context: Context | None) -> None:
+        self._finalise(self._start(span, parent_context), span)
+
+    def open(self, span: SessionSpan, parent_context: Context | None) -> Span:
+        return self._start(span, parent_context)
+
+    def close(self, open_span: Span, span: SessionSpan) -> None:
+        self._set_attributes(open_span, span.attributes)
+        self._finalise(open_span, span)
+
+    def _start(self, span: SessionSpan, parent_context: Context | None) -> Span:
+        open_span = (
+            self._tracer.start_span(
+                span.name, context=parent_context, start_time=span.start_nanoseconds
+            )
+            if span.start_nanoseconds is not None
+            else self._tracer.start_span(span.name, context=parent_context)
+        )
+        self._set_attributes(open_span, span.attributes)
+        return open_span
+
+    def _finalise(self, open_span: Span, span: SessionSpan) -> None:
+        # ERROR (with the message as the status description) makes a failed step
+        # show up in Weave's native status column and error-rate; OK marks the rest
+        # so a successful span reads as OK rather than the default UNSET.
+        if span.failed:
+            open_span.set_status(Status(StatusCode.ERROR, span.error or None))
+        else:
+            open_span.set_status(Status(StatusCode.OK))
+        if span.end_nanoseconds is not None:
+            open_span.end(end_time=span.end_nanoseconds)
+        else:
+            open_span.end()
+
+    @staticmethod
+    def _set_attributes(open_span: Span, attributes: dict[str, Any]) -> None:
+        for key, value in attributes.items():
+            if value is not None and value != "":
+                open_span.set_attribute(key, value)
 
 
-def _start_span(
-    tracer: Any,
-    name: str,
-    parent_context: Any,
-    start_nanoseconds: int | None,
-    attributes: dict[str, Any],
-) -> Any:
-    """Start a span and leave it open. The caller must call ``_end_span``."""
-    span = (
-        tracer.start_span(name, context=parent_context, start_time=start_nanoseconds)
-        if start_nanoseconds is not None
-        else tracer.start_span(name, context=parent_context)
-    )
-    _set_attributes(span, attributes)
-    return span
+class ScoreOutcome(BaseModel):
+    value: Value
+    answer: str | None = None
 
 
-def _end_span(
-    span: Any,
-    end_nanoseconds: int | None,
-    attributes: dict[str, Any] | None = None,
-    *,
-    failed: bool = False,
-    error: str | None = None,
-) -> None:
-    if attributes:
-        _set_attributes(span, attributes)
-    _set_span_status(span, failed=failed, error=error)
-    span.end(end_time=end_nanoseconds) if end_nanoseconds is not None else span.end()
+class SampleOutcome(BaseModel):
+    """Sample-outcome metadata, known only at sample end, for the final turn."""
 
+    total_time: float | None = None
+    working_time: float | None = None
+    error: EvalError | None = None
+    limit: EvalSampleLimit | None = None
+    total_tokens: int | None = None
+    scores: dict[str, ScoreOutcome] = Field(default_factory=dict)
 
-def _emit_span(
-    tracer: Any,
-    name: str,
-    parent_context: Any,
-    start_nanoseconds: int | None,
-    end_nanoseconds: int | None,
-    attributes: dict[str, Any],
-    *,
-    failed: bool = False,
-    error: str | None = None,
-) -> Any:
-    """Emit a complete (already finished) span: start and end it immediately."""
-    span = _start_span(tracer, name, parent_context, start_nanoseconds, attributes)
-    _end_span(span, end_nanoseconds, failed=failed, error=error)
-    return span
+    @classmethod
+    def from_sample(cls, sample: EvalSample) -> "SampleOutcome":
+        total_tokens = sum(
+            (usage.total_tokens or 0)
+            for usage in sample.model_usage.values()
+            if usage.total_tokens is not None
+        )
+        return cls(
+            total_time=sample.total_time,
+            working_time=sample.working_time,
+            error=sample.error,
+            limit=sample.limit,
+            total_tokens=total_tokens or None,
+            scores={
+                name: ScoreOutcome(value=score.value, answer=score.answer)
+                for name, score in (sample.scores or {}).items()
+            },
+        )
+
+    @property
+    def error_message(self) -> str | None:
+        return self.error.message if self.error is not None else None
+
+    def to_attributes(self) -> dict[str, Any]:
+        values: dict[str, Any] = {
+            "total_time": self.total_time,
+            "working_time": self.working_time,
+            "error": self.error,
+            "limit": self.limit,
+            "total_tokens": self.total_tokens,
+        }
+        for name, score in self.scores.items():
+            values[f"score.{name}"] = score.value
+            if score.answer:
+                values[f"score.{name}.answer"] = score.answer
+        return _inspect_attributes(values)
 
 
 class AgentSessionEmitter:
@@ -241,33 +348,7 @@ class AgentSessionEmitter:
     Emission is *incremental*: the ``invoke_agent`` turn span is opened when the
     turn starts and each child (``chat``/``execute_tool``) span is emitted as its
     event arrives, rather than buffering the whole turn and emitting at turn end.
-    Because the OTel batch processor exports a span only once it ends, emitting
-    children eagerly is what makes an in-progress turn observable in the Agents
-    view — a turn stuck on a slow or hung tool shows its completed steps instead
-    of nothing at all. Weave groups those children into the conversation by
-    ``gen_ai.conversation.id`` and nests them under the turn once it closes.
-
-    Token usage is carried on the child ``chat`` spans only, matching weave's own
-    contract (its ``invoke_agent`` spans never carry ``gen_ai.usage.*``); weave
-    rolls usage up onto the turn, so also setting it on the turn span would
-    double-count in the Agents view. A turn is one model generation plus the tool
-    calls it triggered; a new ``ModelEvent`` closes the open turn and starts the
-    next, and ``finish`` closes the last turn with sample outcome metadata
-    attached.
-
-    Each ``chat`` span's ``input.messages`` carries only the messages *new that
-    turn* (``event.input`` sliced from the previous turn's length), not the whole
-    re-shipped history — keeping aggregate transcript volume ~O(n) instead of
-    O(n²) on long-horizon runs. Token counts are unchanged (they reflect the real
-    API call). A ``CompactionEvent`` rewrites the message stream, so it resets the
-    slice offset and the next turn re-ships its full (compacted) input.
-
-    Span status is set explicitly: a failed step (an errored/failed tool call, a
-    model-call error, or an errored sample on the closing turn) gets ``ERROR`` with
-    the message as its status description, and everything else gets ``OK`` — so
-    failures surface in Weave's native status column and error-rate rather than
-    being buried as custom attributes on an otherwise ``UNSET`` span. All emission
-    is best-effort: failures are logged and never propagate into the eval run.
+    This enables live monitoring of agent rollouts.
     """
 
     def __init__(
@@ -279,6 +360,7 @@ class AgentSessionEmitter:
         model: str,
         identity: dict[str, Any],
         include_content: bool = True,
+        writer: SessionSpanWriter | None = None,
     ) -> None:
         self._session_id = session_id
         self._session_name = session_name
@@ -286,53 +368,45 @@ class AgentSessionEmitter:
         self._model = model
         self._identity_attributes = _inspect_attributes(identity)
         self._include_content = include_content
+        self._writer = writer or SessionSpanWriter()
         self._turn_index = 0
         self._prev_input_length = 0
         self._reset_turn()
 
     def _reset_turn(self) -> None:
-        self._turn_span: Any = None
-        self._child_context: Any = None
+        self._turn: TurnSpan | None = None
+        self._open_turn_span: Span | None = None
+        self._child_context: Context | None = None
         self._turn_end: datetime | None = None
 
     def handle_event(self, event: Event) -> None:
-        if not SESSIONS_AVAILABLE:
-            return
         try:
             if isinstance(event, ModelEvent):
                 self._close_turn()
                 self._open_turn(event.timestamp)
                 self._turn_end = event.completed or event.timestamp
-                self._emit_child(
-                    f"chat {event.model}",
-                    llm_span_attributes(
+                self._writer.emit(
+                    ChatSpan.from_event(
                         event,
                         conversation_id=self._session_id,
                         include_content=self._include_content,
                         input_from_index=self._prev_input_length,
                     ),
-                    _to_nanoseconds(event.timestamp),
-                    _to_nanoseconds(event.completed),
-                    failed=event.error is not None,
-                    error=event.error,
+                    self._child_context,
                 )
                 self._prev_input_length = len(event.input)
             elif isinstance(event, CompactionEvent):
                 # History was rewritten; the next model input is a new stream, so
                 # re-ship it in full rather than delta against the old one.
                 self._prev_input_length = 0
-            elif isinstance(event, ToolEvent) and self._turn_span is not None:
-                self._emit_child(
-                    f"execute_tool {event.function}",
-                    tool_span_attributes(
+            elif isinstance(event, ToolEvent) and self._turn is not None:
+                self._writer.emit(
+                    ToolSpan.from_event(
                         event,
                         conversation_id=self._session_id,
                         include_content=self._include_content,
                     ),
-                    _to_nanoseconds(event.timestamp),
-                    _to_nanoseconds(event.completed),
-                    failed=bool(event.failed) or event.error is not None,
-                    error=getattr(event.error, "message", None),
+                    self._child_context,
                 )
                 if event.completed is not None:
                     self._turn_end = event.completed
@@ -341,105 +415,43 @@ class AgentSessionEmitter:
                 "Failed to handle event for Weave agent session", exc_info=True
             )
 
-    def finish(self, outcome: dict[str, Any] | None = None) -> None:
-        if not SESSIONS_AVAILABLE:
-            return
+    def finish(self, outcome: SampleOutcome | None = None) -> None:
         try:
-            sample_error = outcome.get("error") if outcome else None
-            error_message = getattr(sample_error, "message", None) or (
-                str(sample_error) if sample_error else None
-            )
             self._close_turn(
-                outcome=_inspect_attributes(outcome) if outcome else {},
-                failed=sample_error is not None,
-                error=error_message,
+                outcome_attributes=outcome.to_attributes() if outcome else {},
+                failed=outcome is not None and outcome.error is not None,
+                error=outcome.error_message if outcome else None,
             )
         except Exception:
             logger.warning("Failed to finish Weave agent session", exc_info=True)
 
     def _open_turn(self, start: datetime | None) -> None:
-        turn_attributes = {
-            **invoke_agent_attributes(
-                agent_name=self._agent_name,
-                conversation_id=self._session_id,
-                conversation_name=self._session_name,
-                model=self._model,
-                agent_version=self._model,
-            ),
-            **self._identity_attributes,
-            "inspect.turn_index": self._turn_index,
-        }
-        self._turn_span = _start_span(
-            otel_trace.get_tracer(_TRACER_NAME),
-            f"invoke_agent {self._agent_name}",
-            Context(),
-            _to_nanoseconds(start),
-            turn_attributes,
+        self._turn = TurnSpan.opened(
+            agent_name=self._agent_name,
+            conversation_id=self._session_id,
+            conversation_name=self._session_name,
+            model=self._model,
+            identity_attributes=self._identity_attributes,
+            turn_index=self._turn_index,
+            start=start,
         )
-        self._child_context = set_span_in_context(self._turn_span)
+        self._open_turn_span = self._writer.open(self._turn, Context())
+        self._child_context = set_span_in_context(self._open_turn_span)
         self._turn_index += 1
-
-    def _emit_child(
-        self,
-        name: str,
-        attributes: dict[str, Any],
-        start_nanoseconds: int | None,
-        end_nanoseconds: int | None,
-        *,
-        failed: bool = False,
-        error: str | None = None,
-    ) -> None:
-        _emit_span(
-            otel_trace.get_tracer(_TRACER_NAME),
-            name,
-            self._child_context,
-            start_nanoseconds,
-            end_nanoseconds,
-            attributes,
-            failed=failed,
-            error=error,
-        )
 
     def _close_turn(
         self,
-        outcome: dict[str, Any] | None = None,
         *,
+        outcome_attributes: dict[str, Any] | None = None,
         failed: bool = False,
         error: str | None = None,
     ) -> None:
-        if self._turn_span is None:
+        turn, open_span = self._turn, self._open_turn_span
+        if turn is None or open_span is None:
             return
-        turn_span, turn_end = self._turn_span, self._turn_end
+        turn.end_nanoseconds = _to_nanoseconds(self._turn_end)
+        turn.attributes.update(outcome_attributes or {})
+        turn.failed = failed
+        turn.error = error
         self._reset_turn()
-        _end_span(
-            turn_span,
-            _to_nanoseconds(turn_end),
-            outcome or None,
-            failed=failed,
-            error=error,
-        )
-
-
-def build_outcome(sample: Any) -> dict[str, Any]:
-    """Build sample-outcome metadata (known only at sample end) for the final turn."""
-    outcome: dict[str, Any] = {
-        "total_time": sample.total_time,
-        "working_time": getattr(sample, "working_time", None),
-        "error": sample.error,
-        "limit": getattr(sample, "limit", None),
-    }
-    scores: dict[str, Score] | None = sample.scores
-    if scores:
-        for name, score in scores.items():
-            outcome[f"score.{name}"] = score.value
-            if score.answer:
-                outcome[f"score.{name}.answer"] = score.answer
-    usages = getattr(sample, "model_usage", None) or {}
-    total_tokens = sum(
-        (usage.total_tokens or 0)
-        for usage in usages.values()
-        if usage.total_tokens is not None
-    )
-    if total_tokens:
-        outcome["total_tokens"] = total_tokens
-    return outcome
+        self._writer.close(open_span, turn)

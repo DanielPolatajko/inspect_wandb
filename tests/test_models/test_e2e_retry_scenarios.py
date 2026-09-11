@@ -1,16 +1,17 @@
-import pytest
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
+
+import inspect_ai.hooks._startup as hooks_startup_module
+import pytest
 from inspect_ai import Task, eval_set, task
+from inspect_ai._util.registry import registry_find
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import exact
-from inspect_ai.solver import Solver, TaskState, Generate, solver, generate
+from inspect_ai.solver import Generate, Solver, TaskState, generate, solver
+
 from inspect_wandb.config.settings import ModelsSettings, WeaveSettings
-from inspect_ai._util.registry import registry_find
-import inspect_ai.hooks._startup as hooks_startup_module
-from uuid import uuid4
-from typing import Sequence
 
 
 @solver

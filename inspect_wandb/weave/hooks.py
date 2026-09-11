@@ -1,41 +1,43 @@
+from os import environ
 from typing import Any
+
 from inspect_ai.hooks import (
+    EvalSetEnd,
+    EvalSetStart,
     RunEnd,
     SampleEnd,
     SampleEvent,
     SampleStart,
-    TaskStart,
     TaskEnd,
-    EvalSetStart,
-    EvalSetEnd,
+    TaskStart,
 )
-from os import environ
 
 environ["WANDB_DISABLE_WEAVE"] = "1"
-from weave import init as weave_init, attributes as weave_attributes
-from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
-from weave.trace.weave_client import WeaveClient
-from weave.trace.settings import UserSettings
-from inspect_wandb.weave.utils import format_score_types, format_sample_display_name
-from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
-from inspect_wandb.config.settings import WeaveSettings
-from logging import getLogger
-from inspect_wandb.weave.autopatcher import get_inspect_patcher, CustomAutopatchSettings
-from inspect_wandb.exceptions import WeaveEvaluationException
-from weave.trace.context import call_context
-from typing_extensions import override
 import asyncio
-from weave.trace.autopatch import IntegrationSettings, OpSettings
-from weave import integrations
 from importlib.util import find_spec
+from logging import getLogger
+
 from gql.transport.exceptions import TransportQueryError
+from typing_extensions import override
+from weave import attributes as weave_attributes
+from weave import init as weave_init
+from weave import integrations
+from weave.evaluation.eval_imperative import EvaluationLogger, ScoreLogger
+from weave.trace.autopatch import IntegrationSettings, OpSettings
+from weave.trace.context import call_context
+from weave.trace.settings import UserSettings
+from weave.trace.weave_client import WeaveClient
+
+from inspect_wandb.config.settings import WeaveSettings
+from inspect_wandb.exceptions import WeaveEvaluationException
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
+from inspect_wandb.shared.utils import format_wandb_id_string as format_model_name
+from inspect_wandb.weave.autopatcher import CustomAutopatchSettings, get_inspect_patcher
 from inspect_wandb.weave.sessions import (
-    SESSIONS_AVAILABLE,
     AgentSessionEmitter,
-    build_outcome,
-    flatten_metadata,
+    SampleOutcome,
 )
+from inspect_wandb.weave.utils import format_sample_display_name, format_score_types
 
 logger = getLogger(__name__)
 
@@ -45,26 +47,31 @@ class WeaveEvaluationHooks(InspectWandBHooks):
     _settings_cls = WeaveSettings
 
     weave_client: WeaveClient
-    weave_eval_loggers: dict[str, EvaluationLogger] = {}
+    weave_eval_loggers: dict[str, EvaluationLogger]
     settings: WeaveSettings | None = None
-    sample_calls: dict[str, ScoreLogger] = {}
-    task_mapping: dict[str, str] = {}
+    sample_calls: dict[str, ScoreLogger]
+    task_mapping: dict[str, str]
     _weave_initialized: bool = False
     _eval_set: bool = False
     _eval_set_log_dir: str | None = None
-    _session_emitters: dict[str, AgentSessionEmitter] = {}
-    _task_models: dict[str, str] = {}
-    _task_context: dict[str, dict[str, Any]] = {}
+    _session_emitters: dict[str, AgentSessionEmitter]
+    _task_models: dict[str, str]
+    _task_context: dict[str, dict[str, Any]]
     _pending_sample_tasks: set[asyncio.Task[None]]
 
     def __init__(self) -> None:
         super().__init__()
+        self.weave_eval_loggers = {}
+        self.sample_calls = {}
+        self.task_mapping = {}
+        self._session_emitters = {}
+        self._task_models = {}
+        self._task_context = {}
         self._pending_sample_tasks = set()
 
     def _agent_sessions_active(self) -> bool:
         return bool(
-            SESSIONS_AVAILABLE
-            and self._hooks_enabled
+            self._hooks_enabled
             and self.settings is not None
             and self.settings.agent_sessions
             and not self.settings.eval_traces_only
@@ -262,7 +269,10 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     "target": data.summary.target,
                     "dataset": task_context.get("dataset"),
                     "sandbox": task_context.get("sandbox"),
-                    **flatten_metadata(data.summary.metadata),
+                    **{
+                        f"metadata.{key}": value
+                        for key, value in data.summary.metadata.items()
+                    },
                 }
                 self._session_emitters[data.sample_id] = AgentSessionEmitter(
                     session_id=data.sample_id,
@@ -288,7 +298,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         emitter = self._session_emitters.pop(data.sample_id, None)
         if emitter is not None:
-            emitter.finish(build_outcome(data.sample))
+            emitter.finish(SampleOutcome.from_sample(data.sample))
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         self._pending_sample_tasks.add(task)
@@ -331,7 +341,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
             )
 
         if hasattr(data.sample, "model_usage") and data.sample.model_usage:
-            for model_name, usage in data.sample.model_usage.items():
+            for usage in data.sample.model_usage.values():
                 if usage.total_tokens is not None:
                     await sample_score_logger.alog_score(
                         scorer="total_tokens", score=usage.total_tokens

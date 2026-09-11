@@ -1,11 +1,11 @@
 from typing import Any, cast
 
-from weave import op as weave_op
+from inspect_ai._util.registry import registry_info
 from inspect_ai.solver import Generate, Plan, TaskState
+from inspect_ai.solver._plan import logger
 from inspect_ai.solver._task_state import state_jsonable
 from inspect_ai.solver._transcript import solver_transcript
-from inspect_ai.solver._plan import logger
-from inspect_ai._util.registry import registry_info
+from weave import op as weave_op
 
 
 def _postprocess_solver_inputs(
@@ -53,7 +53,7 @@ class PatchedPlan(Plan):
                         postprocess_inputs=_postprocess_solver_inputs,
                         postprocess_output=_postprocess_solver_output,
                     )(self.cleanup)(state)
-                except Exception as ex:
+                except Exception as ex:  # noqa: BLE001 - user cleanup code may raise anything; must not mask the original error
                     logger.warning(
                         f"Exception occurred during plan cleanup: {ex}", exc_info=ex
                     )

@@ -1,7 +1,9 @@
 from typing import Any, ClassVar
+
 from inspect_ai.hooks import Hooks, TaskStart
-from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 from typing_extensions import override
+
+from inspect_wandb.config.settings.base import InspectWandBBaseSettings
 
 
 class InspectWandBHooks(Hooks):

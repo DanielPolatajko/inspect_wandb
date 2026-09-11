@@ -1,16 +1,17 @@
-from inspect_wandb.models.hooks import WandBModelHooks
-from inspect_wandb.config.settings import ModelsSettings
-from unittest.mock import patch, MagicMock, PropertyMock
+from collections.abc import Callable
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import pytest
-from wandb.sdk.wandb_run import Run
-from wandb.sdk.wandb_config import Config
-from wandb.sdk.wandb_summary import Summary
-from wandb.errors import CommError
-from typing import Callable
-from inspect_ai.hooks import TaskStart, SampleEnd, RunEnd
+from inspect_ai.hooks import RunEnd, SampleEnd, TaskStart
 from inspect_ai.log import EvalSample
 from inspect_ai.scorer import Score
-from inspect_wandb.models.hooks import Metric
+from wandb.errors import CommError
+from wandb.sdk.wandb_config import Config
+from wandb.sdk.wandb_run import Run
+from wandb.sdk.wandb_summary import Summary
+
+from inspect_wandb.config.settings import ModelsSettings
+from inspect_wandb.models.hooks import Metric, WandBModelHooks
 
 
 @pytest.fixture(scope="function")
@@ -64,7 +65,7 @@ class TestWandBModelHooks:
     async def test_wandb_initialised_on_task_start(
         self,
         mock_wandb_run: Run,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         """
@@ -100,7 +101,7 @@ class TestWandBModelHooks:
     async def test_wandb_config_updated_on_task_start_if_settings_config_is_set(
         self,
         mock_wandb_run: Run,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         """
@@ -142,7 +143,7 @@ class TestWandBModelHooks:
     async def test_wandb_init_called_with_eval_set_log_dir_if_eval_set(
         self,
         mock_wandb_run: Run,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         """
@@ -175,7 +176,7 @@ class TestWandBModelHooks:
     async def test_wandb_config_updated_with_eval_metadata(
         self,
         mock_wandb_run: Run,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         """
@@ -215,7 +216,7 @@ class TestWandBModelHooks:
     async def test_wandb_config_not_updated_with_eval_metadata_if_add_metadata_to_config_is_false(
         self,
         mock_wandb_run: Run,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         """
@@ -250,7 +251,7 @@ class TestWandBModelHooks:
     async def test_wandb_tags_updated_on_task_start_if_settings_tags_are_set(
         self,
         mock_wandb_run: Run,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         """
@@ -489,7 +490,7 @@ class TestWandBModelHooks:
 
     @pytest.mark.asyncio
     async def test_wandb_run_url_added_to_eval_metadata(
-        self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]
+        self, mock_wandb_run: Run, create_task_start: Callable[[dict | None], TaskStart]
     ) -> None:
         """Test wandb_run_url is added to eval metadata"""
         # Given
@@ -714,7 +715,7 @@ class TestWandBModelHooks:
         ],
     )
     def parse_settings_from_metadata_is_case_insensitive(
-        self, create_task_start: Callable[dict | None, TaskStart], metadata_key: str
+        self, create_task_start: Callable[[dict | None], TaskStart], metadata_key: str
     ) -> None:
         """Test that parse_settings_from_metadata is case insensitive"""
         # Given
@@ -734,7 +735,7 @@ class TestWandBModelHooks:
 
     @pytest.mark.asyncio
     async def test_metadata_accumulates_across_multiple_task_starts(
-        self, mock_wandb_run: Run, create_task_start: Callable[dict | None, TaskStart]
+        self, mock_wandb_run: Run, create_task_start: Callable[[dict | None], TaskStart]
     ) -> None:
         # Given
         hooks = WandBModelHooks()
@@ -803,7 +804,7 @@ class TestWandBModelHooks:
     @pytest.mark.asyncio
     async def test_wandb_disabled_on_invalid_entity_error(
         self,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         # Given
@@ -836,7 +837,7 @@ class TestWandBModelHooks:
     @pytest.mark.asyncio
     async def test_wandb_disabled_on_invalid_project_error(
         self,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         # Given
@@ -869,7 +870,7 @@ class TestWandBModelHooks:
     @pytest.mark.asyncio
     async def test_wandb_disabled_on_generic_comm_error(
         self,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
         initialise_wandb: None,
     ) -> None:
         # Given

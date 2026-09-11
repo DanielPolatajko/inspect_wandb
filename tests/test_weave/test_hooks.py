@@ -1,25 +1,27 @@
 import asyncio
-from inspect_ai.log import EvalLog
+from collections.abc import Callable
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
+import pytest
+from gql.transport.exceptions import TransportQueryError
+from inspect_ai._eval.eval import EvalLogs
 from inspect_ai.hooks import (
+    RunEnd,
     SampleEnd,
     SampleEvent,
     SampleStart,
     TaskEnd,
-    RunEnd,
     TaskStart,
 )
-from inspect_ai.model import ChatCompletionChoice, ModelOutput, ChatMessageAssistant
-from inspect_ai.log import EvalSample
-from inspect_ai._eval.eval import EvalLogs
-from inspect_wandb.weave.hooks import WeaveEvaluationHooks
+from inspect_ai.log import EvalLog, EvalSample
+from inspect_ai.model import ChatCompletionChoice, ChatMessageAssistant, ModelOutput
 from inspect_ai.scorer import Score
-import pytest
-from weave.evaluation.eval_imperative import ScoreLogger, EvaluationLogger
+from weave.evaluation.eval_imperative import EvaluationLogger, ScoreLogger
+from weave.trace.weave_client import Call, WeaveClient
+
 from inspect_wandb.config.settings import WeaveSettings
-from weave.trace.weave_client import WeaveClient, Call
-from gql.transport.exceptions import TransportQueryError
-from typing import Callable
+from inspect_wandb.weave.hooks import WeaveEvaluationHooks
+
 from .conftest import WeaveTestClient
 
 
@@ -189,7 +191,7 @@ class TestWeaveEvaluationHooks:
         ],
     )
     def parse_settings_from_metadata_is_case_insensitive(
-        self, create_task_start: Callable[dict | None, TaskStart], metadata_key: str
+        self, create_task_start: Callable[[dict | None], TaskStart], metadata_key: str
     ) -> None:
         """Test that parse_settings_from_metadata is case insensitive"""
         # Given
@@ -723,7 +725,7 @@ class TestWeaveTransportQueryErrors:
     async def test_weave_disabled_on_invalid_entity_error(
         self,
         test_settings: WeaveSettings,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
     ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
@@ -753,7 +755,7 @@ class TestWeaveTransportQueryErrors:
     async def test_weave_disabled_on_invalid_project_error(
         self,
         test_settings: WeaveSettings,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
     ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
@@ -783,7 +785,7 @@ class TestWeaveTransportQueryErrors:
     async def test_weave_disabled_on_generic_transport_query_error(
         self,
         test_settings: WeaveSettings,
-        create_task_start: Callable[dict | None, TaskStart],
+        create_task_start: Callable[[dict | None], TaskStart],
     ) -> None:
         # Given
         hooks = WeaveEvaluationHooks()
@@ -818,17 +820,6 @@ class TestAgentSessionsWiring:
             enabled=True, entity="e", project="p", agent_sessions=True
         )
         return hooks
-
-    def test_agent_sessions_inactive_when_weave_unavailable(self) -> None:
-        # Given
-        hooks = self._enabled_hooks()
-
-        # When
-        with patch("inspect_wandb.weave.hooks.SESSIONS_AVAILABLE", False):
-            active = hooks._agent_sessions_active()
-
-        # Then
-        assert active is False
 
     def test_agent_sessions_inactive_when_setting_disabled(self) -> None:
         # Given

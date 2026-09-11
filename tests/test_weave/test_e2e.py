@@ -1,10 +1,12 @@
-from typing import Callable
+from collections.abc import Callable
 from unittest.mock import MagicMock
-from pytest import MonkeyPatch
-from inspect_ai import Task, eval as inspect_eval, task
+
+from inspect_ai import Task, task
+from inspect_ai import eval as inspect_eval
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import exact
 from inspect_ai.solver import generate
+from pytest import MonkeyPatch
 
 
 class TestEndToEndInspectRuns:

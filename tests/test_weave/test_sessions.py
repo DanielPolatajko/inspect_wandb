@@ -1,8 +1,10 @@
-from datetime import datetime, timezone
-from types import SimpleNamespace
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from inspect_ai.event import CompactionEvent, ModelEvent, ToolEvent
+from inspect_ai.log import EvalError, EvalSample
 from inspect_ai.model import (
     ChatCompletionChoice,
     ChatMessageAssistant,
@@ -12,24 +14,23 @@ from inspect_ai.model import (
     ModelUsage,
 )
 from inspect_ai.scorer import Score
-from opentelemetry.trace import StatusCode
+from opentelemetry.context import Context
+from opentelemetry.trace import Span, StatusCode
 
 from inspect_wandb.weave.sessions import (
     AgentSessionEmitter,
-    _coerce,
-    _emit_span,
-    _set_span_status,
-    build_outcome,
-    flatten_metadata,
-    llm_span_attributes,
-    to_messages,
-    tool_span_attributes,
-    usage_from_event,
+    ChatSpan,
+    SampleOutcome,
+    ScoreOutcome,
+    SessionSpan,
+    SessionSpanWriter,
+    ToolSpan,
+    _coerce_to_otel_scalar,
 )
 
-T0 = datetime(2026, 6, 21, 12, 0, 0, tzinfo=timezone.utc)
-T1 = datetime(2026, 6, 21, 12, 0, 1, tzinfo=timezone.utc)
-T2 = datetime(2026, 6, 21, 12, 0, 2, tzinfo=timezone.utc)
+T0 = datetime(2026, 6, 21, 12, 0, 0, tzinfo=UTC)
+T1 = datetime(2026, 6, 21, 12, 0, 1, tzinfo=UTC)
+T2 = datetime(2026, 6, 21, 12, 0, 2, tzinfo=UTC)
 
 
 def make_model_event(input_tokens: int = 100, output_tokens: int = 20) -> ModelEvent:
@@ -75,26 +76,62 @@ def make_model_event_with_history(contents: list[str]) -> ModelEvent:
     return event
 
 
-class TestPureBuilders:
-    def test_to_messages_maps_roles(self) -> None:
+def make_sample(**overrides: Any) -> EvalSample:
+    sample = EvalSample(id=1, epoch=1, input="solve the task", target="73")
+    for name, value in overrides.items():
+        setattr(sample, name, value)
+    return sample
+
+
+def chat_attributes(
+    event: ModelEvent,
+    *,
+    conversation_id: str = "sess-1",
+    include_content: bool = True,
+    input_from_index: int = 0,
+) -> dict[str, Any]:
+    return ChatSpan.from_event(
+        event,
+        conversation_id=conversation_id,
+        include_content=include_content,
+        input_from_index=input_from_index,
+    ).attributes
+
+
+def tool_attributes(
+    event: ToolEvent,
+    *,
+    conversation_id: str = "sess-1",
+    include_content: bool = True,
+) -> dict[str, Any]:
+    return ToolSpan.from_event(
+        event, conversation_id=conversation_id, include_content=include_content
+    ).attributes
+
+
+class TestSpanBuilders:
+    def test_chat_span_maps_message_roles(self) -> None:
         # Given
-        messages = [ChatMessageUser(content="hi"), ChatMessageAssistant(content="yo")]
+        messages_in = [
+            ChatMessageUser(content="hi"),
+            ChatMessageAssistant(content="yo"),
+        ]
 
         # When
-        result = to_messages(messages)
+        messages = ChatSpan._to_messages(messages_in)
 
         # Then
-        assert [(m.role, m.content) for m in result] == [
+        assert [(message.role, message.content) for message in messages] == [
             ("user", "hi"),
             ("assistant", "yo"),
         ]
 
-    def test_llm_span_attrs_has_usage_provider_and_inspect_extras(self) -> None:
+    def test_chat_span_has_usage_provider_and_inspect_extras(self) -> None:
         # Given
         event = make_model_event(input_tokens=321, output_tokens=99)
 
         # When
-        attributes = llm_span_attributes(event, conversation_id="sess-1")
+        attributes = chat_attributes(event)
 
         # Then
         assert attributes["gen_ai.request.model"] == "anthropic/claude-haiku-4-5"
@@ -104,42 +141,52 @@ class TestPureBuilders:
         assert attributes["gen_ai.request.temperature"] == 0.5
         assert attributes["inspect.generate.top_k"] == 40
 
-    def test_tool_span_attrs_truncates_and_adds_inspect_extras(self) -> None:
+    def test_chat_span_names_and_times_from_event(self) -> None:
+        # Given
+        event = make_model_event()
+
+        # When
+        span = ChatSpan.from_event(
+            event, conversation_id="s", include_content=True, input_from_index=0
+        )
+
+        # Then
+        assert span.name == "chat anthropic/claude-haiku-4-5"
+        assert span.start_nanoseconds == int(T0.timestamp() * 1_000_000_000)
+        assert span.end_nanoseconds == int(T1.timestamp() * 1_000_000_000)
+
+    def test_tool_span_truncates_and_adds_inspect_extras(self) -> None:
         # Given
         event = make_tool_event()
         event.result = "x" * 10000
         event.working_time = 1.5
 
         # When
-        attributes = tool_span_attributes(event, conversation_id="sess-1")
+        attributes = tool_attributes(event)
 
         # Then
         assert attributes["gen_ai.operation.name"] == "execute_tool"
         assert attributes["inspect.tool.working_time"] == 1.5
-        assert any("…[truncated]" in str(v) for v in attributes.values())
+        assert any("…[truncated]" in str(value) for value in attributes.values())
 
     def test_include_content_false_drops_messages_keeps_usage(self) -> None:
         # Given
         event = make_model_event(input_tokens=100, output_tokens=20)
 
         # When
-        attributes = llm_span_attributes(
-            event, conversation_id="sess-1", include_content=False
-        )
+        attributes = chat_attributes(event, include_content=False)
 
         # Then
         assert "gen_ai.input.messages" not in attributes
         assert "gen_ai.output.messages" not in attributes
         assert attributes["gen_ai.usage.input_tokens"] == 100
 
-    def test_llm_span_attributes_trims_input_to_index(self) -> None:
+    def test_chat_span_trims_input_to_index(self) -> None:
         # Given
         event = make_model_event_with_history(["MSG_A", "MSG_B", "MSG_C"])
 
         # When
-        attributes = llm_span_attributes(
-            event, conversation_id="sess-1", input_from_index=1
-        )
+        attributes = chat_attributes(event, input_from_index=1)
 
         # Then
         serialized_input = attributes["gen_ai.input.messages"]
@@ -147,14 +194,12 @@ class TestPureBuilders:
         assert "MSG_C" in serialized_input
         assert "MSG_A" not in serialized_input
 
-    def test_llm_span_attributes_include_content_false_ignores_index(self) -> None:
+    def test_chat_span_include_content_false_ignores_index(self) -> None:
         # Given
         event = make_model_event_with_history(["MSG_A", "MSG_B"])
 
         # When
-        attributes = llm_span_attributes(
-            event, conversation_id="sess-1", include_content=False, input_from_index=1
-        )
+        attributes = chat_attributes(event, include_content=False, input_from_index=1)
 
         # Then
         assert "gen_ai.input.messages" not in attributes
@@ -164,63 +209,59 @@ class TestPureBuilders:
         event = make_tool_event()
 
         # When
-        attributes = tool_span_attributes(
-            event, conversation_id="sess-1", include_content=False
-        )
+        attributes = tool_attributes(event, include_content=False)
 
         # Then
         assert attributes["gen_ai.operation.name"] == "execute_tool"
-        assert all("ls -la" not in str(v) for v in attributes.values())
+        assert all("ls -la" not in str(value) for value in attributes.values())
 
-    def test_tool_span_attributes_marks_failed_only_on_failure(self) -> None:
+    def test_tool_span_marks_failed_only_on_failure(self) -> None:
         # Given
         failed_event = make_tool_event()
         failed_event.failed = True
         ok_event = make_tool_event()
 
         # When
-        failed_attributes = tool_span_attributes(failed_event, conversation_id="s")
-        ok_attributes = tool_span_attributes(ok_event, conversation_id="s")
+        failed_span = ToolSpan.from_event(
+            failed_event, conversation_id="s", include_content=True
+        )
+        ok_span = ToolSpan.from_event(
+            ok_event, conversation_id="s", include_content=True
+        )
 
         # Then
-        assert failed_attributes["inspect.tool.failed"] is True
-        assert "inspect.tool.failed" not in ok_attributes
+        assert failed_span.attributes["inspect.tool.failed"] is True
+        assert "inspect.tool.failed" not in ok_span.attributes
+        assert failed_span.failed is True
+        assert ok_span.failed is False
 
-    def test_llm_span_attributes_surfaces_model_error(self) -> None:
+    def test_chat_span_surfaces_model_error(self) -> None:
         # Given
         errored_event = make_model_event()
         errored_event.error = "rate limit exceeded"
         ok_event = make_model_event()
 
         # When
-        errored_attributes = llm_span_attributes(errored_event, conversation_id="s")
-        ok_attributes = llm_span_attributes(ok_event, conversation_id="s")
+        errored_span = ChatSpan.from_event(
+            errored_event, conversation_id="s", include_content=True, input_from_index=0
+        )
+        ok_span = ChatSpan.from_event(
+            ok_event, conversation_id="s", include_content=True, input_from_index=0
+        )
 
         # Then
-        assert errored_attributes["inspect.model.error"] == "rate limit exceeded"
-        assert "inspect.model.error" not in ok_attributes
-
-    def test_flatten_metadata(self) -> None:
-        # Given
-        metadata = {"difficulty": "hard", "category": "crypto"}
-
-        # When
-        result = flatten_metadata(metadata)
-
-        # Then
-        assert result == {"metadata.difficulty": "hard", "metadata.category": "crypto"}
-
-    def test_flatten_metadata_ignores_non_dict(self) -> None:
-        # Given / When / Then
-        assert flatten_metadata("not a dict") == {}
+        assert errored_span.attributes["inspect.model.error"] == "rate limit exceeded"
+        assert errored_span.failed is True
+        assert errored_span.error == "rate limit exceeded"
+        assert "inspect.model.error" not in ok_span.attributes
 
     def test_coerce_preserves_scalars_and_json_encodes_collections(self) -> None:
         # Given / When / Then
-        assert _coerce(True) is True  # bool checked before int
-        assert _coerce(5) == 5
-        assert _coerce("x") == "x"
-        assert _coerce(["a", "b"]) == '["a", "b"]'
-        assert _coerce(None) is None
+        assert _coerce_to_otel_scalar(True) is True  # bool checked before int
+        assert _coerce_to_otel_scalar(5) == 5
+        assert _coerce_to_otel_scalar("x") == "x"
+        assert _coerce_to_otel_scalar(["a", "b"]) == '["a", "b"]'
+        assert _coerce_to_otel_scalar(None) is None
 
     def test_usage_from_event_handles_missing_usage(self) -> None:
         # Given
@@ -228,131 +269,233 @@ class TestPureBuilders:
         event.output.usage = None
 
         # When
-        usage = usage_from_event(event)
+        usage = ChatSpan._usage_from_event(event)
 
         # Then
         assert usage.input_tokens == 0
         assert usage.output_tokens == 0
 
-    def test_emit_span_sets_attrs_skips_empty_and_ends(self) -> None:
+
+class TestSessionSpan:
+    def test_defaults_are_supplied_without_explicit_init(self) -> None:
+        # Given / When
+        span = SessionSpan(name="chat x")
+
+        # Then
+        assert span.attributes == {}
+        assert span.start_nanoseconds is None
+        assert span.end_nanoseconds is None
+        assert span.failed is False
+        assert span.error is None
+
+    def test_each_span_gets_its_own_attributes_dict(self) -> None:
         # Given
-        tracer = MagicMock()
-        span = MagicMock()
-        tracer.start_span.return_value = span
+        first = SessionSpan(name="a")
+        second = SessionSpan(name="b")
 
         # When
-        _emit_span(tracer, "chat x", None, 100, 200, {"a": 1, "b": None, "c": ""})
+        first.attributes["only_on_first"] = 1
+
+        # Then
+        assert second.attributes == {}
+
+
+class TestSessionSpanWriter:
+    def _writer(self) -> tuple[SessionSpanWriter, MagicMock, MagicMock]:
+        tracer = MagicMock()
+        open_span = MagicMock()
+        tracer.start_span.return_value = open_span
+        with patch(
+            "inspect_wandb.weave.sessions.otel_trace.get_tracer", return_value=tracer
+        ):
+            return SessionSpanWriter(), tracer, open_span
+
+    def test_emit_sets_attributes_skips_empty_and_ends(self) -> None:
+        # Given
+        writer, tracer, open_span = self._writer()
+        span = SessionSpan(
+            name="chat x",
+            attributes={"a": 1, "b": None, "c": ""},
+            start_nanoseconds=100,
+            end_nanoseconds=200,
+        )
+
+        # When
+        writer.emit(span, None)
 
         # Then
         tracer.start_span.assert_called_once_with(
             "chat x", context=None, start_time=100
         )
-        span.set_attribute.assert_called_once_with("a", 1)
-        span.end.assert_called_once_with(end_time=200)
+        open_span.set_attribute.assert_called_once_with("a", 1)
+        open_span.end.assert_called_once_with(end_time=200)
 
-    def test_set_span_status_marks_error_and_ok(self) -> None:
-        # Given / When / Then
-        errored = MagicMock()
-        _set_span_status(errored, failed=True, error="boom")
-        error_status = errored.set_status.call_args.args[0]
+    def test_emit_without_timestamps_omits_them(self) -> None:
+        # Given
+        writer, tracer, open_span = self._writer()
+
+        # When
+        writer.emit(SessionSpan(name="chat x"), None)
+
+        # Then
+        tracer.start_span.assert_called_once_with("chat x", context=None)
+        open_span.end.assert_called_once_with()
+
+    def test_status_marks_error_with_message_and_ok_otherwise(self) -> None:
+        # Given
+        writer, _tracer, errored_span = self._writer()
+
+        # When
+        writer.emit(SessionSpan(name="x", failed=True, error="boom"), None)
+
+        # Then
+        error_status = errored_span.set_status.call_args.args[0]
         assert error_status.status_code == StatusCode.ERROR
         assert error_status.description == "boom"
 
-        ok = MagicMock()
-        _set_span_status(ok, failed=False)
-        assert ok.set_status.call_args.args[0].status_code == StatusCode.OK
+        # Given / When
+        writer, _tracer, ok_span = self._writer()
+        writer.emit(SessionSpan(name="x"), None)
 
-    def test_build_outcome_includes_scores_timing_and_tokens(self) -> None:
+        # Then
+        assert ok_span.set_status.call_args.args[0].status_code == StatusCode.OK
+
+
+class TestSampleOutcome:
+    def test_from_sample_captures_scores_timing_and_tokens(self) -> None:
         # Given
-        sample = SimpleNamespace(
+        sample = make_sample(
             total_time=12.3,
             working_time=10.1,
-            error=None,
-            limit=None,
             scores={"includes": Score(value=1.0, answer="73")},
             model_usage={"anthropic/claude-haiku-4-5": ModelUsage(total_tokens=7815)},
         )
 
         # When
-        outcome = build_outcome(sample)
+        outcome = SampleOutcome.from_sample(sample)
 
         # Then
-        assert outcome["total_time"] == 12.3
-        assert outcome["score.includes"] == 1.0
-        assert outcome["score.includes.answer"] == "73"
-        assert outcome["total_tokens"] == 7815
+        assert outcome.total_time == 12.3
+        assert outcome.working_time == 10.1
+        assert outcome.total_tokens == 7815
+        assert outcome.scores == {"includes": ScoreOutcome(value=1.0, answer="73")}
+
+    def test_to_attributes_namespaces_and_flattens_scores(self) -> None:
+        # Given
+        sample = make_sample(
+            total_time=12.3,
+            scores={"includes": Score(value=1.0, answer="73")},
+            model_usage={"anthropic/claude-haiku-4-5": ModelUsage(total_tokens=7815)},
+        )
+
+        # When
+        attributes = SampleOutcome.from_sample(sample).to_attributes()
+
+        # Then
+        assert attributes["inspect.total_time"] == 12.3
+        assert attributes["inspect.score.includes"] == 1.0
+        assert attributes["inspect.score.includes.answer"] == "73"
+        assert attributes["inspect.total_tokens"] == 7815
+
+    def test_score_without_answer_omits_answer_attribute(self) -> None:
+        # Given
+        sample = make_sample(scores={"accuracy": Score(value=0.0)})
+
+        # When
+        attributes = SampleOutcome.from_sample(sample).to_attributes()
+
+        # Then
+        assert "inspect.score.accuracy.answer" not in attributes
+
+    def test_absent_fields_are_dropped_from_attributes(self) -> None:
+        # Given
+        sample = make_sample()
+
+        # When
+        outcome = SampleOutcome.from_sample(sample)
+
+        # Then
+        assert outcome.total_tokens is None
+        assert outcome.scores == {}
+        assert outcome.to_attributes() == {}
+
+    def test_error_message_reads_through_to_eval_error(self) -> None:
+        # Given
+        sample = make_sample(
+            error=EvalError(
+                message="sample crashed", traceback="tb", traceback_ansi="tb"
+            )
+        )
+
+        # When
+        outcome = SampleOutcome.from_sample(sample)
+
+        # Then
+        assert outcome.error_message == "sample crashed"
+
+    def test_error_message_is_none_when_sample_succeeded(self) -> None:
+        # Given / When
+        outcome = SampleOutcome.from_sample(make_sample())
+
+        # Then
+        assert outcome.error_message is None
+
+
+@dataclass
+class Recorded:
+    kind: str
+    name: str
+    attributes: dict[str, Any] = field(default_factory=dict)
+    failed: bool = False
+    error: str | None = None
+
+
+class RecordingWriter(SessionSpanWriter):
+    """Captures spans instead of writing them, snapshotting mutable attributes.
+
+    The turn span is mutated after it is opened, so each record keeps a copy.
+    """
+
+    def __init__(self) -> None:
+        self.records: list[Recorded] = []
+
+    def _record(self, kind: str, span: SessionSpan) -> None:
+        self.records.append(
+            Recorded(kind, span.name, dict(span.attributes), span.failed, span.error)
+        )
+
+    def emit(self, span: SessionSpan, parent_context: Context | None) -> None:
+        self._record("child", span)
+
+    def open(self, span: SessionSpan, parent_context: Context | None) -> Span:
+        self._record("turn_open", span)
+        return MagicMock()
+
+    def close(self, open_span: Span, span: SessionSpan) -> None:
+        self._record("turn_close", span)
 
 
 class TestAgentSessionEmitter:
     def _run(
         self,
         events: list,
-        outcome: dict | None = None,
+        outcome: SampleOutcome | None = None,
         finish_run: bool = True,
-    ) -> list:
-        """Drive the emitter, recording (kind, name, attributes) in emission order.
-
-        Kinds are "turn_open" (turn span started and left open), "child" (a
-        complete chat/execute_tool span) and "turn_close" (turn span ended).
-        """
-        recorded: list = []
-
-        def fake_start(tracer, name, parent_context, start_nanoseconds, attributes):  # noqa: ANN001
-            recorded.append(("turn_open", name, dict(attributes), {}))
-            return MagicMock()
-
-        def fake_emit(
-            tracer,
-            name,
-            parent_context,
-            start_nanoseconds,
-            end_nanoseconds,
-            attributes,
-            *,
-            failed=False,
-            error=None,
-        ):  # noqa: ANN001
-            recorded.append(
-                ("child", name, dict(attributes), {"failed": failed, "error": error})
-            )
-            return MagicMock()
-
-        def fake_end(
-            span, end_nanoseconds, attributes=None, *, failed=False, error=None
-        ):  # noqa: ANN001
-            recorded.append(
-                (
-                    "turn_close",
-                    None,
-                    dict(attributes or {}),
-                    {"failed": failed, "error": error},
-                )
-            )
-
+    ) -> list[Recorded]:
+        writer = RecordingWriter()
         emitter = AgentSessionEmitter(
             session_id="sess-uuid",
             session_name="task-sample-1",
             agent_name="my_task",
             model="anthropic/claude-haiku-4-5",
             identity={"task": "my_task", "sample_id": 1},
+            writer=writer,
         )
-        with (
-            patch("inspect_wandb.weave.sessions._start_span", side_effect=fake_start),
-            patch("inspect_wandb.weave.sessions._emit_span", side_effect=fake_emit),
-            patch("inspect_wandb.weave.sessions._end_span", side_effect=fake_end),
-            patch(
-                "inspect_wandb.weave.sessions.set_span_in_context", return_value=None
-            ),
-            patch(
-                "inspect_wandb.weave.sessions.otel_trace.get_tracer",
-                return_value=MagicMock(),
-            ),
-        ):
-            for event in events:
-                emitter.handle_event(event)
-            if finish_run:
-                emitter.finish(outcome)
-        return recorded
+        for event in events:
+            emitter.handle_event(event)
+        if finish_run:
+            emitter.finish(outcome)
+        return writer.records
 
     def test_in_flight_turn_emits_children_before_turn_closes(self) -> None:
         # Given
@@ -363,9 +506,9 @@ class TestAgentSessionEmitter:
 
         # Then: completed steps are already emitted while the turn is still open,
         # which is what makes an in-progress turn observable in the Agents view
-        assert [kind for kind, *_ in recorded] == ["turn_open", "child", "child"]
-        assert recorded[1][1].startswith("chat")
-        assert recorded[2][1].startswith("execute_tool")
+        assert [record.kind for record in recorded] == ["turn_open", "child", "child"]
+        assert recorded[1].name.startswith("chat")
+        assert recorded[2].name.startswith("execute_tool")
 
     def test_hung_tool_leaves_chat_child_emitted_with_no_tool_child(self) -> None:
         # Given: the model requested a tool that never completed, so Inspect never
@@ -377,8 +520,8 @@ class TestAgentSessionEmitter:
 
         # Then: the chat span is still visible with no execute_tool following it —
         # the signal a Monitor keys on to detect a hung tool call
-        assert [kind for kind, *_ in recorded] == ["turn_open", "child"]
-        assert recorded[1][1].startswith("chat")
+        assert [record.kind for record in recorded] == ["turn_open", "child"]
+        assert recorded[1].name.startswith("chat")
 
     def test_segments_turns_with_usage_on_llm_children_not_turn(self) -> None:
         # Given
@@ -393,18 +536,18 @@ class TestAgentSessionEmitter:
         recorded = self._run(events)
 
         # Then
-        turns = [(n, a) for kind, n, a, *_ in recorded if kind == "turn_open"]
-        chats = [(n, a) for kind, n, a, *_ in recorded if n and n.startswith("chat")]
+        turns = [record for record in recorded if record.kind == "turn_open"]
+        chats = [record for record in recorded if record.name.startswith("chat")]
         assert len(turns) == 2
-        assert turns[0][1]["inspect.turn_index"] == 0
-        assert turns[1][1]["inspect.turn_index"] == 1
-        assert turns[0][1]["inspect.task"] == "my_task"
+        assert turns[0].attributes["inspect.turn_index"] == 0
+        assert turns[1].attributes["inspect.turn_index"] == 1
+        assert turns[0].attributes["inspect.task"] == "my_task"
         # Usage lives on the child chat spans, not the turn span; weave rolls it
         # up, so setting it on the turn too would double-count in the Agents view
-        assert "gen_ai.usage.input_tokens" not in turns[0][1]
-        assert chats[0][1]["gen_ai.usage.input_tokens"] == 100
+        assert "gen_ai.usage.input_tokens" not in turns[0].attributes
+        assert chats[0].attributes["gen_ai.usage.input_tokens"] == 100
         # Each turn is closed before the next one opens
-        assert [kind for kind, *_ in recorded] == [
+        assert [record.kind for record in recorded] == [
             "turn_open",
             "child",
             "child",
@@ -417,33 +560,50 @@ class TestAgentSessionEmitter:
 
     def test_final_turn_carries_outcome(self) -> None:
         # Given
-        events = [make_model_event(), make_tool_event()]
+        sample = make_sample(
+            total_time=5.0, scores={"includes": Score(value=1.0, answer="73")}
+        )
 
         # When
-        recorded = self._run(events, outcome={"score.includes": 1.0, "total_time": 5.0})
+        recorded = self._run(
+            [make_model_event(), make_tool_event()],
+            outcome=SampleOutcome.from_sample(sample),
+        )
 
         # Then: outcome is attached when the last turn is closed
-        closes = [a for kind, _, a, *_ in recorded if kind == "turn_close"]
-        assert closes[-1]["inspect.score.includes"] == 1.0
-        assert closes[-1]["inspect.total_time"] == 5.0
+        closes = [record for record in recorded if record.kind == "turn_close"]
+        assert closes[-1].attributes["inspect.score.includes"] == 1.0
+        assert closes[-1].attributes["inspect.total_time"] == 5.0
+
+    def test_outcome_is_absent_from_the_open_turn(self) -> None:
+        # Given
+        sample = make_sample(total_time=5.0)
+
+        # When
+        recorded = self._run(
+            [make_model_event()], outcome=SampleOutcome.from_sample(sample)
+        )
+
+        # Then: outcome lands only at close, not on the turn as it was opened
+        opens = [record for record in recorded if record.kind == "turn_open"]
+        assert "inspect.total_time" not in opens[0].attributes
 
     def test_emit_failure_is_swallowed(self) -> None:
         # Given
+        writer = MagicMock()
+        writer.open.side_effect = RuntimeError("otel down")
         emitter = AgentSessionEmitter(
             session_id="s",
             session_name="n",
             agent_name="a",
             model="m",
             identity={},
+            writer=writer,
         )
 
         # When / Then
-        with patch(
-            "inspect_wandb.weave.sessions._start_span",
-            side_effect=RuntimeError("otel down"),
-        ):
-            emitter.handle_event(make_model_event())
-            emitter.finish()  # must not raise
+        emitter.handle_event(make_model_event())
+        emitter.finish()  # must not raise
 
     def test_tool_before_model_is_ignored(self) -> None:
         # Given / When
@@ -452,11 +612,11 @@ class TestAgentSessionEmitter:
         # Then
         assert recorded == []
 
-    def _chat_inputs(self, recorded: list) -> list[str]:
+    def _chat_inputs(self, recorded: list[Recorded]) -> list[str]:
         return [
-            attributes.get("gen_ai.input.messages", "")
-            for kind, name, attributes, *_ in recorded
-            if name and name.startswith("chat")
+            record.attributes.get("gen_ai.input.messages", "")
+            for record in recorded
+            if record.name.startswith("chat")
         ]
 
     def test_input_trimmed_to_delta_across_turns(self) -> None:
@@ -501,9 +661,7 @@ class TestAgentSessionEmitter:
         ]
 
         def serialized_input_length(event: ModelEvent, input_from_index: int) -> int:
-            attributes = llm_span_attributes(
-                event, conversation_id="s", input_from_index=input_from_index
-            )
+            attributes = chat_attributes(event, input_from_index=input_from_index)
             return len(attributes["gen_ai.input.messages"])
 
         # When: comparing the delta (from the previous turn's length) against
@@ -517,10 +675,10 @@ class TestAgentSessionEmitter:
         # history each turn (quadratic)
         assert delta_volume < full_volume / 5
 
-    def _status(self, recorded: list, name_prefix: str) -> dict:
-        for _kind, name, _attributes, status in recorded:
-            if name and name.startswith(name_prefix):
-                return status
+    def _status(self, recorded: list[Recorded], name_prefix: str) -> tuple:
+        for record in recorded:
+            if record.name.startswith(name_prefix):
+                return (record.failed, record.error)
         raise AssertionError(f"no span starting with {name_prefix!r}")
 
     def test_failed_tool_marks_span_status_error(self) -> None:
@@ -533,7 +691,7 @@ class TestAgentSessionEmitter:
         recorded = self._run(events, finish_run=False)
 
         # Then: the execute_tool span carries ERROR status so it reads as failed
-        assert self._status(recorded, "execute_tool") == {"failed": True, "error": None}
+        assert self._status(recorded, "execute_tool") == (True, None)
 
     def test_model_error_marks_chat_span_status_error(self) -> None:
         # Given
@@ -544,10 +702,7 @@ class TestAgentSessionEmitter:
         recorded = self._run([model], finish_run=False)
 
         # Then
-        assert self._status(recorded, "chat") == {
-            "failed": True,
-            "error": "rate limit exceeded",
-        }
+        assert self._status(recorded, "chat") == (True, "rate limit exceeded")
 
     def test_successful_steps_marked_ok_not_unset(self) -> None:
         # Given
@@ -557,16 +712,22 @@ class TestAgentSessionEmitter:
         recorded = self._run(events, finish_run=False)
 
         # Then: non-failing spans are explicitly OK rather than left UNSET
-        assert self._status(recorded, "chat")["failed"] is False
-        assert self._status(recorded, "execute_tool")["failed"] is False
+        assert self._status(recorded, "chat")[0] is False
+        assert self._status(recorded, "execute_tool")[0] is False
 
     def test_turn_marked_error_when_sample_errored(self) -> None:
         # Given
-        outcome = {"error": SimpleNamespace(message="sample crashed")}
+        sample = make_sample(
+            error=EvalError(
+                message="sample crashed", traceback="tb", traceback_ansi="tb"
+            )
+        )
 
         # When
-        recorded = self._run([make_model_event()], outcome=outcome)
+        recorded = self._run(
+            [make_model_event()], outcome=SampleOutcome.from_sample(sample)
+        )
 
         # Then: the closed turn reflects the sample-level failure
-        closes = [status for kind, _n, _a, status in recorded if kind == "turn_close"]
-        assert closes[-1] == {"failed": True, "error": "sample crashed"}
+        closes = [record for record in recorded if record.kind == "turn_close"]
+        assert (closes[-1].failed, closes[-1].error) == (True, "sample crashed")
