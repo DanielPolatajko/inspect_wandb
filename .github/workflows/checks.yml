@@ -20,7 +20,7 @@ jobs:
       - uses: marceloprado/has-changed-path@v1.0.1
         id: requires-checks
         with:
-          paths: inspect_wandb tests .github/workflows/checks.yml
+          paths: inspect_wandb tests .github/workflows/checks.yml pyproject.toml uv.lock
     outputs:
       changed: ${{ steps.requires-checks.outputs.changed }}
 

@@ -260,15 +260,15 @@ wheels = [
 
 [[package]]
 name = "anyio"
-version = "4.12.1"
+version = "4.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "idna" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/f0/5eb65b2bb0d09ac6776f2eb54adee6abe8228ea05b20a5ad0e4945de8aac/anyio-4.12.1.tar.gz", hash = "sha256:41cfcc3a4c85d3f05c932da7c26d0201ac36f72abd4435ba90d0464a3ffed703", size = 228685, upload-time = "2026-01-06T11:45:21.246Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/0e/27be9fdef66e72d64c0cdc3cc2823101b80585f8119b5c112c2e8f5f7dab/anyio-4.12.1-py3-none-any.whl", hash = "sha256:d405828884fc140aa80a3c667b8beed277f1dfedec42ba031bd6ac3db606ab6c", size = 113592, upload-time = "2026-01-06T11:45:19.497Z" },
+    { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
 ]
 
 [[package]]
@@ -728,6 +728,15 @@ wheels = [
 ]
 
 [[package]]
+name = "distro"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
+]
+
+[[package]]
 name = "docstring-parser"
 version = "0.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1183,7 +1192,7 @@ wheels = [
 
 [[package]]
 name = "inspect-ai"
-version = "0.3.240"
+version = "0.3.250"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agent-client-protocol" },
@@ -1226,9 +1235,9 @@ dependencies = [
     { name = "zipp" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/74/59d732f7f25fc8cfd7914dfa9831b7ae6ece4c3e06254caee9a4d9889261/inspect_ai-0.3.240.tar.gz", hash = "sha256:8a0bb8ba1fd73a86b106eed7ea9c32eecb9a856f9ae2dcd08d94385801a5bcb3", size = 46723848, upload-time = "2026-06-15T18:39:15.497Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/80/4688162232e5ecafcb53a97cbcf4c523370ab2c5eea6eecf47eee5ecb209/inspect_ai-0.3.250.tar.gz", hash = "sha256:0ac1f7665c687ad0df8a551ba59cf3c7c2e63720f6fd027d8e3824b62493088b", size = 50168357, upload-time = "2026-07-28T16:01:15.424Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/23/0b3b7bdae6641cd447f11c2cf1d1dbc9819fcc1a67b454734da34e7ac18c/inspect_ai-0.3.240-py3-none-any.whl", hash = "sha256:f366d012800d6d96e25b5a46c13fef5a20f7e8ee48e8d609db899b706599ed8c", size = 33940870, upload-time = "2026-06-15T18:39:02.988Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/c9/1e8f3e9a1da205cf1c1f6695a1b0cef300a4c1454f6c5cff2a0056c9518c/inspect_ai-0.3.250-py3-none-any.whl", hash = "sha256:205b3e9e4b63bafe9b2ec6f1126473b795b8ed4a302faa15ec1a930540e9ecf8", size = 37583447, upload-time = "2026-07-28T16:01:01.575Z" },
 ]
 
 [[package]]
@@ -1299,7 +1308,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12,<3" },
     { name = "pydantic-settings" },
     { name = "wandb", specifier = ">=0.25.1" },
-    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.52.43" },
+    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.53.0" },
 ]
 provides-extras = ["weave", "viz"]
 
@@ -2460,21 +2469,21 @@ wheels = [
 
 [[package]]
 name = "playwright"
-version = "1.58.0"
+version = "1.61.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "greenlet" },
     { name = "pyee" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/c9/9c6061d5703267f1baae6a4647bfd1862e386fbfdb97d889f6f6ae9e3f64/playwright-1.58.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:96e3204aac292ee639edbfdef6298b4be2ea0a55a16b7068df91adac077cc606", size = 42251098, upload-time = "2026-01-30T15:09:24.028Z" },
-    { url = "https://files.pythonhosted.org/packages/e0/40/59d34a756e02f8c670f0fee987d46f7ee53d05447d43cd114ca015cb168c/playwright-1.58.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:70c763694739d28df71ed578b9c8202bb83e8fe8fb9268c04dd13afe36301f71", size = 41039625, upload-time = "2026-01-30T15:09:27.558Z" },
-    { url = "https://files.pythonhosted.org/packages/e1/ee/3ce6209c9c74a650aac9028c621f357a34ea5cd4d950700f8e2c4b7fe2c4/playwright-1.58.0-py3-none-macosx_11_0_universal2.whl", hash = "sha256:185e0132578733d02802dfddfbbc35f42be23a45ff49ccae5081f25952238117", size = 42251098, upload-time = "2026-01-30T15:09:30.461Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/af/009958cbf23fac551a940d34e3206e6c7eed2b8c940d0c3afd1feb0b0589/playwright-1.58.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:c95568ba1eda83812598c1dc9be60b4406dffd60b149bc1536180ad108723d6b", size = 46235268, upload-time = "2026-01-30T15:09:33.787Z" },
-    { url = "https://files.pythonhosted.org/packages/d9/a6/0e66ad04b6d3440dae73efb39540c5685c5fc95b17c8b29340b62abbd952/playwright-1.58.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8f9999948f1ab541d98812de25e3a8c410776aa516d948807140aff797b4bffa", size = 45964214, upload-time = "2026-01-30T15:09:36.751Z" },
-    { url = "https://files.pythonhosted.org/packages/0e/4b/236e60ab9f6d62ed0fd32150d61f1f494cefbf02304c0061e78ed80c1c32/playwright-1.58.0-py3-none-win32.whl", hash = "sha256:1e03be090e75a0fabbdaeab65ce17c308c425d879fa48bb1d7986f96bfad0b99", size = 36815998, upload-time = "2026-01-30T15:09:39.627Z" },
-    { url = "https://files.pythonhosted.org/packages/41/f8/5ec599c5e59d2f2f336a05b4f318e733077cd5044f24adb6f86900c3e6a7/playwright-1.58.0-py3-none-win_amd64.whl", hash = "sha256:a2bf639d0ce33b3ba38de777e08697b0d8f3dc07ab6802e4ac53fb65e3907af8", size = 36816005, upload-time = "2026-01-30T15:09:42.449Z" },
-    { url = "https://files.pythonhosted.org/packages/c8/c4/cc0229fea55c87d6c9c67fe44a21e2cd28d1d558a5478ed4d617e9fb0c93/playwright-1.58.0-py3-none-win_arm64.whl", hash = "sha256:32ffe5c303901a13a0ecab91d1c3f74baf73b84f4bedbb6b935f5bc11cc98e1b", size = 33085919, upload-time = "2026-01-30T15:09:45.71Z" },
+    { url = "https://files.pythonhosted.org/packages/44/ee/31e4e0db36588b817a10b299a0285082545fde7d36543c2abe498bb3d61a/playwright-1.61.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:ff138c3a604f69911e9d42fd036e55c2a171e5616edf04c1e7f60a2a285540b0", size = 43421877, upload-time = "2026-06-29T10:32:48.428Z" },
+    { url = "https://files.pythonhosted.org/packages/42/35/71395dd3ecc798965be4a3ef8c443217d4abca168e7cb34536304f9489e6/playwright-1.61.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:009588c2a7e499bc5a8b425b61fa65490968bbda9cd69e0cf2cff10f8304659a", size = 42205016, upload-time = "2026-06-29T10:32:52.104Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/44/323164cf5cd1647bdefce76ffce27651aadb959d089b48f53ea40918276e/playwright-1.61.0-py3-none-macosx_11_0_universal2.whl", hash = "sha256:9f7de4536088d12037c13a52b7ea34b59270b78926bb56935070597ffac6b1af", size = 43421884, upload-time = "2026-06-29T10:32:55.773Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/f8/a35bf179e4ba2522c1893635094a64e407572547bd61528820fc0abc87fe/playwright-1.61.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:54f3b39f6eab832e33458c1dd7da0b5682aedab3b09ae731b5c59fa12fd2024e", size = 47421381, upload-time = "2026-06-29T10:32:59.903Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/eb/e3f922348ec17c315f98c463f72faa1181a1c3de0bfe31a8d2edf6561723/playwright-1.61.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:93454322ade8c11d5d6c211bfd91bdfb9ffb4810e3e026371bcbc4bec1b7ee4c", size = 47120545, upload-time = "2026-06-29T10:33:03.574Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/a6/5be4e52b40a9c0c8a073e7c5b0785c05cf5a9ea8f8a7b5b260e32d970342/playwright-1.61.0-py3-none-win32.whl", hash = "sha256:372d55a6f1248fa1dd47599686980cb8fb5bbe6fcda59eab793eb657c11d8a9b", size = 37844841, upload-time = "2026-06-29T10:33:07.361Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/fd/2b78036e5fbe9d5f5645bbe08a1eac7160c51243c0093963edbcf67c35d9/playwright-1.61.0-py3-none-win_amd64.whl", hash = "sha256:35c6cc4589a5d00964a59d7b3e59641e0aac0c02f15479a7af77d20f6bc79597", size = 37844846, upload-time = "2026-06-29T10:33:10.637Z" },
+    { url = "https://files.pythonhosted.org/packages/27/0d/1b0f3c4ee4eb0514bc805b5c2f9a223e5b6de4f11a926f5235d51d0fc81b/playwright-1.61.0-py3-none-win_arm64.whl", hash = "sha256:e9fcbffcf557a8620fdedd92491eb59a32d18e23d6f3b4f6214b952be324fe51", size = 33955127, upload-time = "2026-06-29T10:33:14.008Z" },
 ]
 
 [[package]]
@@ -3979,28 +3988,29 @@ wheels = [
 
 [[package]]
 name = "weave"
-version = "0.52.43"
+version = "0.53.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
     { name = "click" },
     { name = "diskcache-weave" },
+    { name = "distro" },
     { name = "gql", extra = ["httpx"] },
     { name = "jsonschema" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
-    { name = "opentelemetry-semantic-conventions" },
     { name = "packaging" },
     { name = "polyfile-weave" },
     { name = "pydantic" },
     { name = "sentry-sdk" },
+    { name = "sniffio" },
     { name = "tenacity" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/df/dcb32bf366eca5e11d345a8e15238256396a9ff7346a29b3290a358b9cd8/weave-0.52.43.tar.gz", hash = "sha256:3c4abcb4da33e0db8a03bd52739503d99c90bdb1922b704ca2b2df8a0f6d561e", size = 977397, upload-time = "2026-06-15T21:29:23.062Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/b5/13e3de57a603e2ead6d85054ad731a05decc3065edee4c13a839deb2bfdc/weave-0.53.9.tar.gz", hash = "sha256:f3c7a7c40a1f817ee89db4b754f849a79e426e7e677bae8e5623c02f2535a5fd", size = 1350587, upload-time = "2026-09-10T21:17:43.65Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/a0/e823f714e337c6342a831307d21d2a12c87bc6a6015fc0ac62be9dd8e01f/weave-0.52.43-py3-none-any.whl", hash = "sha256:d7fb10e893c9da57c7663c8c51a1a67eb59216f9da0e4056a244a41de63faf19", size = 1199217, upload-time = "2026-06-15T21:29:21.267Z" },
+    { url = "https://files.pythonhosted.org/packages/02/d1/4d8881311f9f9b01d7c1613dcc984c7c55f0235cdc194881d987aca82fdf/weave-0.53.9-py3-none-any.whl", hash = "sha256:3a2cfbb1239458379746722604d7122a6d2b2ffd808ad12de6ae7e6f8bd6fd90", size = 1794870, upload-time = "2026-09-10T21:17:41.312Z" },
 ]
 
 [[package]]
