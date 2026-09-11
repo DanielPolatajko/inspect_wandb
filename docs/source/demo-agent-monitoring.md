@@ -37,6 +37,22 @@ or for a project, in `pyproject.toml`:
 agent_sessions = true
 ```
 
+```{important}
+Eval metadata can refine the integration's settings, but it cannot *bootstrap* it.
+The entity and project must be resolvable before the first hook fires — from the wandb
+settings file (`wandb init`), `pyproject.toml`, or the `WANDB_ENTITY` / `WANDB_PROJECT`
+environment variables.
+
+Inspect asks each hook `enabled()` before dispatching `on_task_start`, and
+`on_task_start` is where eval metadata is read. If entity/project are only supplied via
+metadata, the hook reports itself disabled on that first check and never receives the
+metadata that would have enabled it — the run completes with
+
+> `WandB integration disabled: missing required field(s): project, entity.`
+
+and nothing reaches Weave.
+```
+
 ## 2. The demo agent
 
 Two variants of a number-guessing agent. The **healthy** tool gives correct
@@ -86,7 +102,8 @@ task = Task(
         init=system_message("Use the guess tool with binary search; reason step by "
                             "step; submit once correct."),
         tools=[guess()],
-        max_messages=20,
+        message_limit=20,
+        max_attempts=1,
     ),
     scorer=includes(),
 )
@@ -100,22 +117,109 @@ if __name__ == "__main__":
     )
 ```
 
-Run it and open the **Agents view** in your Weave project. As the agent runs you'll see
-the session grow one turn at a time — each turn an LLM span plus a `guess` tool span.
+```{note}
+The cap is `message_limit`, not `max_messages`. `basic_agent` forwards unrecognised
+keywords into `**kwargs`, so a misspelled cap is silently ignored and the broken agent
+loops until it exhausts `token_limit` instead of stopping at 20 messages.
+```
+
+Run it with the entity and project in the environment, so the integration is enabled
+before the first hook fires:
+
+```bash
+WANDB_ENTITY=<your-entity> WANDB_PROJECT=<your-project> python demo_agent.py
+```
+
+Then open the **Agents view** in your Weave project. As the agent runs you'll see the
+session grow one turn at a time — each turn an LLM span plus a `guess` tool span.
+
+A run of the two variants looks like this:
+
+| Variant | Turns | Guesses | Outcome |
+| --- | --- | --- | --- |
+| healthy (`BROKEN = False`) | 7 | 50, 75, 62, 68, 71, 73 | converges, scores `C` |
+| broken (`BROKEN = True`) | 9 | 50, 25, 12, 6, 3, 1, 2, 75, 100 | hits the 20-message limit, scores `I` |
+
+The broken trajectory is the interesting one: the agent binary-searches downward, bottoms
+out at 1, then flails (2, 75, 100) because every response says `lower`. That is the
+no-progress signature the Monitor below is looking for.
 
 ## 3. Add a Monitor
 
 In the Weave UI, go to **Monitors → New monitor**:
 
-- **Operations**: the agent turn spans (`invoke_agent`).
+- **Operations**: the agent turn spans — select the agent-turn operation
+  (`weave.genai.turn_ended`).
 - **Sampling rate**: 100% (so every turn is scored in the demo).
 - **LLM judge / scoring prompt**: something like —
-  > *Given this agent turn, is the agent making no progress — repeating similar actions,
-  > or looping without getting closer to the goal? Answer 1 for "stuck/no progress",
-  > 0 otherwise.*
+  > *Given the agent's recent turns, is the agent making no progress — repeating similar
+  > actions, or looping without getting closer to the goal? Answer 1 for "stuck/no
+  > progress", 0 otherwise.*
 
 Monitor results are written to each turn's `feedback`, visible in the Signals column of
 the Agents/Traces view.
+
+### Or define it in code
+
+Monitors are also a first-class SDK object, which makes them reviewable and reproducible
+alongside the eval:
+
+```python
+import weave
+from weave.flow.monitor import Monitor
+from weave.scorers import LLMAsAJudgeScorer
+from weave.trace_server.interface.builtin_object_classes.llm_structured_model import (
+    LLMStructuredCompletionModel,
+)
+
+weave.init("<entity>/<project>")
+
+monitor = Monitor(
+    name="agent-no-progress",
+    description="Scores Inspect agent turns for a stuck/no-progress loop.",
+    sampling_rate=1.0,
+    op_names=["weave.genai.turn_ended"],
+    scorers=[
+        LLMAsAJudgeScorer(
+            name="no-progress-judge",
+            model=LLMStructuredCompletionModel(
+                llm_model_id="anthropic/claude-haiku-4-5"
+            ),
+            scoring_prompt=(
+                "You are monitoring a long-horizon agent for a stuck / no-progress "
+                "failure mode. Answer 1 if the agent is repeating the same or "
+                "near-identical tool calls, receiving the same tool response without "
+                "adapting, or cycling without getting closer to the goal. Else 0. "
+                "Return only the integer."
+            ),
+        )
+    ],
+    # A single turn cannot reveal a loop — window the recent turns of one
+    # conversation together so the judge can see the repetition.
+    scorer_debounce_config={
+        "aggregation_field": "thread_id",
+        "aggregation_method": "all_messages",
+        "timeout_seconds": 30,
+    },
+)
+
+monitor.activate()
+```
+
+`op_names=["weave.genai.turn_ended"]` is the agent-span literal — it is what an
+`invoke_agent` turn span becomes once ingested through the agents OTLP endpoint, and it
+is passed through unexpanded rather than resolved to a `weave:///` op ref.
+
+```{note}
+`scorer_debounce_config` is doing real work here, not tuning. A no-progress judge
+scoring one turn in isolation has nothing to compare against — looping is only visible
+*across* turns. Windowing by `thread_id` with `all_messages` gives the judge the recent
+trajectory instead of a single step.
+```
+
+`monitor.activate()` publishes it live; until then it is stored but inert. Note that an
+active monitor runs its judge against every matching turn, so it draws LLM spend on an
+ongoing basis.
 
 ## 4. Add an Automation
 
@@ -126,6 +230,12 @@ From the monitor's detail view, create an **Automation**:
 - **Action**: Slack notification (or webhook) to your channel.
 
 (Slack/webhook integrations are configured in **Team Settings**.)
+
+```{note}
+Unlike Monitors, Automations have no SDK equivalent — there is no `weave.Automation`
+or equivalent client method. This step is UI-only, so it cannot be scripted or checked
+into the repo alongside the monitor definition above.
+```
 
 ## 5. Watch it fire
 
@@ -146,8 +256,10 @@ burn budget. Full intervention support in Inspect WandB is tracked as follow-up 
 
 ## Notes
 
-- **Cost**: the demo is one short sample on Haiku (a few thousand tokens). The monitoring
-  scales identically to a real long-horizon run — only the eval is small.
+- **Cost**: the demo is one short sample on Haiku — measured at ~10k tokens for the
+  broken variant and ~7k for the healthy one. The monitoring scales identically to a real
+  long-horizon run — only the eval is small. An active Monitor adds its own judge cost per
+  turn, which is the part that scales with the run.
 - **Simulating "long"**: a 20-turn looping agent is enough to demonstrate live detection;
   the same setup works unchanged on a million-token, hours-long agentic eval.
 - **Token counts vs. Inspect**: the Agents view's headline **Tokens** tile counts prompt

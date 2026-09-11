@@ -728,6 +728,15 @@ wheels = [
 ]
 
 [[package]]
+name = "distro"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
+]
+
+[[package]]
 name = "docstring-parser"
 version = "0.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1299,7 +1308,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12,<3" },
     { name = "pydantic-settings" },
     { name = "wandb", specifier = ">=0.25.1" },
-    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.52.43" },
+    { name = "weave", marker = "extra == 'weave'", specifier = ">=0.53.0" },
 ]
 provides-extras = ["weave", "viz"]
 
@@ -3979,28 +3988,29 @@ wheels = [
 
 [[package]]
 name = "weave"
-version = "0.52.43"
+version = "0.53.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
     { name = "click" },
     { name = "diskcache-weave" },
+    { name = "distro" },
     { name = "gql", extra = ["httpx"] },
     { name = "jsonschema" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
-    { name = "opentelemetry-semantic-conventions" },
     { name = "packaging" },
     { name = "polyfile-weave" },
     { name = "pydantic" },
     { name = "sentry-sdk" },
+    { name = "sniffio" },
     { name = "tenacity" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/df/dcb32bf366eca5e11d345a8e15238256396a9ff7346a29b3290a358b9cd8/weave-0.52.43.tar.gz", hash = "sha256:3c4abcb4da33e0db8a03bd52739503d99c90bdb1922b704ca2b2df8a0f6d561e", size = 977397, upload-time = "2026-06-15T21:29:23.062Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/b5/13e3de57a603e2ead6d85054ad731a05decc3065edee4c13a839deb2bfdc/weave-0.53.9.tar.gz", hash = "sha256:f3c7a7c40a1f817ee89db4b754f849a79e426e7e677bae8e5623c02f2535a5fd", size = 1350587, upload-time = "2026-09-10T21:17:43.65Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/a0/e823f714e337c6342a831307d21d2a12c87bc6a6015fc0ac62be9dd8e01f/weave-0.52.43-py3-none-any.whl", hash = "sha256:d7fb10e893c9da57c7663c8c51a1a67eb59216f9da0e4056a244a41de63faf19", size = 1199217, upload-time = "2026-06-15T21:29:21.267Z" },
+    { url = "https://files.pythonhosted.org/packages/02/d1/4d8881311f9f9b01d7c1613dcc984c7c55f0235cdc194881d987aca82fdf/weave-0.53.9-py3-none-any.whl", hash = "sha256:3a2cfbb1239458379746722604d7122a6d2b2ffd808ad12de6ae7e6f8bd6fd90", size = 1794870, upload-time = "2026-09-10T21:17:41.312Z" },
 ]
 
 [[package]]
