@@ -1,6 +1,11 @@
-## Unreleased
+## [v0.3.0](https://pypi.org/project/inspect-wandb/0.3.0/) (11 September 2026)
 
 ### Added
+- Add `agent_sessions_include_content` Weave setting controlling whether full message and tool content is included on the streamed spans. Set `false` to log only structure (turns, tool names, tokens, timing, scores) for very long-horizon evals where per-turn transcript volume is prohibitive.
+- Set OpenTelemetry status on the streamed agent-session spans: tool and model failures are marked `ERROR` with the failure message, successful spans `OK`, so failed turns and tool calls surface as errors in the Weave Agents view rather than looking successful.
+
+### Changed
+- **Breaking:** the `weave` extra now requires `weave >= 0.53.0` (the agent Conversation SDK), raised from `0.52.43`, and `inspect_ai` requires `>= 0.3.217` (the `on_sample_event` hook). Environments pinned to weave 0.52.x must upgrade.
 - Add `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Conversation SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. 
 - Bump minimum `weave` to `0.53.0` (the agent Conversation SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
 
@@ -10,6 +15,11 @@
 - Postprocess Task States using Inspect AI's state_jsonable method to show readable dicts instead of showing Python object reprs in Weave.
 - Stop importing `wandb.old.core.wandb_dir`, which was removed in wandb 0.27.1 and made the package fail to import on newer wandb versions. The wandb settings file is now located via wandb's public `Settings` API.
 - Drain pending per-sample Weave logging tasks before finalizing the evaluation in `on_task_end`, so scores are no longer silently dropped by a race with `log_summary` (`Cannot log score after finish has been called`).
+
+### New Contributors
+
+- [@mlsimon734](https://github.com/mlsimon734)
+- [@abhiramvsmg](https://github.com/abhiramvsmg)
 
 ## [v0.2.3](https://pypi.org/project/inspect-wandb/0.2.3/) (16 March 2026)
 
