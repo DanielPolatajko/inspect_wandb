@@ -2,9 +2,11 @@
 
 ### Added
 - Add `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. 
-- Bump minimum `weave` to `0.52.43` (agent Session SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
+- Bump minimum `weave` to `0.53.0` (the agent Conversation SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
 
 ### Fixed
+- Follow weave's `weave.session` -> `weave.conversation` rename (weave 0.53). The old module was reduced to a deprecation shim with `session_otel`/`types` removed, which made `inspect_wandb.weave.hooks` unimportable and took the whole hook entry point down on any weave >= 0.53. Thanks to [@mlsimon734](https://github.com/mlsimon734) for the diagnosis.
+- Run the linting and testing checks on dependency changes (`pyproject.toml`, `uv.lock`), which previously skipped CI entirely and let incompatible dependency bumps merge green.
 - Postprocess Task States using Inspect AI's state_jsonable method to show readable dicts instead of showing Python object reprs in Weave.
 - Stop importing `wandb.old.core.wandb_dir`, which was removed in wandb 0.27.1 and made the package fail to import on newer wandb versions. The wandb settings file is now located via wandb's public `Settings` API.
 - Drain pending per-sample Weave logging tasks before finalizing the evaluation in `on_task_end`, so scores are no longer silently dropped by a race with `log_summary` (`Cannot log score after finish has been called`).

@@ -11,19 +11,19 @@ from opentelemetry import trace as otel_trace
 from pydantic import BaseModel, Field
 from opentelemetry.context import Context
 from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context
-from weave.session.session_otel import (
+from weave.conversation.conversation_otel import (
     execute_tool_attributes,
     invoke_agent_attributes,
     llm_attributes,
 )
-from weave.session.types import Message, Usage
+from weave.conversation.types import Message, Usage
 
 logger = getLogger(__name__)
 
 MAX_TOOL_RESULT_CHARS = 4000
 MAX_ATTRIBUTE_VALUE_CHARS = 16000
 _WEAVE_ROLES = frozenset(get_args(Message.model_fields["role"].annotation))
-_TRACER_NAME = "weave.session"
+_TRACER_NAME = "weave.conversation"
 
 
 def _to_nanoseconds(event_time: datetime | None) -> int | None:
