@@ -31,10 +31,8 @@ from importlib.util import find_spec
 from gql.transport.exceptions import TransportQueryError
 from inspect_wandb.shared.base_hooks import InspectWandBHooks
 from inspect_wandb.weave.sessions import (
-    SESSIONS_AVAILABLE,
     AgentSessionEmitter,
-    build_outcome,
-    flatten_metadata,
+    SampleOutcome,
 )
 
 logger = getLogger(__name__)
@@ -63,8 +61,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
     def _agent_sessions_active(self) -> bool:
         return bool(
-            SESSIONS_AVAILABLE
-            and self._hooks_enabled
+            self._hooks_enabled
             and self.settings is not None
             and self.settings.agent_sessions
             and not self.settings.eval_traces_only
@@ -262,7 +259,10 @@ class WeaveEvaluationHooks(InspectWandBHooks):
                     "target": data.summary.target,
                     "dataset": task_context.get("dataset"),
                     "sandbox": task_context.get("sandbox"),
-                    **flatten_metadata(data.summary.metadata),
+                    **{
+                        f"metadata.{key}": value
+                        for key, value in data.summary.metadata.items()
+                    },
                 }
                 self._session_emitters[data.sample_id] = AgentSessionEmitter(
                     session_id=data.sample_id,
@@ -288,7 +288,7 @@ class WeaveEvaluationHooks(InspectWandBHooks):
 
         emitter = self._session_emitters.pop(data.sample_id, None)
         if emitter is not None:
-            emitter.finish(build_outcome(data.sample))
+            emitter.finish(SampleOutcome.from_sample(data.sample))
 
         task = asyncio.create_task(self._log_sample_to_weave_async(data))
         self._pending_sample_tasks.add(task)
