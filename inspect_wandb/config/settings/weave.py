@@ -16,7 +16,7 @@ class WeaveSettings(InspectWandBBaseSettings):
     )
     agent_sessions: bool = Field(
         default=False,
-        description="When True, stream each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, in addition to eval logging.",
+        description="When True, stream each Inspect sample's agent trajectory to Weave's agent Conversation SDK (the Agents view) as turns complete, in addition to eval logging.",
     )
     agent_sessions_include_content: bool = Field(
         default=True,

@@ -1,7 +1,7 @@
 ## Unreleased
 
 ### Added
-- Add `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Session SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. 
+- Add `agent_sessions` Weave setting that streams each Inspect sample's agent trajectory to Weave's agent Conversation SDK (the Agents view) as turns complete, enabling live, turn-level observability and server-side Monitors/Signals on long-horizon agentic evals. 
 - Bump minimum `weave` to `0.53.0` (the agent Conversation SDK) and `inspect_ai` to `0.3.217` (the `on_sample_event` hook).
 
 ### Fixed

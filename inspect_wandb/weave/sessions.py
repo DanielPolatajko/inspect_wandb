@@ -339,7 +339,7 @@ class SampleOutcome(BaseModel):
 
 class AgentSessionEmitter:
     """Reconstructs an Inspect sample's agent trajectory and streams it to
-    Weave's agent Session SDK as gen_ai OpenTelemetry spans, one turn at a time.
+    Weave's agent Conversation SDK as gen_ai OpenTelemetry spans, one turn at a time.
 
     Emits the spans directly via the weave-configured global tracer (rather than
     weave's imperative ``log_turn``) so we can attach rich ``inspect.*`` metadata
